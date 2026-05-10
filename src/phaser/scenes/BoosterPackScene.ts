@@ -10,16 +10,14 @@ import { getPlayerState } from '../../game/PlayerState';
 import { createDie } from '../../game/DiceSystem';
 import { generateRandomEquipment } from '../../game/ItemsSystem';
 import { DiceEnhancement, HandType } from '../../game/types';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ItemCard } from '../ui/ItemCard';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { DicePouch } from '../ui/DicePouch';
-import { DicePouchModal } from '../ui/DicePouchModal';
-import { JourneyInfoModal } from '../ui/JourneyInfoModal';
-import { OptionsModal } from '../ui/OptionsModal';
+import { createLayout } from '../ui/SceneLayout';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
 import pipEnhancementsData from '../../data/pip_enhancements.json';
 import trailGuidesData from '../../data/trail_guides.json';
@@ -64,7 +62,6 @@ export class BoosterPackScene extends Scene {
   private dicePouch: DicePouch;
 
   // Layout helpers
-  private sidebarW: number = 0;
   private contentCX: number = 0;
   private cardY: number = 0;
 
@@ -88,52 +85,16 @@ export class BoosterPackScene extends Scene {
   }
 
   private buildLayout(): void {
-    const { width, height } = this.scale;
-    const player = getPlayerState();
+    const { height } = this.scale;
 
-    // Full-screen background
-    const bg = this.add.graphics();
-    bg.fillStyle(COLORS.BG_PRIMARY, 1);
-    bg.fillRect(0, 0, width, height);
-
-    // ─── Sidebar ───
-    this.sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
-    this.sidebar = new Sidebar(this, this.sidebarW, height);
-    this.sidebar.updateData({
-      title: 'BOOSTER PACK',
-      roundScore: 0,
-      milesBase: 0,
-      mult: 0,
-      daysRemaining: GAMEPLAY.MAX_DAYS,
-      maxDays: GAMEPLAY.MAX_DAYS,
-      rerolls: GAMEPLAY.MAX_REROLLS,
-      maxRerolls: GAMEPLAY.MAX_REROLLS,
-      leg: player.leg,
-      totalLegs: 8,
-      targetMiles: GAMEPLAY.TARGET_MILES,
-    });
-    this.sidebar.setJourneyInfoCallback(() => {
-      new JourneyInfoModal(this, this.sidebarW, width - this.sidebarW, height);
-    });
-    this.sidebar.setOptionsCallback(() => {
-      new OptionsModal(this, this.sidebarW, width - this.sidebarW, height);
-    });
-
-    // ─── Main content area ───
-    const contentX = this.sidebarW + UI.FELT_PADDING;
-    const contentW = width - this.sidebarW - UI.FELT_PADDING * 2;
-    this.contentCX = this.sidebarW + (width - this.sidebarW) / 2;
-
-    // Content area felt
-    const felt = this.add.graphics();
-    felt.fillStyle(COLORS.BG_FELT, UI.FELT_ALPHA);
-    felt.fillRoundedRect(this.sidebarW, 0, width - this.sidebarW, height, 0);
-
-    // ─── Equipment bar (top) ───
-    const equipBarH = UI.EQUIP_BAR_HEIGHT;
-    this.equipBar = new EquipmentBar(this, contentX, 8, contentW, equipBarH);
+    const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'BOOSTER PACK' });
+    this.sidebar = layout.sidebar;
+    this.equipBar = layout.equipBar;
+    this.dicePouch = layout.dicePouch;
+    this.contentCX = layout.contentCX;
 
     // ─── Pack name ───
+    const equipBarH = UI.EQUIP_BAR_HEIGHT;
     const titleY = equipBarH + 16;
     this.add.text(this.contentCX, titleY, this.packDef.name, {
       fontFamily: FONTS.HEADING,
@@ -191,12 +152,6 @@ export class BoosterPackScene extends Scene {
 
     this.skipBtn = new Button(this, this.contentCX + 100, btnY, 'Skip All', 140, 44);
     this.skipBtn.onClick(() => this.onSkip());
-
-    // ─── Dice Pouch (bottom-right) ───
-    this.dicePouch = new DicePouch(this, width - UI.POUCH_MARGIN - UI.POUCH_SIZE, height - UI.POUCH_MARGIN - UI.POUCH_SIZE);
-    this.dicePouch.setClickCallback(() => {
-      new DicePouchModal(this, this.sidebarW, width - this.sidebarW, height);
-    });
   }
 
   private createCardDisplay(x: number, y: number, item: PackItem): { container: Phaser.GameObjects.Container, diceSprite: DiceSprite | null, itemCard: ItemCard | null } {

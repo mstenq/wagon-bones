@@ -3,6 +3,8 @@
 
 import { Die, HandType, HandResult, HandDefinition, ScoreResult } from './types';
 import handsData from '../data/hands.json';
+import { getPlayerState } from './PlayerState';
+import type { EquipmentInstance } from './ItemsSystem';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -193,9 +195,115 @@ export function detectBestHand(dice: Die[]): HandResult {
  * Calculate score for a played hand.
  * miles = (handBaseMiles + sum of scoring dice pips) × handBaseMult
  */
-export function scoreHand(handResult: HandResult): ScoreResult {
-  const totalPips = handResult.scoringDice.reduce((sum, d) => sum + d.pips, 0);
-  const mult = handResult.baseMult;
+export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]): ScoreResult {
+  let totalPips = 0;
+  let bonusMult = 0;
+  let xMult = 1;
+  const player = getPlayerState();
+
+  console.log('  [scoreHand] Step 3: Per-die scoring');
+  // Step 3: Per-die scoring (left to right)
+  for (const die of handResult.scoringDice) {
+    // Base effect — pips as miles (stone dice have 0 pips but add 50 miles)
+    if (die.enhancement === 'stone') {
+      totalPips += 50;
+      console.log(`  [scoreHand]   Die ${die.id}: STONE +50 miles (total: ${totalPips})`);
+    } else {
+      totalPips += die.pips;
+      console.log(`  [scoreHand]   Die ${die.id}: +${die.pips} pips (total: ${totalPips})`);
+    }
+
+    // Dice enhancement effects
+    switch (die.enhancement) {
+      case 'bone':
+        bonusMult += 4;
+        console.log(`  [scoreHand]   Die ${die.id} BONE: +4 mult (bonusMult: ${bonusMult})`);
+        break;
+      case 'wooden':
+        totalPips += 10;
+        console.log(`  [scoreHand]   Die ${die.id} WOODEN: +10 miles (totalPips: ${totalPips})`);
+        break;
+      case 'gold':
+        player.economy.earn(1);
+        console.log(`  [scoreHand]   Die ${die.id} GOLD: earned $1`);
+        break;
+      case 'diamond':
+        xMult *= 2;
+        console.log(`  [scoreHand]   Die ${die.id} DIAMOND: x2 mult (xMult: ${xMult})`);
+        // TODO: 25% chance of cracking
+        break;
+      case 'lucky': {
+        if (Math.random() < 1 / 5) {
+          bonusMult += 20;
+          console.log(`  [scoreHand]   Die ${die.id} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
+        }
+        if (Math.random() < 1 / 15) {
+          player.economy.earn(20);
+          console.log(`  [scoreHand]   Die ${die.id} LUCKY: hit $20!`);
+        }
+        break;
+      }
+      // loaded, blurry, stone — no additional scoring effect
+    }
+
+    // Dice aura effects
+    switch (die.aura) {
+      case 'fire':
+        bonusMult += 10;
+        console.log(`  [scoreHand]   Die ${die.id} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
+        break;
+      case 'icy':
+        totalPips += 50;
+        console.log(`  [scoreHand]   Die ${die.id} ICY aura: +50 pips (totalPips: ${totalPips})`);
+        break;
+      case 'holy':
+        xMult *= 1.5;
+        console.log(`  [scoreHand]   Die ${die.id} HOLY aura: x1.5 (xMult: ${xMult})`);
+        break;
+    }
+
+    // 'On scored' equipment — items that trigger per matching die (left to right)
+    for (const equip of equipment) {
+      const { effectType, effectParams } = equip.def;
+      const p = effectParams as Record<string, unknown>;
+
+      switch (effectType) {
+        case 'PIP_MULT':
+          if (die.pips === (p.pip as number)) {
+            bonusMult += p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
+          }
+          break;
+        case 'PIP_MILES':
+          if (die.pips === (p.pip as number)) {
+            totalPips += p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalPips: ${totalPips})`);
+          }
+          break;
+        case 'PARITY_MULT':
+          if (matchesParity(die.pips, p.parity as string)) {
+            bonusMult += p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
+          }
+          break;
+        case 'PARITY_MILES':
+          if (matchesParity(die.pips, p.parity as string)) {
+            totalPips += p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalPips: ${totalPips})`);
+          }
+          break;
+      }
+    }
+  }
+
+  const mult = Math.floor((handResult.baseMult + bonusMult) * xMult);
   const miles = (handResult.baseMiles + totalPips) * mult;
+  console.log(`  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalPips} pips) * floor((${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult) = ${miles} miles (mult: ${mult})`);
   return { handResult, totalPips, miles, mult };
+}
+
+function matchesParity(pips: number, parity: string): boolean {
+  if (parity === 'even') return pips % 2 === 0;
+  if (parity === 'odd') return pips % 2 !== 0;
+  return false;
 }

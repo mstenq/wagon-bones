@@ -30,6 +30,7 @@ export function applyEquipmentEffects(
     switch (effectType) {
       case 'ADD_MULT':
         bonusMult += p.value as number;
+        console.log(`  [equip] ${equip.def.name}: ADD_MULT +${p.value} (bonusMult: ${bonusMult})`);
         break;
 
       case 'ADD_MULT_RISKY':
@@ -37,14 +38,7 @@ export function applyEquipmentEffects(
         bonusMult += p.value as number;
         break;
 
-      case 'PIP_MULT':
-        // +mult for each scored die matching a specific pip
-        for (const die of context.scoringDice) {
-          if (die.pips === (p.pip as number)) {
-            bonusMult += p.value as number;
-          }
-        }
-        break;
+      // PIP_MULT, PIP_MILES, PARITY_MULT, PARITY_MILES are handled per-die in scoreHand (step 3)
 
       case 'HAND_MULT':
         // +mult if hand type contains the specified type
@@ -57,33 +51,6 @@ export function applyEquipmentEffects(
         // +miles if hand type contains the specified type
         if (handTypeMatches(context.handResult.type, p.handType as string)) {
           bonusMiles += p.value as number;
-        }
-        break;
-
-      case 'PIP_MILES':
-        // +miles for each scored die matching a specific pip
-        for (const die of context.scoringDice) {
-          if (die.pips === (p.pip as number)) {
-            bonusMiles += p.value as number;
-          }
-        }
-        break;
-
-      case 'PARITY_MULT':
-        // +mult per scored die with matching parity
-        for (const die of context.scoringDice) {
-          if (matchesParity(die.pips, p.parity as string)) {
-            bonusMult += p.value as number;
-          }
-        }
-        break;
-
-      case 'PARITY_MILES':
-        // +miles per scored die with matching parity
-        for (const die of context.scoringDice) {
-          if (matchesParity(die.pips, p.parity as string)) {
-            bonusMiles += p.value as number;
-          }
         }
         break;
 
@@ -116,9 +83,11 @@ export function applyEquipmentEffects(
       switch (equip.def.aura.id) {
         case 'fire':
           bonusMult += 10;
+          console.log(`  [equip] ${equip.def.name} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
           break;
         case 'icy':
           bonusMiles += 50;
+          console.log(`  [equip] ${equip.def.name} ICY aura: +50 miles (bonusMiles: ${bonusMiles})`);
           break;
         // holy (xMult) is applied after additive bonuses below
         // ghost is not a scoring effect
@@ -126,18 +95,22 @@ export function applyEquipmentEffects(
     }
   }
 
+  console.log(`  [equip] Step 4 totals: bonusMiles: ${bonusMiles}, bonusMult: ${bonusMult}`);
+
   const totalPips = baseResult.totalPips;
   const baseMiles = baseResult.handResult.baseMiles;
-  let finalMult = baseResult.handResult.baseMult + bonusMult;
+  let finalMult = baseResult.mult + bonusMult;
 
   // Apply holy aura xMult (multiplicative, applied last)
   for (const equip of equipment) {
     if (equip.def.aura?.id === 'holy') {
       finalMult = Math.floor(finalMult * 1.5);
+      console.log(`  [equip] ${equip.def.name} HOLY aura: x1.5 mult (finalMult: ${finalMult})`);
     }
   }
 
   const finalMiles = (baseMiles + totalPips + bonusMiles) * finalMult;
+  console.log(`  [equip] Final: (${baseMiles} base + ${totalPips} pips + ${bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`);
 
   return {
     handResult: baseResult.handResult,
@@ -210,6 +183,8 @@ function handTypeMatches(played: HandType, required: string): boolean {
   }
   // Two pair contains pair
   if (played === HandType.TWO_PAIR && required === HandType.PAIR) return true;
+  // Three of a kind contains pair
+  if (played === HandType.THREE_OF_A_KIND && required === HandType.PAIR) return true;
   // Four of a kind contains three of a kind and pair
   if (played === HandType.FOUR_OF_A_KIND) {
     if (required === HandType.THREE_OF_A_KIND || required === HandType.PAIR) return true;
@@ -225,11 +200,5 @@ function handTypeMatches(played: HandType, required: string): boolean {
   // Four straight contains three straight
   if (played === HandType.FOUR_STRAIGHT && required === HandType.THREE_STRAIGHT) return true;
 
-  return false;
-}
-
-function matchesParity(pips: number, parity: string): boolean {
-  if (parity === 'even') return pips % 2 === 0;
-  if (parity === 'odd') return pips % 2 !== 0;
   return false;
 }

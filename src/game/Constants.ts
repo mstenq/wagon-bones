@@ -116,14 +116,15 @@ export const UI = {
   SIDEBAR_BORDER: 0x333355,
   SIDEBAR_SECTION_GAP: 8,
 
-  // Equipment bar (top of main area)
-  EQUIP_BAR_HEIGHT: 100,
-  EQUIP_CARD_SCALE: 0.38,
-  EQUIP_CARD_SPACING: 70,
+  // Equipment bar (top of main area, left 80%)
+  EQUIP_BAR_HEIGHT: 220,
+  EQUIP_BAR_RATIO: 0.8,
+  EQUIP_CARD_SCALE: 1,
+  EQUIP_CARD_SPACING: 160,
 
-  // Supply bar (top-right)
-  SUPPLY_SLOT_SIZE: 60,
-  SUPPLY_SLOT_GAP: 8,
+  // Consumable bar (top of main area, right 20%)
+  CONSUMABLE_CARD_SCALE: 0.2,
+  CONSUMABLE_MAX_SLOTS: 2,
 
   // Dice pouch (bottom-right indicator)
   POUCH_SIZE: 56,
@@ -139,9 +140,14 @@ export const UI = {
   BTN_FONT_SIZE: '18px',
 
   // Cards
-  CARD_RADIUS: 8,
+  CARD_W: 140,
+  CARD_H: 200,
+  CARD_RADIUS: 12,
   CARD_SHADOW_OFFSET: 4,
   CARD_SHADOW_ALPHA: 0.35,
+  CARD_PRICE_TAG_H: 26,
+  CARD_PRICE_TAG_GAP: 6,
+  CARD_TOOLTIP_PAD: 10,
 
   // Game scene (main content area — right of sidebar)
   HAND_Y_RATIO: 0.72,
@@ -183,4 +189,18 @@ export const ANIM = {
   SCORE_COMPLETE_DELAY: 400,
   HOVER_DURATION: 100,
   CARD_HOVER_SCALE: 1.05,
+
+  // Card wobble / tilt / drag swing
+  CARD_WOBBLE_ANGLE: 0.018,           // radians, ~1°
+  CARD_WOBBLE_DURATION_MIN: 1800,     // ms per half-cycle
+  CARD_WOBBLE_DURATION_MAX: 2600,
+  CARD_TILT_MAX: 0.08,                // radians, ~4.5° max rotation on hover
+  CARD_TILT_SCALE_AMOUNT: 0.06,       // scaleX foreshortening at max tilt
+  CARD_TILT_LIFT: 1.05,               // scale-up when hovered (card "lifts" toward you)
+  CARD_TILT_LERP: 0.15,              // lerp speed toward target tilt (0-1, lower = smoother)
+  CARD_DRAG_SWING_FACTOR: 0.003,      // rotation per px of velocity
+  CARD_DRAG_SWING_MAX: 0.18,          // radians, ~10° max swing
+  CARD_DRAG_SWING_DAMPING: 0.92,      // velocity damping per frame (higher = more inertia)
+  CARD_DRAG_SETTLE_DURATION: 500,     // ms to settle back after drop
+  CARD_DRAG_LIFT_Y: -6,               // Y offset while dragging (card lifts up)
 };

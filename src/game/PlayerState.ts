@@ -159,6 +159,13 @@ export class PlayerState {
     return true;
   }
 
+  reorderEquipment(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || fromIndex >= this.equipment.length) return;
+    if (toIndex < 0 || toIndex >= this.equipment.length) return;
+    const [item] = this.equipment.splice(fromIndex, 1);
+    this.equipment.splice(toIndex, 0, item);
+  }
+
   /** Reset for a new run */
   reset(): void {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);

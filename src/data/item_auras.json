@@ -25,6 +25,6 @@
     "name": "Ghost",
     "description": "Doesn't take up space in your inventory",
     "costIncrease": 5,
-    "chance": 0.5
+    "chance": 0.01
   }
 ]

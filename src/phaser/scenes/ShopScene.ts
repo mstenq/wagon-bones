@@ -5,7 +5,7 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { generateShopStock, EquipmentDef } from '../../game/ItemsSystem';
 import { generateShopPacks, PackInstance } from '../../game/BoosterPackSystem';
 import { ItemCard } from '../ui/ItemCard';
@@ -14,9 +14,7 @@ import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { DicePouch } from '../ui/DicePouch';
-import { DicePouchModal } from '../ui/DicePouchModal';
-import { JourneyInfoModal } from '../ui/JourneyInfoModal';
-import { OptionsModal } from '../ui/OptionsModal';
+import { createLayout } from '../ui/SceneLayout';
 
 const CARD_SPACING = 185;
 
@@ -55,66 +53,17 @@ export class ShopScene extends Scene {
   }
 
   private buildLayout(): void {
-    const { width, height } = this.scale;
     const player = getPlayerState();
 
-    // Background image (cover/fill - no stretching)
-    const bg = this.add.image(width / 2, height / 2, 'bg_shop');
-    const scaleX = width / bg.width;
-    const scaleY = height / bg.height;
-    const bgScale = Math.max(scaleX, scaleY);
-    bg.setScale(bgScale);
-
-    // ─── Sidebar ───
-    const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
-    this.sidebar = new Sidebar(this, sidebarW, height);
-    this.sidebar.updateData({
-      title: 'SHOP',
-      roundScore: 0,
-      milesBase: 0,
-      mult: 0,
-      daysRemaining: GAMEPLAY.MAX_DAYS,
-      maxDays: GAMEPLAY.MAX_DAYS,
-      rerolls: GAMEPLAY.MAX_REROLLS,
-      maxRerolls: GAMEPLAY.MAX_REROLLS,
-      leg: player.leg,
-      totalLegs: 8,
-      targetMiles: GAMEPLAY.TARGET_MILES,
-    });
-    this.sidebar.setJourneyInfoCallback(() => {
-      new JourneyInfoModal(this, sidebarW, width - sidebarW, height);
-    });
-    this.sidebar.setOptionsCallback(() => {
-      new OptionsModal(this, sidebarW, width - sidebarW, height);
-    });
-
-    // ─── Main content area metrics ───
-    const contentL = sidebarW + UI.FELT_PADDING;
-    const contentR = width - UI.FELT_PADDING;
-    const contentW = contentR - contentL;
-
-    // ─── Equipment bar (top) ───
-    const equipBarH = UI.EQUIP_BAR_HEIGHT;
-    this.equipBar = new EquipmentBar(this, contentL, 8, contentW, equipBarH);
-
-    // ─── Supply slots placeholder (top-right) ───
-    const supplyX = width - UI.FELT_PADDING - UI.SUPPLY_SLOT_SIZE * 2 - UI.SUPPLY_SLOT_GAP;
-    const supplyY = 8;
-    const supplyBg = this.add.graphics();
-    for (let i = 0; i < 2; i++) {
-      const sx = supplyX + i * (UI.SUPPLY_SLOT_SIZE + UI.SUPPLY_SLOT_GAP);
-      supplyBg.fillStyle(COLORS.SIDEBAR_SECTION, 0.5);
-      supplyBg.fillRoundedRect(sx, supplyY, UI.SUPPLY_SLOT_SIZE, UI.SUPPLY_SLOT_SIZE, 6);
-      supplyBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.5);
-      supplyBg.strokeRoundedRect(sx, supplyY, UI.SUPPLY_SLOT_SIZE, UI.SUPPLY_SLOT_SIZE, 6);
-    }
-    this.add.text(supplyX + UI.SUPPLY_SLOT_SIZE + UI.SUPPLY_SLOT_GAP / 2, supplyY + UI.SUPPLY_SLOT_SIZE + 4, '0/2', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
-    }).setOrigin(0.5, 0);
+    const layout = createLayout(this, { bgKey: 'bg_shop', sidebarTitle: 'SHOP' });
+    this.sidebar = layout.sidebar;
+    this.equipBar = layout.equipBar;
+    this.dicePouch = layout.dicePouch;
+    const contentL = layout.contentX;
+    const contentW = layout.contentW;
 
     // ─── Layout constants ───
+    const equipBarH = UI.EQUIP_BAR_HEIGHT;
     const BOX_RADIUS = 12;
     const BOX_PAD = 16;          // padding inside boxes
     const BOX_GAP = 12;          // gap between the two boxes
@@ -125,7 +74,7 @@ export class ShopScene extends Scene {
     // Row heights (box inner height = card height + price tag + padding)
     const rowInnerH = CARD_H + PRICE_TAG_SPACE + BOX_PAD * 2;
 
-    // Top of first box
+    // Top of first box (below equipment/consumable bars)
     const box1Top = equipBarH + 20;
     const box1H = rowInnerH;
     const box2Top = box1Top + box1H + BOX_GAP;
@@ -246,12 +195,6 @@ export class ShopScene extends Scene {
 
       this.packCards.push(packCard);
     }
-
-    // ─── Dice Pouch (bottom-right) ───
-    this.dicePouch = new DicePouch(this, width - UI.POUCH_MARGIN - UI.POUCH_SIZE, height - UI.POUCH_MARGIN - UI.POUCH_SIZE);
-    this.dicePouch.setClickCallback(() => {
-      new DicePouchModal(this, sidebarW, width - sidebarW, height);
-    });
   }
 
   private onBuyPack(card: BoosterPackCard, pack: PackInstance): void {

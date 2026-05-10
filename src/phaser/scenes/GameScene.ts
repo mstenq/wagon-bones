@@ -14,9 +14,7 @@ import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { DicePouch } from '../ui/DicePouch';
-import { DicePouchModal } from '../ui/DicePouchModal';
-import { JourneyInfoModal } from '../ui/JourneyInfoModal';
-import { OptionsModal } from '../ui/OptionsModal';
+import { createLayout } from '../ui/SceneLayout';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { playScoreAnimation } from '../animations/ScoreAnimation';
 
@@ -39,8 +37,6 @@ export class GameScene extends Scene {
   private dicePouch: DicePouch;
 
   // Layout helpers
-  private contentX: number = 0;
-  private contentW: number = 0;
   private contentCX: number = 0;
   private sidebarW: number = 0;
 
@@ -104,38 +100,14 @@ export class GameScene extends Scene {
   }
 
   private buildLayout(): void {
-    const { width, height } = this.scale;
+    const { height } = this.scale;
 
-    // Background image (cover/fill - no stretching)
-    const bg = this.add.image(width / 2, height / 2, 'bg_1');
-    const scaleX = width / bg.width;
-    const scaleY = height / bg.height;
-    const scale = Math.max(scaleX, scaleY);
-    bg.setScale(scale);
-
-    // ─── Sidebar ───
-    this.sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
-    this.sidebar = new Sidebar(this, this.sidebarW, height);
-    this.sidebar.setJourneyInfoCallback(() => {
-      new JourneyInfoModal(this, this.sidebarW, width - this.sidebarW, height);
-    });
-    this.sidebar.setOptionsCallback(() => {
-      new OptionsModal(this, this.sidebarW, width - this.sidebarW, height);
-    });
-
-    // Content area metrics
-    this.contentX = this.sidebarW + UI.FELT_PADDING;
-    this.contentW = width - this.sidebarW - UI.FELT_PADDING * 2;
-    this.contentCX = this.sidebarW + (width - this.sidebarW) / 2;
-
-    // Game table felt area (right of sidebar)
-    const felt = this.add.graphics();
-    felt.fillStyle(COLORS.BG_FELT, UI.FELT_ALPHA);
-    felt.fillRoundedRect(this.sidebarW, 0, width - this.sidebarW, height, 0);
-
-    // ─── Equipment bar (top) ───
-    const equipBarH = UI.EQUIP_BAR_HEIGHT;
-    this.equipBar = new EquipmentBar(this, this.contentX, 8, this.contentW, equipBarH);
+    const layout = createLayout(this, { bgKey: 'bg_1' });
+    this.sidebar = layout.sidebar;
+    this.equipBar = layout.equipBar;
+    this.dicePouch = layout.dicePouch;
+    this.sidebarW = layout.sidebarW;
+    this.contentCX = layout.contentCX;
 
     // Instruction text
     this.instructionText = this.add.text(this.contentCX, height - 60, '', {
@@ -154,12 +126,6 @@ export class GameScene extends Scene {
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
 
     this.hideAllButtons();
-
-    // ─── Dice Pouch (bottom-right) ───
-    this.dicePouch = new DicePouch(this, width - UI.POUCH_MARGIN - UI.POUCH_SIZE, height - UI.POUCH_MARGIN - UI.POUCH_SIZE);
-    this.dicePouch.setClickCallback(() => {
-      new DicePouchModal(this, this.sidebarW, width - this.sidebarW, height);
-    });
 
     // Re-enter current phase
     this.enterCurrentPhase();

@@ -146,6 +146,8 @@ export class GameState {
     if (this.state.selectedForScore.length === 0) return null;
 
     const handResult: HandResult = detectBestHand(this.state.selectedForScore);
+    console.log('[SCORE] Step 0: Hand detected:', handResult.name, '| baseMiles:', handResult.baseMiles, '| baseMult:', handResult.baseMult);
+    console.log('[SCORE] Scoring dice:', this.state.selectedForScore.map(d => `${d.id}(pips:${d.pips}, aura:${d.aura}, enh:${d.enhancement})`).join(', '));
 
     // Apply hand level scaling before scoring
     const player = getPlayerState();
@@ -159,16 +161,24 @@ export class GameState {
       baseMiles: handResult.baseMiles + stats.milesPerLevel * levelBonus,
       baseMult: handResult.baseMult + stats.multPerLevel * levelBonus,
     };
+    if (levelBonus > 0) {
+      console.log('[SCORE] Hand level:', stats.level, '| +miles/lvl:', stats.milesPerLevel * levelBonus, '| +mult/lvl:', stats.multPerLevel * levelBonus);
+    }
+    console.log('[SCORE] After leveling: baseMiles:', leveledResult.baseMiles, '| baseMult:', leveledResult.baseMult);
 
-    const baseResult = scoreHand(leveledResult);
+    const baseResult = scoreHand(leveledResult, player.equipment);
+    console.log('[SCORE] After scoreHand: totalPips:', baseResult.totalPips, '| mult:', baseResult.mult, '| miles:', baseResult.miles);
 
     // Apply equipment effects
+    console.log('[SCORE] Equipment:', player.equipment.map(e => `${e.def.name}(${e.def.effectType}, aura:${e.def.aura?.id ?? 'none'})`).join(', ') || 'none');
     const result = applyEquipmentEffects(baseResult, player.equipment, {
       handResult: leveledResult,
       scoringDice: this.state.selectedForScore,
       rerollsRemaining: this.state.rerollsRemaining,
       equipmentCount: player.equipment.length,
     });
+
+    console.log('[SCORE] Final result: miles:', result.miles, '| mult:', result.mult);
 
     // Record hand played
     player.recordHandPlayed(handType);

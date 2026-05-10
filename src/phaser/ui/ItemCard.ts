@@ -5,7 +5,7 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { COLORS } from '../../game/Constants';
+import { COLORS, UI } from '../../game/Constants';
 import type { ItemAura } from '../../game/ItemsSystem';
 import { applyAuraGlow, createAuraParticles } from './AuraFX';
 
@@ -32,14 +32,14 @@ export interface ItemCardOptions {
   texturePrefix?: string;
 }
 
-const CARD_W = 165;
-const CARD_H = 235;
-const CARD_RADIUS = 12;
-const SHADOW_OFFSET = 4;
-const SHADOW_ALPHA = 0.35;
-const PRICE_TAG_H = 26;
-const PRICE_TAG_GAP = 6;
-const TOOLTIP_PAD = 10;
+const CARD_W = UI.CARD_W;
+const CARD_H = UI.CARD_H;
+const CARD_RADIUS = UI.CARD_RADIUS;
+const SHADOW_OFFSET = UI.CARD_SHADOW_OFFSET;
+const SHADOW_ALPHA = UI.CARD_SHADOW_ALPHA;
+const PRICE_TAG_H = UI.CARD_PRICE_TAG_H;
+const PRICE_TAG_GAP = UI.CARD_PRICE_TAG_GAP;
+const TOOLTIP_PAD = UI.CARD_TOOLTIP_PAD;
 const TOOLTIP_BG = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER = COLORS.TOOLTIP_BORDER;
 
