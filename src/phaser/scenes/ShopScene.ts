@@ -62,6 +62,9 @@ export class ShopScene extends Scene {
     const contentL = layout.contentX;
     const contentW = layout.contentW;
 
+    // Show equipment hints with default (shop) context
+    this.updateEquipHints();
+
     // ─── Layout constants ───
     const equipBarH = UI.EQUIP_BAR_HEIGHT;
     const BOX_RADIUS = 12;
@@ -220,6 +223,7 @@ export class ShopScene extends Scene {
       this.sound.play('sfx_coin', { volume: 0.5 });
       this.updateDisplays();
       this.equipBar.refresh();
+      this.updateEquipHints();
     }
   }
 
@@ -260,5 +264,9 @@ export class ShopScene extends Scene {
     this.cards = [];
     this.packCards = [];
     this.buildLayout();
+  }
+
+  private updateEquipHints(): void {
+    this.equipBar.updateHints(null, getPlayerState());
   }
 }

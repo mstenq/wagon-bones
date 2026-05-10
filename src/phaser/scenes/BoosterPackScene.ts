@@ -93,6 +93,9 @@ export class BoosterPackScene extends Scene {
     this.dicePouch = layout.dicePouch;
     this.contentCX = layout.contentCX;
 
+    // Show equipment hints
+    this.updateEquipHints();
+
     // ─── Pack name ───
     const equipBarH = UI.EQUIP_BAR_HEIGHT;
     const titleY = equipBarH + 16;
@@ -371,6 +374,7 @@ export class BoosterPackScene extends Scene {
 
     // Refresh shared UI to reflect changes
     this.equipBar.refresh();
+    this.updateEquipHints();
     this.dicePouch.refresh();
     this.sidebar.refreshMoney();
 
@@ -443,5 +447,9 @@ export class BoosterPackScene extends Scene {
     this.cardSprites = [];
     this.children.removeAll(true);
     this.buildLayout();
+  }
+
+  private updateEquipHints(): void {
+    this.equipBar.updateHints(null, getPlayerState());
   }
 }

@@ -19,7 +19,7 @@ export const GAMEPLAY = {
   STARTING_DICE: 10,
   STARTING_MONEY: 10,
   MAX_EQUIPMENT_SLOTS: 5,
-  SHOP_SLOTS: 2,
+  SHOP_SLOTS: 4,
   SHOP_REROLL_COST: 5,
 };
 
@@ -29,7 +29,7 @@ export const CHANCES = {
   DICE_AURA: 0.50,          // 50% chance for aura on pack dice (high for testing)
   AURA_HOLY: 0.10,          // 10% of auras are holy
   AURA_FIRE: 0.30,          // 30% of auras are fire (cumulative 40%)
-  AURA_ICY: 0.60,           // 60% of auras are icy  (remainder)
+  AURA_ICY: 0.10,           // 10% of auras are icy  (remainder)
 };
 
 // ─── Pack Weight Multipliers ───
@@ -117,9 +117,9 @@ export const UI = {
   SIDEBAR_SECTION_GAP: 8,
 
   // Equipment bar (top of main area, left 80%)
-  EQUIP_BAR_HEIGHT: 220,
+  EQUIP_BAR_HEIGHT: 250,
   EQUIP_BAR_RATIO: 0.8,
-  EQUIP_CARD_SCALE: 1,
+  EQUIP_CARD_SCALE: .9,
   EQUIP_CARD_SPACING: 160,
 
   // Consumable bar (top of main area, right 20%)
@@ -198,9 +198,9 @@ export const ANIM = {
   CARD_TILT_SCALE_AMOUNT: 0.06,       // scaleX foreshortening at max tilt
   CARD_TILT_LIFT: 1.05,               // scale-up when hovered (card "lifts" toward you)
   CARD_TILT_LERP: 0.15,              // lerp speed toward target tilt (0-1, lower = smoother)
-  CARD_DRAG_SWING_FACTOR: 0.003,      // rotation per px of velocity
-  CARD_DRAG_SWING_MAX: 0.18,          // radians, ~10° max swing
-  CARD_DRAG_SWING_DAMPING: 0.92,      // velocity damping per frame (higher = more inertia)
+  CARD_DRAG_SWING_FACTOR: 0.04,       // rotation per px of velocity
+  CARD_DRAG_SWING_MAX: 0.35,          // radians, ~20° max swing
+  CARD_DRAG_SWING_DAMPING: 0.75,      // velocity damping per frame (lower = more responsive)
   CARD_DRAG_SETTLE_DURATION: 500,     // ms to settle back after drop
   CARD_DRAG_LIFT_Y: -6,               // Y offset while dragging (card lifts up)
 };

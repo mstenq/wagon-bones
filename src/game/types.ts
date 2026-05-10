@@ -92,6 +92,8 @@ export interface RoundState {
   selectedForRoll: Die[];
   rolledDice: Die[];       // dice after rolling
   selectedForScore: Die[];
+  currentHandType: HandType | null; // hand type from most recent scoring (for hint display)
+  handHistory: HandType[];          // all hand types scored this round (for cards that check history)
 }
 
 export type GameEventType =

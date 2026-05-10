@@ -1,8 +1,13 @@
 // ─── Items System (No Phaser imports) ───
 // Equipment definitions, shop stock generation, aura system.
 
-import allItems from '../data/items.json';
+import allItems from '../data/items';
 import itemAurasData from '../data/item_auras.json';
+
+export type { HintSegment, HintStyle } from '../data/items';
+
+import type { GameState } from './GameState';
+import type { PlayerState } from './PlayerState';
 
 export interface ItemAura {
   id: string;
@@ -21,6 +26,7 @@ export interface EquipmentDef {
   effectType: string;
   effectParams: Record<string, unknown>;
   aura?: ItemAura | null;
+  hintDisplay?: (game: GameState | null, player: PlayerState) => import('../data/items').HintSegment[][];
 }
 
 export interface EquipmentInstance {

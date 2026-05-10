@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import allItems from '../../data/items.json';
+import allItems from '../../data/items';
 import allTrailGuides from '../../data/trail_guides.json';
 import allSupplyCards from '../../data/supply_cards.json';
 import allFrontierEncounters from '../../data/frontier_encounters.json';

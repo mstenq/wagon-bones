@@ -9,6 +9,8 @@ import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI, ANIM } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { ItemCard } from './ItemCard';
+import type { GameState } from '../../game/GameState';
+import type { PlayerState } from '../../game/PlayerState';
 
 export class EquipmentBar extends GameObjects.Container {
   private bg: GameObjects.Graphics;
@@ -92,7 +94,7 @@ export class EquipmentBar extends GameObjects.Container {
     const spacing = UI.EQUIP_CARD_SPACING;
     const totalW = (equipment.length - 1) * spacing;
     const startX = this.barWidth / 2 - totalW / 2;
-    const cy = this.barHeight / 2;
+    const cy = (this.barHeight / 2) - 20;
 
     for (let i = 0; i < equipment.length; i++) {
       const equip = equipment[i];
@@ -115,6 +117,13 @@ export class EquipmentBar extends GameObjects.Container {
   /** Get the card containers for animation purposes */
   getCards(): ItemCard[] {
     return this.cards;
+  }
+
+  /** Update all card hints with current game context */
+  updateHints(game: GameState | null, player: PlayerState): void {
+    for (const card of this.cards) {
+      card.updateHints(game, player);
+    }
   }
 
   // ─── Idle Wobble ───
@@ -274,6 +283,7 @@ export class EquipmentBar extends GameObjects.Container {
       this.stopWobble(card);
       this.hoveredCard = null;
       card.setDepth(200);
+      this.bringToTop(card);
       card.scaleX = 1.03;
       card.scaleY = 1.03;
     });
@@ -389,7 +399,6 @@ export class EquipmentBar extends GameObjects.Container {
       if (finalIndex !== this.dragStartIndex) {
         const player = getPlayerState();
         player.reorderEquipment(this.dragStartIndex, finalIndex);
-        this.scene.sound.play('sfx_card_slide1', { volume: 0.3 });
       }
 
       this.dragStartIndex = -1;

@@ -21,23 +21,30 @@ export interface ScoreAnimationConfig {
   onComplete: () => void;
 }
 
-/** Determine which equipment indices trigger for a specific die */
-function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _handType: string): number[] {
-  const triggered: number[] = [];
+/** Determine which equipment indices trigger for a specific die, with their contribution type */
+function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _handType: string): { index: number; type: 'mult' | 'miles'; value: number }[] {
+  const triggered: { index: number; type: 'mult' | 'miles'; value: number }[] = [];
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
     const { effectType, effectParams } = equip.def;
     const p = effectParams as Record<string, unknown>;
     switch (effectType) {
       case 'PIP_MULT':
-      case 'PIP_MILES':
-        if (die.pips === (p.pip as number)) triggered.push(i);
+        if (die.pips === (p.pip as number)) triggered.push({ index: i, type: 'mult', value: p.value as number });
         break;
-      case 'PARITY_MULT':
+      case 'PIP_MILES':
+        if (die.pips === (p.pip as number)) triggered.push({ index: i, type: 'miles', value: p.value as number });
+        break;
+      case 'PARITY_MULT': {
+        const parity = p.parity as string;
+        const matches = parity === 'odd' ? die.pips % 2 !== 0 : die.pips % 2 === 0;
+        if (matches) triggered.push({ index: i, type: 'mult', value: p.value as number });
+        break;
+      }
       case 'PARITY_MILES': {
         const parity = p.parity as string;
         const matches = parity === 'odd' ? die.pips % 2 !== 0 : die.pips % 2 === 0;
-        if (matches) triggered.push(i);
+        if (matches) triggered.push({ index: i, type: 'miles', value: p.value as number });
         break;
       }
     }
@@ -45,9 +52,9 @@ function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _hand
   return triggered;
 }
 
-/** Determine which equipment triggers independently (not per-die) */
-function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: string, context: { rerollsRemaining: number; scoringDice: Die[]; equipmentCount: number }): number[] {
-  const triggered: number[] = [];
+/** Determine which equipment triggers independently (not per-die), with contribution details */
+function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: string, context: { rerollsRemaining: number; scoringDice: Die[]; equipmentCount: number }): { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] {
+  const triggered: { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] = [];
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
     const { effectType, effectParams } = equip.def;
@@ -55,33 +62,43 @@ function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: 
     switch (effectType) {
       case 'ADD_MULT':
       case 'ADD_MULT_RISKY':
-        triggered.push(i);
+        triggered.push({ index: i, type: 'mult', value: p.value as number });
         break;
       case 'HAND_MULT':
+        if (handTypeMatches(handType, p.handType as string))
+          triggered.push({ index: i, type: 'mult', value: p.value as number });
+        break;
       case 'HAND_MILES':
-        if (handTypeMatches(handType, p.handType as string)) triggered.push(i);
+        if (handTypeMatches(handType, p.handType as string))
+          triggered.push({ index: i, type: 'miles', value: p.value as number });
         break;
-      case 'MILES_PER_UNUSED_REROLL':
-        if (context.rerollsRemaining > 0) triggered.push(i);
+      case 'MILES_PER_UNUSED_REROLL': {
+        const total = (p.value as number) * context.rerollsRemaining;
+        if (total > 0) triggered.push({ index: i, type: 'miles', value: total });
         break;
+      }
       case 'CONDITIONAL_MULT': {
         const condition = p.condition as string;
         let met = false;
         if (condition === 'SCORED_DICE_LTE') met = context.scoringDice.length <= (p.threshold as number);
         else if (condition === 'NO_REROLLS') met = context.rerollsRemaining === 0;
-        if (met) triggered.push(i);
+        if (met) triggered.push({ index: i, type: 'mult', value: p.value as number });
         break;
       }
       case 'MULT_PER_EQUIPMENT':
-        triggered.push(i);
+        triggered.push({ index: i, type: 'mult', value: (p.value as number) * context.equipmentCount });
         break;
     }
 
-    // Aura effects trigger independently (fire, icy, holy all contribute to scoring)
-    if (!triggered.includes(i) && equip.def.aura) {
+    // Aura effects
+    if (equip.def.aura) {
       const auraId = equip.def.aura.id;
-      if (auraId === 'fire' || auraId === 'icy' || auraId === 'holy') {
-        triggered.push(i);
+      if (auraId === 'fire') {
+        triggered.push({ index: i, type: 'mult', value: 10 });
+      } else if (auraId === 'icy') {
+        triggered.push({ index: i, type: 'miles', value: 50 });
+      } else if (auraId === 'holy') {
+        triggered.push({ index: i, type: 'xmult', value: 1.5 });
       }
     }
   }
@@ -134,11 +151,13 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   // Sound for hand detection
   scene.sound.play('sfx_chips1', { volume: 0.5 });
 
+  const EQUIP_STEP_DELAY = 250;
+
   let index = 0;
 
   function scoreNextDie() {
     if (index >= scoringSprites.length) {
-      // All dice scored — now trigger independent equipment
+      // All dice scored — now trigger independent equipment one by one
       const independentEquip = getIndependentTriggeredEquip(equipment, result.handResult.type, {
         rerollsRemaining: (result as any)._rerollsRemaining ?? 0,
         scoringDice: result.handResult.scoringDice,
@@ -152,11 +171,25 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             finishScoring();
             return;
           }
-          const eqI = independentEquip[equipIdx];
-          wiggleEquipCard(scene, equipBar, eqI);
-          scene.sound.play('sfx_multhit1', { volume: 0.35 });
+          const entry = independentEquip[equipIdx];
+          wiggleEquipCard(scene, equipBar, entry.index);
+
+          if (entry.type === 'mult') {
+            currentMult += entry.value;
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit1', { volume: 0.35, detune: equipIdx * 60 });
+          } else if (entry.type === 'miles') {
+            currentMiles += entry.value;
+            sidebar.setMilesAnimated(currentMiles);
+            scene.sound.play('sfx_chips2', { volume: 0.35, detune: equipIdx * 60 });
+          } else if (entry.type === 'xmult') {
+            currentMult = Math.floor(currentMult * entry.value);
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
+          }
+
           equipIdx++;
-          scene.time.delayedCall(180, triggerNextEquip);
+          scene.time.delayedCall(EQUIP_STEP_DELAY, triggerNextEquip);
         }
         scene.time.delayedCall(200, triggerNextEquip);
       } else {
@@ -210,23 +243,40 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       });
 
       // Add this die's pips to miles
-      currentMiles += die.pips;
+      const pipMiles = die.enhancement === 'stone' ? 50 : die.pips;
+      currentMiles += pipMiles;
       sidebar.setMilesAnimated(currentMiles);
       scene.sound.play('sfx_chips2', { volume: 0.3, detune: index * 80 });
 
-      // Wiggle equipment that triggers for this die
+      // Per-die equipment triggers — animate each one sequentially
       const triggered = getTriggeredEquipForDie(die, equipment, result.handResult.type);
       if (triggered.length > 0) {
-        scene.time.delayedCall(80, () => {
-          for (const eqI of triggered) {
-            wiggleEquipCard(scene, equipBar, eqI);
+        let tIdx = 0;
+        function triggerNextPerDie() {
+          if (tIdx >= triggered.length) {
+            index++;
+            scene.time.delayedCall(ANIM.SCORE_HIGHLIGHT_DURATION, scoreNextDie);
+            return;
           }
-          scene.sound.play('sfx_multhit2', { volume: 0.3 });
-        });
+          const entry = triggered[tIdx];
+          wiggleEquipCard(scene, equipBar, entry.index);
+          if (entry.type === 'mult') {
+            currentMult += entry.value;
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit1', { volume: 0.3 });
+          } else {
+            currentMiles += entry.value;
+            sidebar.setMilesAnimated(currentMiles);
+            scene.sound.play('sfx_chips2', { volume: 0.3, detune: 200 });
+          }
+          tIdx++;
+          scene.time.delayedCall(EQUIP_STEP_DELAY, triggerNextPerDie);
+        }
+        scene.time.delayedCall(120, triggerNextPerDie);
+      } else {
+        index++;
+        scene.time.delayedCall(ANIM.SCORE_HIGHLIGHT_DURATION + 100, scoreNextDie);
       }
-
-      index++;
-      scene.time.delayedCall(ANIM.SCORE_HIGHLIGHT_DURATION + 100, scoreNextDie);
     });
   }
 

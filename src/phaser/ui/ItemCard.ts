@@ -7,6 +7,9 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../game/Constants';
 import type { ItemAura } from '../../game/ItemsSystem';
+import type { HintSegment } from '../../game/ItemsSystem';
+import type { GameState } from '../../game/GameState';
+import type { PlayerState } from '../../game/PlayerState';
 import { applyAuraGlow, createAuraParticles } from './AuraFX';
 
 /** Generic data shape for any card type */
@@ -17,6 +20,7 @@ export interface CardData {
   cost?: number;
   rarity?: string;
   aura?: ItemAura | null;
+  hintDisplay?: (game: GameState | null, player: PlayerState) => HintSegment[][];
 }
 
 export interface ItemCardOptions {
@@ -71,6 +75,7 @@ export class ItemCard extends GameObjects.Container {
   private auraEmitters: GameObjects.Particles.ParticleEmitter[] = [];
   private auraTweens: Phaser.Tweens.Tween[] = [];
   private auraGlowCleanup: (() => void) | null = null;
+  private hintObjects: GameObjects.GameObject[] = [];
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -266,6 +271,130 @@ export class ItemCard extends GameObjects.Container {
         align: 'center',
       }).setOrigin(0.5);
       this.add(this.costText);
+    }
+  }
+
+  // ─── Hint Display ───
+
+  private static readonly HINT_COLORS: Record<string, { text: string; bg?: number }> = {
+    miles:      { text: '#55aaff' },
+    mult:       { text: '#ffffff', bg: 0xcc3333 },
+    xmult:      { text: '#ffffff', bg: 0xcc3333 },
+    odds:       { text: '#55cc55' },
+    inactive:   { text: '#777777' },
+    condition:  { text: '#ddaa44' },
+    active:     { text: '#55dd55' },
+    money:      { text: '#ffd700' },
+    text:       { text: '#7b7b7b' },
+    aura_fire:  { text: '#ff4500' },
+    aura_icy:   { text: '#00bfff' },
+    aura_holy:  { text: '#fffacd' },
+  };
+
+  /** Build aura bonus row if this card has a scoring aura */
+  private getAuraHintRow(): HintSegment[] | null {
+    const aura = this._def.aura;
+    if (!aura) return null;
+    switch (aura.id) {
+      case 'fire':
+        return [
+          { text: '+10', style: 'mult' },
+          { text: 'Fire', style: 'aura_fire' },
+        ];
+      case 'icy':
+        return [
+          { text: '+50', style: 'miles' },
+          { text: 'Icy', style: 'aura_icy' },
+        ];
+      case 'holy':
+        return [
+          { text: 'x1.5', style: 'xmult' },
+          { text: 'Holy', style: 'aura_holy' },
+        ];
+      default:
+        return null;
+    }
+  }
+
+  /** Render or update the hint rows below the card */
+  updateHints(game: GameState | null, player: PlayerState): void {
+    if (!this._def.hintDisplay && !this._def.aura) return;
+
+    const baseRows = this._def.hintDisplay ? this._def.hintDisplay(game, player) : [];
+    const auraRow = this.getAuraHintRow();
+    const rows = [...(baseRows || [])];
+    if (auraRow) rows.push(auraRow);
+    if (rows.length === 0) return;
+
+    // Clear previous hint objects
+    for (const obj of this.hintObjects) {
+      obj.destroy();
+    }
+    this.hintObjects = [];
+
+    const scale = this._options.cardScale ?? 1;
+    const fontSize = Math.round(18 * scale);
+    const padX = 3 * scale;
+    const padY = 1 * scale;
+    const chipRadius = 3 * scale;
+    const rowHeight = Math.round(15 * scale);
+    const rowGap = Math.round(10 * scale);
+    const startY = this._cardH / 2 + Math.round(12 * scale);
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length === 0) continue;
+
+      const rowY = startY + r * (rowHeight + rowGap) + rowHeight / 2;
+      const segGap = Math.round(3 * scale);
+
+      // Measure row width
+      let totalW = 0;
+      const measurements: { w: number; h: number }[] = [];
+      for (const seg of row) {
+        const hasBg = ItemCard.HINT_COLORS[seg.style]?.bg !== undefined;
+        const tmpText = this.scene.add.text(0, 0, seg.text, {
+          fontFamily: 'sans-serif',
+          fontSize: `${fontSize}px`,
+        });
+        const tw = tmpText.width;
+        const th = tmpText.height;
+        tmpText.destroy();
+        const segW = hasBg ? tw + padX * 2 : tw;
+        measurements.push({ w: segW, h: th });
+        totalW += segW;
+      }
+      // Add gaps between segments
+      totalW += segGap * (row.length - 1);
+
+      // Render segments centered
+      let curX = -totalW / 2;
+      for (let i = 0; i < row.length; i++) {
+        const seg = row[i];
+        const colors = ItemCard.HINT_COLORS[seg.style] ?? ItemCard.HINT_COLORS.text;
+        const { w: segW, h: segH } = measurements[i];
+        const hasBg = colors.bg !== undefined;
+
+        if (hasBg) {
+          const chipG = this.scene.add.graphics();
+          const chipW = segW;
+          const chipH = segH + padY * 2;
+          chipG.fillStyle(colors.bg!, 0.9);
+          chipG.fillRoundedRect(curX, rowY - chipH / 2, chipW, chipH, chipRadius);
+          this.add(chipG);
+          this.hintObjects.push(chipG);
+        }
+
+        const segText = this.scene.add.text(curX + segW / 2, rowY, seg.text, {
+          fontFamily: 'sans-serif',
+          fontSize: `${fontSize}px`,
+          color: colors.text,
+        }).setOrigin(0.5);
+        this.add(segText);
+        this.hintObjects.push(segText);
+
+        curX += segW + segGap;
+      }
     }
   }
 

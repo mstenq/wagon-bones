@@ -580,7 +580,10 @@ export class GameScene extends Scene {
       targetMiles: this.gameState.config.targetMiles,
     });
     if (this.dicePouch) this.dicePouch.refresh();
-    if (this.equipBar) this.equipBar.refresh();
+    if (this.equipBar) {
+      this.equipBar.refresh();
+      this.equipBar.updateHints(this.gameState, player);
+    }
   }
 
   // ─── Refresh Prompt ───

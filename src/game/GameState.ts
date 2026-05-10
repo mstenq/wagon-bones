@@ -59,6 +59,8 @@ export class GameState {
       selectedForRoll: [],
       rolledDice: [],
       selectedForScore: [],
+      currentHandType: null,
+      handHistory: [],
     };
   }
 
@@ -96,6 +98,7 @@ export class GameState {
 
     // Roll them
     this.state.rolledDice = rollDice(selected);
+    this.state.currentHandType = detectBestHand(this.state.rolledDice).type;
     this.emit('phase-change', this.state.phase);
     this.emit('dice-rolled', this.state.rolledDice);
     return true;
@@ -117,6 +120,7 @@ export class GameState {
     });
 
     this.state.rerollsRemaining--;
+    this.state.currentHandType = detectBestHand(this.state.rolledDice).type;
     this.emit('reroll-updated', this.state.rerollsRemaining);
     this.emit('dice-rolled', this.state.rolledDice);
     return true;
@@ -146,6 +150,8 @@ export class GameState {
     if (this.state.selectedForScore.length === 0) return null;
 
     const handResult: HandResult = detectBestHand(this.state.selectedForScore);
+    this.state.currentHandType = handResult.type;
+    this.state.handHistory.push(handResult.type);
     console.log('[SCORE] Step 0: Hand detected:', handResult.name, '| baseMiles:', handResult.baseMiles, '| baseMult:', handResult.baseMult);
     console.log('[SCORE] Scoring dice:', this.state.selectedForScore.map(d => `${d.id}(pips:${d.pips}, aura:${d.aura}, enh:${d.enhancement})`).join(', '));
 
@@ -235,6 +241,7 @@ export class GameState {
     this.state.selectedForRoll = [];
     this.state.rolledDice = [];
     this.state.selectedForScore = [];
+    this.state.currentHandType = null;
 
     // Reset re-rolls for the new day
     this.state.rerollsRemaining = this.config.maxRerolls;
