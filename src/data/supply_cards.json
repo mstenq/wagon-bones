@@ -1,0 +1,50 @@
+[
+  { "id": "coffee_tin", "name": "Coffee Tin", "description": "Create 2 iron dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "iron", "count": 2 } },
+  { "id": "buzzards", "name": "Buzzards", "description": "Create 2 bone dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "bone", "count": 2 } },
+  { "id": "rabbits_foot", "name": "Rabbit's Foot", "description": "Create 2 lucky dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "lucky", "count": 2 } },
+  { "id": "firewood", "name": "Firewood", "description": "Create 2 wooden dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "wooden", "count": 2 } },
+  { "id": "magnet", "name": "Magnet", "description": "Create one loaded dice (select 1-6)",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "loaded", "count": 1 } },
+  { "id": "pick_axe", "name": "Pick Axe", "description": "Create one diamond dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "diamond", "count": 1 } },
+  { "id": "pan_for_gold", "name": "Pan for Gold", "description": "Create 1 golden dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "gold", "count": 1 } },
+  { "id": "whisky_goggles", "name": "Whisky Goggles", "description": "Create one blurry dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "blurry", "count": 1 } },
+  { "id": "treasure_map", "name": "Treasure Map", "description": "Double your money (max $20)",
+    "instantEffect": { "type": "DOUBLE_MONEY", "maxGain": 20 } },
+  {
+    "id": "shallow_grave",
+    "name": "Shallow Grave",
+    "description": "Choose 2 from 5 random dice to destroy",
+    "diceSelection": {
+      "drawCount": 5,
+      "pickCount": 2,
+      "effectType": "DESTROY",
+      "effectParams": {}
+    }
+  },
+  { "id": "trade", "name": "Trade", "description": "Get money equal to equipment value (max $50)",
+    "instantEffect": { "type": "TRADE_EQUIPMENT", "maxGain": 50 } },
+  { "id": "doctor", "name": "Doctor", "description": "Creates 2 medicine cards" },
+  { "id": "compass", "name": "Compass", "description": "Get 2 random trail guides" },
+  { "id": "supply_cache", "name": "Supply Cache", "description": "Get 2 random supply cards" },
+  { "id": "ingenuity", "name": "Ingenuity", "description": "Get 1 random piece of equipment" },
+  {
+    "id": "mirage",
+    "name": "Mirage",
+    "description": "Pick 2 of 5 random dice — left becomes a copy of right",
+    "diceSelection": {
+      "drawCount": 5,
+      "pickCount": 2,
+      "effectType": "CLONE",
+      "effectParams": {}
+    }
+  },
+  { "id": "bless", "name": "Bless", "description": "1 in 4 chance to bless equipment with aura" },
+  { "id": "second_helpings", "name": "Second Helpings", "description": "Creates last used supply/trail guide" }
+]

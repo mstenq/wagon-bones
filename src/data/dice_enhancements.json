@@ -1,0 +1,56 @@
+[
+  {
+    "id": "bone",
+    "name": "Bone",
+    "description": "+4 Mult",
+    "color": "0xe8dcc8"
+  },
+  {
+    "id": "lucky",
+    "name": "Lucky",
+    "description": "1 in 5 chance for +20 Mult, 1 in 15 chance to win $20",
+    "color": "0xc8f0c8"
+  },
+  {
+    "id": "wooden",
+    "name": "Wooden",
+    "description": "+10 base miles",
+    "color": "0xc4a055"
+  },
+  {
+    "id": "iron",
+    "name": "Iron",
+    "description": "x1.5 Mult when not part of scored hand",
+    "color": "0xa8a8b0"
+  },
+  {
+    "id": "gold",
+    "name": "Gold",
+    "description": "Earn $1 when scored",
+    "color": "0xffe870"
+  },
+  {
+    "id": "loaded",
+    "name": "Loaded",
+    "description": "Double the odds of one chosen side being rolled",
+    "color": "0xf0a0a0"
+  },
+  {
+    "id": "diamond",
+    "name": "Diamond",
+    "description": "x2 Mult, 25% chance of cracking",
+    "color": "0xa0e8f0"
+  },
+  {
+    "id": "stone",
+    "name": "Stone",
+    "description": "No pips, counts as 50 base miles",
+    "color": "0x888888"
+  },
+  {
+    "id": "blurry",
+    "name": "Blurry",
+    "description": "Counts as any number in a straight",
+    "color": "0xd0c0f0"
+  }
+]

@@ -1,0 +1,218 @@
+[
+  {
+    "id": "horseshoe",
+    "name": "Horseshoe",
+    "cost": 2,
+    "rarity": "common",
+    "description": "+4 mult",
+    "effectType": "ADD_MULT",
+    "effectParams": { "value": 4 }
+  },
+  {
+    "id": "snake_eyes",
+    "name": "Snake Eyes",
+    "cost": 5,
+    "rarity": "common",
+    "description": "Scored 1s give +3 mult",
+    "effectType": "PIP_MULT",
+    "effectParams": { "pip": 1, "value": 3 }
+  },
+  {
+    "id": "double_deuces",
+    "name": "Double Deuces",
+    "cost": 5,
+    "rarity": "common",
+    "description": "Scored 2s give +3 mult",
+    "effectType": "PIP_MULT",
+    "effectParams": { "pip": 2, "value": 3 }
+  },
+  {
+    "id": "triad_totem",
+    "name": "Triad Totem",
+    "cost": 5,
+    "rarity": "common",
+    "description": "Scored 3s give +3 mult",
+    "effectType": "PIP_MULT",
+    "effectParams": { "pip": 3, "value": 3 }
+  },
+  {
+    "id": "four_aces_brand",
+    "name": "Four Aces Brand",
+    "cost": 5,
+    "rarity": "common",
+    "description": "Scored 4s give +3 mult",
+    "effectType": "PIP_MULT",
+    "effectParams": { "pip": 4, "value": 3 }
+  },
+  {
+    "id": "high_five",
+    "name": "High Five",
+    "cost": 5,
+    "rarity": "common",
+    "description": "Scored 5s give +3 mult",
+    "effectType": "PIP_MULT",
+    "effectParams": { "pip": 5, "value": 3 }
+  },
+  {
+    "id": "devils_dice",
+    "name": "Devil's Dice",
+    "cost": 5,
+    "rarity": "common",
+    "description": "Scored 6s give +3 mult",
+    "effectType": "PIP_MULT",
+    "effectParams": { "pip": 6, "value": 3 }
+  },
+  {
+    "id": "wedding_ring",
+    "name": "Wedding Ring",
+    "cost": 3,
+    "rarity": "common",
+    "description": "If played hand contains a pair +8 mult",
+    "effectType": "HAND_MULT",
+    "effectParams": { "handType": "PAIR", "value": 8 }
+  },
+  {
+    "id": "town_choir",
+    "name": "Town Choir",
+    "cost": 4,
+    "rarity": "common",
+    "description": "If played hand contains three of a kind +12 mult",
+    "effectType": "HAND_MULT",
+    "effectParams": { "handType": "THREE_OF_A_KIND", "value": 12 }
+  },
+  {
+    "id": "deputy_brothers",
+    "name": "Deputy Brothers",
+    "cost": 4,
+    "rarity": "common",
+    "description": "If played hand contains two pair +10 mult",
+    "effectType": "HAND_MULT",
+    "effectParams": { "handType": "TWO_PAIR", "value": 10 }
+  },
+  {
+    "id": "trail_markers",
+    "name": "Trail Markers",
+    "cost": 3,
+    "rarity": "common",
+    "description": "If played hand contains a 3 straight +6 mult",
+    "effectType": "HAND_MULT",
+    "effectParams": { "handType": "THREE_STRAIGHT", "value": 6 }
+  },
+  {
+    "id": "work_boots",
+    "name": "Work Boots",
+    "cost": 3,
+    "rarity": "common",
+    "description": "If played hand contains pair +50 miles",
+    "effectType": "HAND_MILES",
+    "effectParams": { "handType": "PAIR", "value": 50 }
+  },
+  {
+    "id": "buffalo_stampede",
+    "name": "Buffalo Stampede",
+    "cost": 4,
+    "rarity": "common",
+    "description": "If played hand contains three of a kind +100 miles",
+    "effectType": "HAND_MILES",
+    "effectParams": { "handType": "THREE_OF_A_KIND", "value": 100 }
+  },
+  {
+    "id": "trail_rations",
+    "name": "Trail Rations",
+    "cost": 5,
+    "rarity": "uncommon",
+    "description": "+30 miles per unused re-roll",
+    "effectType": "MILES_PER_UNUSED_REROLL",
+    "effectParams": { "value": 30 }
+  },
+  {
+    "id": "last_stand",
+    "name": "Last Stand",
+    "cost": 5,
+    "rarity": "uncommon",
+    "description": "+20 mult if 3 or fewer dice are scored",
+    "effectType": "CONDITIONAL_MULT",
+    "effectParams": { "condition": "SCORED_DICE_LTE", "threshold": 3, "value": 20 }
+  },
+  {
+    "id": "stubborn_mule",
+    "name": "Stubborn Mule",
+    "cost": 5,
+    "rarity": "uncommon",
+    "description": "+15 mult when 0 re-rolls remaining",
+    "effectType": "CONDITIONAL_MULT",
+    "effectParams": { "condition": "NO_REROLLS", "value": 15 }
+  },
+  {
+    "id": "toolbelt",
+    "name": "Toolbelt",
+    "cost": 4,
+    "rarity": "common",
+    "description": "+3 mult for each piece of equipment",
+    "effectType": "MULT_PER_EQUIPMENT",
+    "effectParams": { "value": 3 }
+  },
+  {
+    "id": "trail_boss",
+    "name": "Trail Boss",
+    "cost": 4,
+    "rarity": "common",
+    "description": "Sixes add +30 miles when scored",
+    "effectType": "PIP_MILES",
+    "effectParams": { "pip": 6, "value": 30 }
+  },
+  {
+    "id": "even_odds",
+    "name": "Even Odds",
+    "cost": 4,
+    "rarity": "common",
+    "description": "+4 mult when an even pip is scored",
+    "effectType": "PARITY_MULT",
+    "effectParams": { "parity": "even", "value": 4 }
+  },
+  {
+    "id": "odd_fellow",
+    "name": "Odd Fellow",
+    "cost": 4,
+    "rarity": "common",
+    "description": "+31 miles when an odd pip is scored",
+    "effectType": "PARITY_MILES",
+    "effectParams": { "parity": "odd", "value": 31 }
+  },
+  {
+    "id": "dynamite",
+    "name": "Dynamite",
+    "cost": 5,
+    "rarity": "uncommon",
+    "description": "+15 mult. 1 in 6 chance to be destroyed at end of round.",
+    "effectType": "ADD_MULT_RISKY",
+    "effectParams": { "value": 15, "destroyChance": [1, 6] }
+  },
+  {
+    "id": "extra_saddlebag",
+    "name": "Extra Saddlebag",
+    "cost": 4,
+    "rarity": "common",
+    "description": "refresh your spent dice for free 1 time a round",
+    "effectType": "REFRESH_SPENT_DICE",
+    "effectParams": { "value": 1 }
+  },
+  {
+    "id": "spare_holster",
+    "name": "Spare Holster",
+    "cost": 4,
+    "rarity": "common",
+    "description": "+1 re-roll per day",
+    "effectType": "MODIFY_REROLLS",
+    "effectParams": { "value": 1 }
+  },
+  {
+    "id": "payday",
+    "name": "Payday",
+    "cost": 6,
+    "rarity": "uncommon",
+    "description": "Earn $4 at end of round",
+    "effectType": "END_ROUND_MONEY",
+    "effectParams": { "value": 4 }
+  }
+]
