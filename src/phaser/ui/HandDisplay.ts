@@ -3,6 +3,7 @@
 
 import { GameObjects, Scene } from 'phaser';
 import { ScoreResult } from '../../game/types';
+import { TEXT_COLORS, FONTS } from '../../game/Constants';
 
 export class HandDisplay extends GameObjects.Container {
   private handName: GameObjects.Text;
@@ -13,23 +14,23 @@ export class HandDisplay extends GameObjects.Container {
     super(scene, x, y);
 
     this.handName = scene.add.text(0, 0, '', {
-      fontFamily: 'Arial Black',
+      fontFamily: FONTS.HEADING,
       fontSize: '28px',
-      color: '#ffcc00',
+      color: TEXT_COLORS.GOLD,
       align: 'center',
     }).setOrigin(0.5);
 
     this.scoreText = scene.add.text(0, 40, '', {
-      fontFamily: 'Arial',
+      fontFamily: FONTS.PRIMARY,
       fontSize: '22px',
-      color: '#ffffff',
+      color: TEXT_COLORS.PRIMARY,
       align: 'center',
     }).setOrigin(0.5);
 
     this.detailText = scene.add.text(0, 70, '', {
-      fontFamily: 'Arial',
+      fontFamily: FONTS.PRIMARY,
       fontSize: '16px',
-      color: '#aaaaaa',
+      color: TEXT_COLORS.MUTED,
       align: 'center',
     }).setOrigin(0.5);
 

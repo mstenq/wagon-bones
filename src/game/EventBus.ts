@@ -1,4 +1,21 @@
-import { Events } from 'phaser';
+import { Events as PhaserEvents } from 'phaser';
 
 // Used to emit events between components, HTML and Phaser scenes
-export const EventBus = new Events.EventEmitter();
+export const EventBus = new PhaserEvents.EventEmitter();
+
+// Event name constants — use domain:action naming
+export const Events = {
+  // Scene domain
+  SCENE_READY: 'scene:ready',
+
+  // Game domain
+  PHASE_CHANGED: 'game:phase-changed',
+  HAND_UPDATED: 'game:hand-updated',
+  DICE_ROLLED: 'game:dice-rolled',
+  SCORE_CALCULATED: 'game:score-calculated',
+  DAY_ENDED: 'game:day-ended',
+  ROUND_WON: 'game:round-won',
+  ROUND_LOST: 'game:round-lost',
+  REROLL_UPDATED: 'game:reroll-updated',
+  SPENT_REFRESHED: 'game:spent-refreshed',
+} as const;

@@ -5,7 +5,7 @@
 
 import {
   RoundState, GameConfig, DEFAULT_CONFIG,
-  HandResult, ScoreResult, GameEventType, GameEventCallback,
+  HandResult, ScoreResult, GameEventType, GameEventCallback, HandType,
 } from './types';
 import {
   rollDice, detectBestHand, scoreHand,
@@ -146,16 +146,32 @@ export class GameState {
     if (this.state.selectedForScore.length === 0) return null;
 
     const handResult: HandResult = detectBestHand(this.state.selectedForScore);
-    const baseResult = scoreHand(handResult);
+
+    // Apply hand level scaling before scoring
+    const player = getPlayerState();
+    const handType = handResult.type as HandType;
+    const stats = player.getHandStats(handType);
+
+    // Each level above 1 adds milesPerLevel/multPerLevel from trail guide data
+    const levelBonus = stats.level - 1;
+    const leveledResult = {
+      ...handResult,
+      baseMiles: handResult.baseMiles + stats.milesPerLevel * levelBonus,
+      baseMult: handResult.baseMult + stats.multPerLevel * levelBonus,
+    };
+
+    const baseResult = scoreHand(leveledResult);
 
     // Apply equipment effects
-    const player = getPlayerState();
     const result = applyEquipmentEffects(baseResult, player.equipment, {
-      handResult,
+      handResult: leveledResult,
       scoringDice: this.state.selectedForScore,
       rerollsRemaining: this.state.rerollsRemaining,
       equipmentCount: player.equipment.length,
     });
+
+    // Record hand played
+    player.recordHandPlayed(handType);
 
     this.state.totalMiles += result.miles;
     this.state.phase = 'DAY_END';

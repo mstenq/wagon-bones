@@ -3,12 +3,13 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
+import { COLORS, TEXT_COLORS } from '../../game/Constants';
 
-const DEFAULT_BG = 0x3a3a5c;
-const HOVER_BG = 0x5a5a8c;
-const DISABLED_BG = 0x2a2a3a;
-const TEXT_COLOR = '#ffffff';
-const DISABLED_TEXT = '#666666';
+const DEFAULT_BG = COLORS.BTN_DEFAULT;
+const HOVER_BG = COLORS.BTN_HOVER;
+const DISABLED_BG = COLORS.BTN_DISABLED;
+const TEXT_COLOR = TEXT_COLORS.PRIMARY;
+const DISABLED_TEXT = TEXT_COLORS.DISABLED;
 
 export class Button extends GameObjects.Container {
   private bg: GameObjects.Graphics;
@@ -40,7 +41,14 @@ export class Button extends GameObjects.Container {
 
     this.on('pointerover', () => { if (this._enabled) this.drawBg(HOVER_BG); });
     this.on('pointerout', () => { if (this._enabled) this.drawBg(DEFAULT_BG); });
-    this.on('pointerdown', () => { if (this._enabled && this.onClickCallback) this.onClickCallback(); });
+    this.on('pointerdown', () => {
+      if (this._enabled && this.onClickCallback) {
+        if (this.scene.sound?.get('sfx_button') || this.scene.cache?.audio?.exists('sfx_button')) {
+          this.scene.sound.play('sfx_button', { volume: 0.4 });
+        }
+        this.onClickCallback();
+      }
+    });
 
     this.drawBg(DEFAULT_BG);
     scene.add.existing(this);

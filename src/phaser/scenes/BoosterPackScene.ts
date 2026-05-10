@@ -1,18 +1,28 @@
 // ─── BoosterPackScene ───
 // Opened when player buys a booster pack. Shows N cards, player picks some.
 // Then returns to Shop.
+// Balatro-inspired layout: sidebar left, equipment top, cards center, pouch bottom-right.
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { PackDefinition, PackItem, InstantEffect, generatePackContents } from '../../game/BoosterPackSystem';
 import { getPlayerState } from '../../game/PlayerState';
 import { createDie } from '../../game/DiceSystem';
-import { DiceEnhancement } from '../../game/types';
+import { generateRandomEquipment } from '../../game/ItemsSystem';
+import { DiceEnhancement, HandType } from '../../game/types';
+import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ItemCard } from '../ui/ItemCard';
+import { Sidebar } from '../ui/Sidebar';
+import { EquipmentBar } from '../ui/EquipmentBar';
+import { DicePouch } from '../ui/DicePouch';
+import { DicePouchModal } from '../ui/DicePouchModal';
+import { JourneyInfoModal } from '../ui/JourneyInfoModal';
+import { OptionsModal } from '../ui/OptionsModal';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
 import pipEnhancementsData from '../../data/pip_enhancements.json';
+import trailGuidesData from '../../data/trail_guides.json';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
 const PIP_INFO = new Map(pipEnhancementsData.map(p => [p.id, p]));
@@ -48,6 +58,16 @@ export class BoosterPackScene extends Scene {
   private skipBtn: Button;
   private picksText: Phaser.GameObjects.Text;
 
+  // Shared UI
+  private sidebar: Sidebar;
+  private equipBar: EquipmentBar;
+  private dicePouch: DicePouch;
+
+  // Layout helpers
+  private sidebarW: number = 0;
+  private contentCX: number = 0;
+  private cardY: number = 0;
+
   constructor() {
     super('BoosterPack');
   }
@@ -69,44 +89,82 @@ export class BoosterPackScene extends Scene {
 
   private buildLayout(): void {
     const { width, height } = this.scale;
+    const player = getPlayerState();
 
-    // Background (dark overlay)
+    // Full-screen background
     const bg = this.add.graphics();
-    bg.fillStyle(0x0a0a1a, 1);
+    bg.fillStyle(COLORS.BG_PRIMARY, 1);
     bg.fillRect(0, 0, width, height);
 
-    // Pack name
-    this.add.text(width / 2, height * 0.08, this.packDef.name, {
-      fontFamily: 'Arial Black',
-      fontSize: '32px',
-      color: '#ffffff',
+    // ─── Sidebar ───
+    this.sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
+    this.sidebar = new Sidebar(this, this.sidebarW, height);
+    this.sidebar.updateData({
+      title: 'BOOSTER PACK',
+      roundScore: 0,
+      milesBase: 0,
+      mult: 0,
+      daysRemaining: GAMEPLAY.MAX_DAYS,
+      maxDays: GAMEPLAY.MAX_DAYS,
+      rerolls: GAMEPLAY.MAX_REROLLS,
+      maxRerolls: GAMEPLAY.MAX_REROLLS,
+      leg: player.leg,
+      totalLegs: 8,
+      targetMiles: GAMEPLAY.TARGET_MILES,
+    });
+    this.sidebar.setJourneyInfoCallback(() => {
+      new JourneyInfoModal(this, this.sidebarW, width - this.sidebarW, height);
+    });
+    this.sidebar.setOptionsCallback(() => {
+      new OptionsModal(this, this.sidebarW, width - this.sidebarW, height);
+    });
+
+    // ─── Main content area ───
+    const contentX = this.sidebarW + UI.FELT_PADDING;
+    const contentW = width - this.sidebarW - UI.FELT_PADDING * 2;
+    this.contentCX = this.sidebarW + (width - this.sidebarW) / 2;
+
+    // Content area felt
+    const felt = this.add.graphics();
+    felt.fillStyle(COLORS.BG_FELT, UI.FELT_ALPHA);
+    felt.fillRoundedRect(this.sidebarW, 0, width - this.sidebarW, height, 0);
+
+    // ─── Equipment bar (top) ───
+    const equipBarH = UI.EQUIP_BAR_HEIGHT;
+    this.equipBar = new EquipmentBar(this, contentX, 8, contentW, equipBarH);
+
+    // ─── Pack name ───
+    const titleY = equipBarH + 16;
+    this.add.text(this.contentCX, titleY, this.packDef.name, {
+      fontFamily: FONTS.HEADING,
+      fontSize: '28px',
+      color: TEXT_COLORS.PRIMARY,
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5);
 
     // Instructions
-    this.picksText = this.add.text(width / 2, height * 0.16, '', {
-      fontFamily: 'Arial',
-      fontSize: '18px',
-      color: '#cccccc',
+    this.picksText = this.add.text(this.contentCX, titleY + 36, '', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '16px',
+      color: TEXT_COLORS.SECONDARY,
     }).setOrigin(0.5);
     this.updatePicksText();
 
     // Cards
     const totalCardsWidth = (this.contents.length - 1) * CARD_SPACING;
-    const startX = width / 2 - totalCardsWidth / 2;
-    const cardY = height * 0.48;
+    const startX = this.contentCX - totalCardsWidth / 2;
+    this.cardY = titleY + 80 + CARD_H / 2;
 
     for (let i = 0; i < this.contents.length; i++) {
       const item = this.contents[i];
       const x = startX + i * CARD_SPACING;
-      const { container, diceSprite, itemCard } = this.createCardDisplay(x, cardY, item);
+      const { container, diceSprite, itemCard } = this.createCardDisplay(x, this.cardY, item);
 
       const sprite: CardSprite = { container, item, selected: false, index: i, diceSprite: diceSprite ?? undefined, itemCard: itemCard ?? undefined };
       this.cardSprites.push(sprite);
 
       container.on('pointerdown', () => this.onCardClick(sprite));
-      // Forward clicks from embedded interactive children to the card handler
       if (diceSprite) {
         diceSprite.on('pointerdown', () => this.onCardClick(sprite));
       }
@@ -126,13 +184,19 @@ export class BoosterPackScene extends Scene {
     }
 
     // Buttons
-    const btnY = height * 0.85;
-    this.confirmBtn = new Button(this, width / 2 - 100, btnY, 'Take Selected', 180, 44);
+    const btnY = height - 36;
+    this.confirmBtn = new Button(this, this.contentCX - 100, btnY, 'Take Selected', 180, 44);
     this.confirmBtn.setEnabled(false);
     this.confirmBtn.onClick(() => this.onConfirm());
 
-    this.skipBtn = new Button(this, width / 2 + 100, btnY, 'Skip All', 140, 44);
+    this.skipBtn = new Button(this, this.contentCX + 100, btnY, 'Skip All', 140, 44);
     this.skipBtn.onClick(() => this.onSkip());
+
+    // ─── Dice Pouch (bottom-right) ───
+    this.dicePouch = new DicePouch(this, width - UI.POUCH_MARGIN - UI.POUCH_SIZE, height - UI.POUCH_MARGIN - UI.POUCH_SIZE);
+    this.dicePouch.setClickCallback(() => {
+      new DicePouchModal(this, this.sidebarW, width - this.sidebarW, height);
+    });
   }
 
   private createCardDisplay(x: number, y: number, item: PackItem): { container: Phaser.GameObjects.Container, diceSprite: DiceSprite | null, itemCard: ItemCard | null } {
@@ -163,7 +227,7 @@ export class BoosterPackScene extends Scene {
       const enhInfo = item.die.enhancement ? ENHANCEMENT_INFO.get(item.die.enhancement) : null;
       const enhName = enhInfo ? enhInfo.name : 'Standard';
       const titleText = this.add.text(0, -CARD_H / 2 + 16, enhName, {
-        fontFamily: 'Arial Black',
+        fontFamily: FONTS.HEADING,
         fontSize: '15px',
         color: '#3a3020',
         align: 'center',
@@ -186,7 +250,7 @@ export class BoosterPackScene extends Scene {
       }
       if (descLines.length > 0) {
         const descText = this.add.text(0, CARD_H / 2 - 12, descLines.join('\n'), {
-          fontFamily: 'Arial',
+          fontFamily: FONTS.PRIMARY,
           fontSize: '11px',
           color: '#5a4a2a',
           align: 'center',
@@ -216,25 +280,25 @@ export class BoosterPackScene extends Scene {
       // ─── Other non-dice, non-equipment cards ───
       const catLabel = item.category.replace('_', ' ').toUpperCase();
       const catText = this.add.text(0, -CARD_H / 2 + 14, catLabel, {
-        fontFamily: 'Arial',
+        fontFamily: FONTS.PRIMARY,
         fontSize: '10px',
-        color: '#aaaaaa',
+        color: TEXT_COLORS.MUTED,
       }).setOrigin(0.5, 0);
       container.add(catText);
 
       const nameText = this.add.text(0, -20, item.name, {
-        fontFamily: 'Arial',
+        fontFamily: FONTS.PRIMARY,
         fontSize: '14px',
-        color: '#ffffff',
+        color: TEXT_COLORS.PRIMARY,
         align: 'center',
         wordWrap: { width: CARD_W - 16 },
       }).setOrigin(0.5, 0.5);
       container.add(nameText);
 
       const descText = this.add.text(0, 20, item.description, {
-        fontFamily: 'Arial',
+        fontFamily: FONTS.PRIMARY,
         fontSize: '11px',
-        color: '#cccccc',
+        color: TEXT_COLORS.SECONDARY,
         align: 'center',
         wordWrap: { width: CARD_W - 16 },
       }).setOrigin(0.5, 0);
@@ -259,6 +323,15 @@ export class BoosterPackScene extends Scene {
       this.drawSelectionBorder(sprite, false);
     } else {
       if (this.picksRemaining <= 0) return;
+
+      // Block selection if card needs an equipment slot and none are free
+      if (this.cardNeedsEquipSlot(sprite.item)) {
+        const player = getPlayerState();
+        const selectedEquipCount = this.cardSprites
+          .filter(s => s.selected && this.cardNeedsEquipSlot(s.item)).length;
+        if (player.equipmentSlotsFree <= selectedEquipCount) return;
+      }
+
       sprite.selected = true;
       this.picksRemaining--;
       this.drawSelectionBorder(sprite, true);
@@ -268,6 +341,13 @@ export class BoosterPackScene extends Scene {
     const selectedCount = this.cardSprites.filter(s => s.selected).length;
     this.confirmBtn.setEnabled(selectedCount > 0);
     this.confirmBtn.setText(selectedCount > 0 ? `Take ${selectedCount}` : 'Take Selected');
+  }
+
+  /** Check if a pack item would consume an equipment slot */
+  private cardNeedsEquipSlot(item: PackItem): boolean {
+    if (item.category === 'equipment' && item.equipmentDef) return true;
+    if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
+    return false;
   }
 
   private drawSelectionBorder(sprite: CardSprite, selected: boolean): void {
@@ -290,7 +370,7 @@ export class BoosterPackScene extends Scene {
 
       this.tweens.add({ targets: container, y: container.y - 10, duration: 100 });
     } else {
-      this.tweens.add({ targets: container, y: this.scale.height * 0.48, duration: 100 });
+      this.tweens.add({ targets: container, y: this.cardY, duration: 100 });
     }
   }
 
@@ -320,6 +400,12 @@ export class BoosterPackScene extends Scene {
         }
       } else if (item.category === 'dice' && item.die) {
         player.addDie(item.die);
+      } else if (item.category === 'trail_guide' && item.trailGuideId) {
+        // Look up trail guide data and upgrade the corresponding hand level
+        const tg = trailGuidesData.find(t => t.id === item.trailGuideId);
+        if (tg) {
+          player.upgradeHandLevel(tg.handType as HandType);
+        }
       } else if (item.instantEffect) {
         this.applyInstantEffect(item.instantEffect, player);
       } else if (item.diceSelection) {
@@ -327,6 +413,11 @@ export class BoosterPackScene extends Scene {
       }
       // Other categories are stubs for now
     }
+
+    // Refresh shared UI to reflect changes
+    this.equipBar.refresh();
+    this.dicePouch.refresh();
+    this.sidebar.refreshMoney();
 
     // If any cards require dice selection, chain to DiceSelectionScene
     if (diceSelections.length > 0) {
@@ -362,6 +453,28 @@ export class BoosterPackScene extends Scene {
         const totalValue = player.equipment.reduce((sum, eq) => sum + eq.sellValue, 0);
         const gain = Math.min(totalValue, effect.maxGain ?? 50);
         player.economy.earn(gain);
+        break;
+      }
+      case 'UPGRADE_ALL_HANDS': {
+        for (const type of Object.values(HandType)) {
+          player.upgradeHandLevel(type);
+        }
+        break;
+      }
+      case 'CREATE_EQUIPMENT': {
+        if (player.equipmentSlotsFree > 0) {
+          const def = generateRandomEquipment({
+            rarity: effect.rarity,
+            excludeRarity: effect.excludeRarity,
+          });
+          player.equipment.push({
+            def,
+            sellValue: Math.max(1, Math.floor(def.cost / 2)),
+          });
+        }
+        if (effect.setMoneyZero) {
+          player.economy.spend(player.economy.balance);
+        }
         break;
       }
     }

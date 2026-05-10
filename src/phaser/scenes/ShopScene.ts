@@ -1,27 +1,36 @@
 // ─── ShopScene ───
 // Shop that appears before each round. Buy equipment with your money.
+// Balatro-inspired layout: sidebar left, equipment top, shop center, pouch bottom-right.
 
 import { Scene } from 'phaser';
-import { EventBus } from '../../game/EventBus';
+import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
+import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
 import { generateShopStock, EquipmentDef } from '../../game/ItemsSystem';
 import { generateShopPacks, PackInstance } from '../../game/BoosterPackSystem';
 import { ItemCard } from '../ui/ItemCard';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
+import { Sidebar } from '../ui/Sidebar';
+import { EquipmentBar } from '../ui/EquipmentBar';
+import { DicePouch } from '../ui/DicePouch';
+import { DicePouchModal } from '../ui/DicePouchModal';
+import { JourneyInfoModal } from '../ui/JourneyInfoModal';
+import { OptionsModal } from '../ui/OptionsModal';
 
 const CARD_SPACING = 185;
-const PACK_SPACING = 140;
 
 export class ShopScene extends Scene {
   private stock: EquipmentDef[];
   private packs: PackInstance[];
   private cards: ItemCard[] = [];
   private packCards: BoosterPackCard[] = [];
-  private moneyText: Phaser.GameObjects.Text;
-  private slotsText: Phaser.GameObjects.Text;
   private rerollBtn: Button;
-  private ownedContainer: Phaser.GameObjects.Container;
+
+  // Shared UI
+  private sidebar: Sidebar;
+  private equipBar: EquipmentBar;
+  private dicePouch: DicePouch;
 
   constructor() {
     super('Shop');
@@ -29,7 +38,6 @@ export class ShopScene extends Scene {
 
   create() {
     const player = getPlayerState();
-    // Only generate new stock/packs on first create, not when returning from pack scene
     if (!this.stock) {
       this.stock = generateShopStock(player.shopSlots);
     }
@@ -40,63 +48,126 @@ export class ShopScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
-      // Clear stock/packs when leaving shop entirely (going to Game)
     });
 
     this.buildLayout();
-    EventBus.emit('current-scene-ready', this);
+    EventBus.emit(Events.SCENE_READY, this);
   }
 
   private buildLayout(): void {
     const { width, height } = this.scale;
     const player = getPlayerState();
 
-    // Background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a2e, 1);
-    bg.fillRect(0, 0, width, height);
+    // Background image (cover/fill - no stretching)
+    const bg = this.add.image(width / 2, height / 2, 'bg_shop');
+    const scaleX = width / bg.width;
+    const scaleY = height / bg.height;
+    const bgScale = Math.max(scaleX, scaleY);
+    bg.setScale(bgScale);
 
-    // Shop sign
-    this.add.text(width / 2, height * 0.05, 'GENERAL STORE', {
-      fontFamily: 'Arial Black',
-      fontSize: '32px',
-      color: '#ffcc00',
-      stroke: '#000000',
-      strokeThickness: 4,
-      align: 'center',
-    }).setOrigin(0.5);
+    // ─── Sidebar ───
+    const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
+    this.sidebar = new Sidebar(this, sidebarW, height);
+    this.sidebar.updateData({
+      title: 'SHOP',
+      roundScore: 0,
+      milesBase: 0,
+      mult: 0,
+      daysRemaining: GAMEPLAY.MAX_DAYS,
+      maxDays: GAMEPLAY.MAX_DAYS,
+      rerolls: GAMEPLAY.MAX_REROLLS,
+      maxRerolls: GAMEPLAY.MAX_REROLLS,
+      leg: player.leg,
+      totalLegs: 8,
+      targetMiles: GAMEPLAY.TARGET_MILES,
+    });
+    this.sidebar.setJourneyInfoCallback(() => {
+      new JourneyInfoModal(this, sidebarW, width - sidebarW, height);
+    });
+    this.sidebar.setOptionsCallback(() => {
+      new OptionsModal(this, sidebarW, width - sidebarW, height);
+    });
 
-    // Money display
-    this.moneyText = this.add.text(width * 0.08, height * 0.12, `$${player.economy.balance}`, {
-      fontFamily: 'Arial Black',
-      fontSize: '24px',
-      color: '#ffd700',
-    }).setOrigin(0, 0.5);
+    // ─── Main content area metrics ───
+    const contentL = sidebarW + UI.FELT_PADDING;
+    const contentR = width - UI.FELT_PADDING;
+    const contentW = contentR - contentL;
 
-    // Equipment slots display
-    this.slotsText = this.add.text(width * 0.92, height * 0.12, `Slots: ${player.equipmentSlotsFree}/${player.maxEquipmentSlots}`, {
-      fontFamily: 'Arial',
-      fontSize: '16px',
-      color: '#aaaaaa',
-    }).setOrigin(1, 0.5);
+    // ─── Equipment bar (top) ───
+    const equipBarH = UI.EQUIP_BAR_HEIGHT;
+    this.equipBar = new EquipmentBar(this, contentL, 8, contentW, equipBarH);
 
-    // ─── Equipment for sale section ───
-    // Reroll shop button (left of equipment cards)
-    this.rerollBtn = new Button(this, width * 0.12, height * 0.30, `Reroll\n$${player.shopRerollCost}`, 90, 50);
+    // ─── Supply slots placeholder (top-right) ───
+    const supplyX = width - UI.FELT_PADDING - UI.SUPPLY_SLOT_SIZE * 2 - UI.SUPPLY_SLOT_GAP;
+    const supplyY = 8;
+    const supplyBg = this.add.graphics();
+    for (let i = 0; i < 2; i++) {
+      const sx = supplyX + i * (UI.SUPPLY_SLOT_SIZE + UI.SUPPLY_SLOT_GAP);
+      supplyBg.fillStyle(COLORS.SIDEBAR_SECTION, 0.5);
+      supplyBg.fillRoundedRect(sx, supplyY, UI.SUPPLY_SLOT_SIZE, UI.SUPPLY_SLOT_SIZE, 6);
+      supplyBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.5);
+      supplyBg.strokeRoundedRect(sx, supplyY, UI.SUPPLY_SLOT_SIZE, UI.SUPPLY_SLOT_SIZE, 6);
+    }
+    this.add.text(supplyX + UI.SUPPLY_SLOT_SIZE + UI.SUPPLY_SLOT_GAP / 2, supplyY + UI.SUPPLY_SLOT_SIZE + 4, '0/2', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+    }).setOrigin(0.5, 0);
+
+    // ─── Layout constants ───
+    const BOX_RADIUS = 12;
+    const BOX_PAD = 16;          // padding inside boxes
+    const BOX_GAP = 12;          // gap between the two boxes
+    const CARD_H = 235;
+    const PRICE_TAG_SPACE = 36;  // room above cards for price tags
+    const BTN_COL_W = 130;
+
+    // Row heights (box inner height = card height + price tag + padding)
+    const rowInnerH = CARD_H + PRICE_TAG_SPACE + BOX_PAD * 2;
+
+    // Top of first box
+    const box1Top = equipBarH + 20;
+    const box1H = rowInnerH;
+    const box2Top = box1Top + box1H + BOX_GAP;
+    const box2H = rowInnerH;
+
+    // Card center Y (same for both rows — vertically centered in box, shifted down for price tags)
+    const cardCY1 = box1Top + BOX_PAD + PRICE_TAG_SPACE + CARD_H / 2;
+    const cardCY2 = box2Top + BOX_PAD + PRICE_TAG_SPACE + CARD_H / 2;
+
+    // ─── Box 1: Shop items + action buttons ───
+    const shopBox = this.add.graphics();
+    shopBox.fillStyle(0x0d0d1a, 0.75);
+    shopBox.fillRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
+    shopBox.lineStyle(2, 0x333355, 0.6);
+    shopBox.strokeRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
+
+    // Action buttons (left side of box 1)
+    const btnColX = contentL + BOX_PAD + BTN_COL_W / 2 - 6;
+    const btnW = BTN_COL_W - 16;
+    const btnH = 52;
+
+    new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
+      .onClick(() => {
+        this.stock = null!;
+        this.packs = null!;
+        this.scene.start('Game');
+      });
+
+    this.rerollBtn = new Button(this, btnColX, cardCY1 + btnH / 2 + 8, `Reroll\n$${player.shopRerollCost}`, btnW, btnH);
     this.rerollBtn.setEnabled(player.canRerollShop());
     this.rerollBtn.onClick(() => this.onRerollShop());
 
-    // Shop stock cards
+    // Shop stock cards (right side of box 1)
     this.cards = [];
-    const equipStartX = width * 0.28;
-    const equipEndX = width * 0.72;
+    const cardAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
+    const cardAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
     const equipTotalW = this.stock.length > 1 ? (this.stock.length - 1) * CARD_SPACING : 0;
-    const equipCenterX = (equipStartX + equipEndX) / 2;
-    const equipX0 = equipCenterX - equipTotalW / 2;
+    const cardStartX = cardAreaLeft + cardAreaW / 2 - equipTotalW / 2;
 
     for (let i = 0; i < this.stock.length; i++) {
       const def = this.stock[i];
-      const card = new ItemCard(this, equipX0 + i * CARD_SPACING, height * 0.30, def, { mode: 'shop', showCost: true });
+      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, def, { mode: 'shop', showCost: true });
       card.setDepth(10);
 
       const alreadyOwned = player.equipment.some(e => e.def.id === def.id);
@@ -116,23 +187,50 @@ export class ShopScene extends Scene {
       this.cards.push(card);
     }
 
-    // ─── Booster packs section ───
-    this.add.text(width / 2, height * 0.50, 'BOOSTER PACKS', {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      color: '#888888',
-    }).setOrigin(0.5);
+    // ─── Box 2: Voucher + Booster packs ───
+    const packBox = this.add.graphics();
+    packBox.fillStyle(0x0d0d1a, 0.75);
+    packBox.fillRoundedRect(contentL, box2Top, contentW, box2H, BOX_RADIUS);
+    packBox.lineStyle(2, 0x333355, 0.6);
+    packBox.strokeRoundedRect(contentL, box2Top, contentW, box2H, BOX_RADIUS);
 
+    // Voucher placeholder (left side of box 2)
+    const voucherW = BTN_COL_W - 16;
+    const voucherH = CARD_H;
+    const voucherX = contentL + BOX_PAD + voucherW / 2 - 6;
+    const voucherY = cardCY2;
+
+    const voucherSlot = this.add.graphics();
+    voucherSlot.fillStyle(0x1a1a2e, 0.6);
+    voucherSlot.fillRoundedRect(-voucherW / 2, -voucherH / 2, voucherW, voucherH, 8);
+    voucherSlot.lineStyle(1.5, 0x444466, 0.5);
+    voucherSlot.strokeRoundedRect(-voucherW / 2, -voucherH / 2, voucherW, voucherH, 8);
+    voucherSlot.setPosition(voucherX, voucherY);
+
+    this.add.text(voucherX, voucherY - 12, '🎟️', {
+      fontSize: '28px',
+      align: 'center',
+    }).setOrigin(0.5).setAlpha(0.4);
+
+    this.add.text(voucherX, voucherY + 20, 'VOUCHER', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+      align: 'center',
+    }).setOrigin(0.5).setAlpha(0.5);
+
+    // Booster packs (right side of box 2)
     this.packCards = [];
-    const packTotalW = (this.packs.length - 1) * PACK_SPACING;
-    const packX0 = width / 2 - packTotalW / 2;
+    const packAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
+    const packAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
+    const packTotalW = (this.packs.length - 1) * CARD_SPACING;
+    const packX0 = packAreaLeft + packAreaW / 2 - packTotalW / 2;
 
     for (let i = 0; i < this.packs.length; i++) {
       const packInst = this.packs[i];
-      const packCard = new BoosterPackCard(this, packX0 + i * PACK_SPACING, height * 0.64, packInst);
+      const packCard = new BoosterPackCard(this, packX0 + i * CARD_SPACING, cardCY2, packInst);
       packCard.setDepth(10);
 
-      // Check if already opened
       if ((packInst as unknown as { _opened?: boolean })._opened) {
         packCard.markSold();
       } else {
@@ -149,25 +247,11 @@ export class ShopScene extends Scene {
       this.packCards.push(packCard);
     }
 
-    // ─── Owned equipment section ───
-    this.add.text(width / 2, height * 0.80, 'YOUR EQUIPMENT', {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      color: '#888888',
-      align: 'center',
-    }).setOrigin(0.5);
-
-    this.ownedContainer = this.add.container(0, 0);
-    this.renderOwnedEquipment();
-
-    // Start Round button
-    new Button(this, width / 2, height * 0.94, 'Hit the Trail', 220, 48)
-      .onClick(() => {
-        // Clear shop data for next visit
-        this.stock = null!;
-        this.packs = null!;
-        this.scene.start('Game');
-      });
+    // ─── Dice Pouch (bottom-right) ───
+    this.dicePouch = new DicePouch(this, width - UI.POUCH_MARGIN - UI.POUCH_SIZE, height - UI.POUCH_MARGIN - UI.POUCH_SIZE);
+    this.dicePouch.setClickCallback(() => {
+      new DicePouchModal(this, sidebarW, width - sidebarW, height);
+    });
   }
 
   private onBuyPack(card: BoosterPackCard, pack: PackInstance): void {
@@ -179,8 +263,8 @@ export class ShopScene extends Scene {
     card.markSold();
     (pack as unknown as { _opened?: boolean })._opened = true;
     this.updateDisplays();
+    this.sound.play('sfx_card_fan', { volume: 0.5 });
 
-    // Transition to pack opening scene
     this.scene.start('BoosterPack', { packDef: pack.def });
   }
 
@@ -190,8 +274,9 @@ export class ShopScene extends Scene {
     const success = player.buyEquipment(card.def as EquipmentDef);
     if (success) {
       card.markSold();
+      this.sound.play('sfx_coin', { volume: 0.5 });
       this.updateDisplays();
-      this.renderOwnedEquipment();
+      this.equipBar.refresh();
     }
   }
 
@@ -199,10 +284,8 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     if (!player.payShopReroll()) return;
 
-    // Generate new stock (packs stay the same)
     this.stock = generateShopStock(player.shopSlots);
 
-    // Full rebuild
     this.children.removeAll(true);
     this.cards = [];
     this.packCards = [];
@@ -211,60 +294,22 @@ export class ShopScene extends Scene {
 
   private updateDisplays(): void {
     const player = getPlayerState();
-    this.moneyText.setText(`$${player.economy.balance}`);
-    this.slotsText.setText(`Slots: ${player.equipmentSlotsFree}/${player.maxEquipmentSlots}`);
+    this.sidebar.refreshMoney();
 
-    // Update affordability on remaining equipment cards
     for (const card of this.cards) {
       if (!card.sold) {
         card.setAffordable(player.canBuy(card.def as EquipmentDef));
       }
     }
 
-    // Update affordability on remaining pack cards
     for (const packCard of this.packCards) {
       if (!packCard.sold) {
         packCard.setAffordable(player.economy.balance >= packCard.pack.def.cost);
       }
     }
 
-    // Update reroll button
     this.rerollBtn.setEnabled(player.canRerollShop());
-  }
-
-  private renderOwnedEquipment(): void {
-    const player = getPlayerState();
-    const { width, height } = this.scale;
-
-    // Clear old
-    this.ownedContainer.removeAll(true);
-
-    if (player.equipment.length === 0) {
-      const emptyText = this.add.text(width / 2, height * 0.86, 'No equipment yet', {
-        fontFamily: 'Arial',
-        fontSize: '14px',
-        color: '#666666',
-      }).setOrigin(0.5);
-      this.ownedContainer.add(emptyText);
-      return;
-    }
-
-    const COMPACT_SPACING = 80;
-    const totalW = (player.equipment.length - 1) * COMPACT_SPACING;
-    const startX = width / 2 - totalW / 2;
-
-    for (let i = 0; i < player.equipment.length; i++) {
-      const eq = player.equipment[i];
-      const x = startX + i * COMPACT_SPACING;
-      const y = height * 0.86;
-
-      const card = new ItemCard(this, x, y, eq.def, {
-        mode: 'compact',
-        cardScale: 0.65,
-        sellValue: eq.sellValue,
-      });
-      this.ownedContainer.add(card);
-    }
+    this.dicePouch.refresh();
   }
 
   private onResize(): void {

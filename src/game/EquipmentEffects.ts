@@ -110,11 +110,33 @@ export function applyEquipmentEffects(
       // Config-modifying effects (MODIFY_HAND_SIZE, MODIFY_REROLLS) and
       // end-of-round effects (END_ROUND_MONEY) are not applied during scoring.
     }
+
+    // Apply item aura bonuses
+    if (equip.def.aura) {
+      switch (equip.def.aura.id) {
+        case 'fire':
+          bonusMult += 10;
+          break;
+        case 'icy':
+          bonusMiles += 50;
+          break;
+        // holy (xMult) is applied after additive bonuses below
+        // ghost is not a scoring effect
+      }
+    }
   }
 
   const totalPips = baseResult.totalPips;
   const baseMiles = baseResult.handResult.baseMiles;
-  const finalMult = baseResult.handResult.baseMult + bonusMult;
+  let finalMult = baseResult.handResult.baseMult + bonusMult;
+
+  // Apply holy aura xMult (multiplicative, applied last)
+  for (const equip of equipment) {
+    if (equip.def.aura?.id === 'holy') {
+      finalMult = Math.floor(finalMult * 1.5);
+    }
+  }
+
   const finalMiles = (baseMiles + totalPips + bonusMiles) * finalMult;
 
   return {

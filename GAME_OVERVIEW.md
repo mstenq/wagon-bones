@@ -74,7 +74,27 @@ Instead of decks, we instead choose a character, and the character affects how t
 - Doctor Dr. Eleanor Sykes - Start the game with 2 medicine cards in hand, medicine is twice as likely to show up in shop
 - Con Artist Victor Hale - +2 re-rolls per day, -1 hand size
 
+
+## Hand Sequence / Scoring
+
+0. The base miles and mult are calculated by played hand type
+1. Boss round effects: Certain boss effects trigger before scoring like the The Trickster and The Bottle.
+2. "On Played" items activate when hand is played before scoring like "Trail Tax", "Phantom Wagon", and "Wanted Poster" 
+3. Played dice scoring: Dice played and scored activate from left to right. For each dice, its effects activate in the following order:
+   - Base effect (Miles): The dice activates its base effect, giving the accorded amount of miles. Bonus miles are included in this value (Items like Cowboy Boots can add these bonus miles).
+   - Dice Modifiers: Dice modifiers activate in the following order: enhancements, then gold/purple/blue pip enhancements (red are for retrigger phase), then aura.
+   - 'On scored' Items: Items that activate on a played and scored dice will activate their effects. When multiple Items are triggered by the same card, they activate from left to right. Examples include Mile Marker's scaling, Lucky Number, and The Devil’s Hand.
+   - Retriggers: Each retrigger repeats the previous activation sequence (from base effects to scored card dependent Jokers) one more time. Multiple retriggers stack additively. Red bullet pips would go first, followed by retriggering Jokers like "Last Stand" from left to right. 
+4. Item Editions and 'Independent' Items: Items are checked from left to right to score any Aura (foil, holographic and polychrome) and activate Independent abilities:
+   - Fire or Ice aura bonus.
+   - 'Independent' Items: Items that trigger after all the playing cards are scored will activate their base ability. These do not get affected by retriggers. Examples include "Campfire Stories", "Matchmaker", and "Blessed Herd".
+   - Items dependent on other Items (currently, only "Collector’s Case").
+   - Holy aura bonus (This goes last for greater xMult affect).
+5. Then the miles are multipled against the xmult and the score is determined. Professions like "Accountant Henry Pritchard" will balance the miles and mult the two numbers before multiplying.
+
 ## Also See:
 GAME_BOSS_OVERVIEW.md
 GAME_DICE_OVERVIEW.md
 GAME_EQUIPMENT_OVERVIEW.md
+
+

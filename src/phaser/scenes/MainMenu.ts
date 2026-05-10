@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
-import { EventBus } from '../../game/EventBus';
+import { EventBus, Events } from '../../game/EventBus';
 import { resetPlayerState } from '../../game/PlayerState';
+import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 
 export class MainMenu extends Scene {
@@ -16,14 +17,14 @@ export class MainMenu extends Scene {
 
     // Background
     const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a2e, 1);
+    bg.fillStyle(COLORS.BG_PRIMARY, 1);
     bg.fillRect(0, 0, width, height);
 
     // Title
     this.add.text(width / 2, height * 0.31, 'WAGON BONES', {
-      fontFamily: 'Arial Black',
+      fontFamily: FONTS.HEADING,
       fontSize: '64px',
-      color: '#ffcc00',
+      color: TEXT_COLORS.GOLD,
       stroke: '#000000',
       strokeThickness: 6,
       align: 'center',
@@ -31,9 +32,9 @@ export class MainMenu extends Scene {
 
     // Subtitle
     this.add.text(width / 2, height * 0.42, 'A Dice Rolling Journey', {
-      fontFamily: 'Arial',
+      fontFamily: FONTS.PRIMARY,
       fontSize: '22px',
-      color: '#cccccc',
+      color: TEXT_COLORS.SECONDARY,
       align: 'center',
     }).setOrigin(0.5);
 
@@ -44,7 +45,7 @@ export class MainMenu extends Scene {
         this.scene.start('Shop');
       });
 
-    EventBus.emit('current-scene-ready', this);
+    EventBus.emit(Events.SCENE_READY, this);
   }
 
   private onResize(): void {

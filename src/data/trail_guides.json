@@ -1,12 +1,12 @@
 [
-  { "id": "tg_high_value", "name": "Frontier Survival Notes", "description": "High Value: +10 miles, +1 mult" },
-  { "id": "tg_pair", "name": "Wagon Pairing Guide", "description": "Two of a Kind: +15 miles, +1 mult" },
-  { "id": "tg_two_pair", "name": "Fellow Traveler's Register", "description": "Two Pair: +20 miles, +1 mult" },
-  { "id": "tg_three_kind", "name": "Camp Assembly Guide", "description": "Three of a Kind: +20 miles, +2 mult" },
-  { "id": "tg_full_house", "name": "Fort Resupply Manual", "description": "Full House: +25 miles, +2 mult" },
-  { "id": "tg_four_kind", "name": "Caravan Formation Handbook", "description": "Four of a Kind: +30 miles, +3 mult" },
-  { "id": "tg_five_kind", "name": "Mass Migration Fieldbook", "description": "Five of a Kind: +35 miles, +3 mult" },
-  { "id": "tg_three_straight", "name": "Platte River Crossing Guide", "description": "3 Straight: +20 miles, +1 mult" },
-  { "id": "tg_four_straight", "name": "Snake River Ford Nav Guide", "description": "4 Straight: +25 miles, +2 mult" },
-  { "id": "tg_five_straight", "name": "Columbia River Passage Guide", "description": "5 Straight: +30 miles, +3 mult" }
+  { "id": "tg_high_value", "name": "Frontier Survival Notes", "description": "High Value: +10 miles, +1 mult", "handType": "HIGH_VALUE", "milesPerLevel": 10, "multPerLevel": 1 },
+  { "id": "tg_pair", "name": "Wagon Pairing Guide", "description": "Two of a Kind: +15 miles, +1 mult", "handType": "PAIR", "milesPerLevel": 15, "multPerLevel": 1 },
+  { "id": "tg_two_pair", "name": "Fellow Traveler's Register", "description": "Two Pair: +20 miles, +1 mult", "handType": "TWO_PAIR", "milesPerLevel": 20, "multPerLevel": 1 },
+  { "id": "tg_three_kind", "name": "Camp Assembly Guide", "description": "Three of a Kind: +20 miles, +2 mult", "handType": "THREE_OF_A_KIND", "milesPerLevel": 20, "multPerLevel": 2 },
+  { "id": "tg_full_house", "name": "Fort Resupply Manual", "description": "Full House: +25 miles, +2 mult", "handType": "FULL_HOUSE", "milesPerLevel": 25, "multPerLevel": 2 },
+  { "id": "tg_four_kind", "name": "Caravan Formation Handbook", "description": "Four of a Kind: +30 miles, +3 mult", "handType": "FOUR_OF_A_KIND", "milesPerLevel": 30, "multPerLevel": 3 },
+  { "id": "tg_five_kind", "name": "Mass Migration Fieldbook", "description": "Five of a Kind: +35 miles, +3 mult", "handType": "FIVE_OF_A_KIND", "milesPerLevel": 35, "multPerLevel": 3 },
+  { "id": "tg_three_straight", "name": "Platte River Crossing Guide", "description": "3 Straight: +20 miles, +1 mult", "handType": "THREE_STRAIGHT", "milesPerLevel": 20, "multPerLevel": 1 },
+  { "id": "tg_four_straight", "name": "Snake River Ford Nav Guide", "description": "4 Straight: +25 miles, +2 mult", "handType": "FOUR_STRAIGHT", "milesPerLevel": 25, "multPerLevel": 2 },
+  { "id": "tg_five_straight", "name": "Columbia River Passage Guide", "description": "5 Straight: +30 miles, +3 mult", "handType": "FIVE_STRAIGHT", "milesPerLevel": 30, "multPerLevel": 3 }
 ]

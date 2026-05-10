@@ -1,15 +1,17 @@
 // ─── PlayerState (No Phaser imports) ───
 // Persistent state that carries across scenes (shop, rounds, etc).
 
-import { Die } from './types';
+import { Die, HandType, HandStats } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { GAMEPLAY } from './Constants';
+import trailGuidesData from '../data/trail_guides.json';
 
-const DEFAULT_STARTING_MONEY = 10;
-const DEFAULT_MAX_EQUIPMENT_SLOTS = 5;
-const DEFAULT_SHOP_SLOTS = 2;
-const SHOP_REROLL_COST = 5;
+const DEFAULT_STARTING_MONEY = GAMEPLAY.STARTING_MONEY;
+const DEFAULT_MAX_EQUIPMENT_SLOTS = GAMEPLAY.MAX_EQUIPMENT_SLOTS;
+const DEFAULT_SHOP_SLOTS = GAMEPLAY.SHOP_SLOTS;
+const SHOP_REROLL_COST = GAMEPLAY.SHOP_REROLL_COST;
 
 export class PlayerState {
   economy: Economy;
@@ -19,6 +21,7 @@ export class PlayerState {
   maxEquipmentSlots: number;
   shopSlots: number; // how many items appear in the shop (upgradeable via vouchers)
   leg: number; // current leg of the journey (1-8)
+  handStats: Map<HandType, HandStats>; // level & play count per hand type
 
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
@@ -27,6 +30,48 @@ export class PlayerState {
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
+    this.handStats = PlayerState.createDefaultHandStats();
+  }
+
+  /** Create default hand stats: level 1, 0 plays, per-level bonuses from trail guide data */
+  private static createDefaultHandStats(): Map<HandType, HandStats> {
+    // Build lookup from trail guide JSON
+    const tgLookup = new Map<string, { milesPerLevel: number; multPerLevel: number }>();
+    for (const tg of trailGuidesData) {
+      tgLookup.set(tg.handType, { milesPerLevel: tg.milesPerLevel, multPerLevel: tg.multPerLevel });
+    }
+
+    const stats = new Map<HandType, HandStats>();
+    for (const type of Object.values(HandType)) {
+      const tg = tgLookup.get(type);
+      stats.set(type, {
+        level: 1,
+        timesPlayed: 0,
+        milesPerLevel: tg?.milesPerLevel ?? 10,
+        multPerLevel: tg?.multPerLevel ?? 1,
+      });
+    }
+    return stats;
+  }
+
+  /** Get stats for a hand type (always returns a value) */
+  getHandStats(type: HandType): HandStats {
+    if (!this.handStats.has(type)) {
+      this.handStats.set(type, { level: 1, timesPlayed: 0, milesPerLevel: 10, multPerLevel: 1 });
+    }
+    return this.handStats.get(type)!;
+  }
+
+  /** Record that a hand was played */
+  recordHandPlayed(type: HandType): void {
+    const stats = this.getHandStats(type);
+    stats.timesPlayed++;
+  }
+
+  /** Upgrade a hand's level (e.g. from trail guide cards) */
+  upgradeHandLevel(type: HandType, amount: number = 1): void {
+    const stats = this.getHandStats(type);
+    stats.level += amount;
   }
 
   /** Dice that haven't been spent yet (available for play) */
@@ -123,6 +168,7 @@ export class PlayerState {
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
+    this.handStats = PlayerState.createDefaultHandStats();
   }
 }
 

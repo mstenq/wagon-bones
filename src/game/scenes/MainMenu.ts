@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 
-import { EventBus } from '../EventBus';
+import { EventBus, Events } from '../EventBus';
 
 export class MainMenu extends Scene
 {
@@ -26,7 +26,7 @@ export class MainMenu extends Scene
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
 
-        EventBus.emit('current-scene-ready', this);
+        EventBus.emit(Events.SCENE_READY, this);
     }
     
     changeScene ()

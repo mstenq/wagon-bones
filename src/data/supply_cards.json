@@ -33,7 +33,8 @@
   { "id": "doctor", "name": "Doctor", "description": "Creates 2 medicine cards" },
   { "id": "compass", "name": "Compass", "description": "Get 2 random trail guides" },
   { "id": "supply_cache", "name": "Supply Cache", "description": "Get 2 random supply cards" },
-  { "id": "ingenuity", "name": "Ingenuity", "description": "Get 1 random piece of equipment" },
+  { "id": "ingenuity", "name": "Ingenuity", "description": "Get 1 random piece of equipment",
+    "instantEffect": { "type": "CREATE_EQUIPMENT", "excludeRarity": "legendary" } },
   {
     "id": "mirage",
     "name": "Mirage",

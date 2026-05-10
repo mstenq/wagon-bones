@@ -1,0 +1,430 @@
+// ─── Sidebar ───
+// Balatro-style left panel showing game state info.
+// Used in both ShopScene and GameScene for consistency.
+
+import { GameObjects, Scene } from 'phaser';
+import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { getPlayerState } from '../../game/PlayerState';
+import { Button } from './Button';
+
+export interface SidebarData {
+  /** Title shown at top: "SHOP", "The Inspector", etc. */
+  title: string;
+  /** Current round/leg score */
+  roundScore: number;
+  /** Miles base value */
+  milesBase: number;
+  /** Multiplier value */
+  mult: number;
+  /** Travel days remaining */
+  daysRemaining: number;
+  /** Max travel days */
+  maxDays: number;
+  /** Re-rolls remaining */
+  rerolls: number;
+  /** Max re-rolls */
+  maxRerolls: number;
+  /** Current leg number */
+  leg: number;
+  /** Total legs */
+  totalLegs: number;
+  /** Target miles for this leg */
+  targetMiles: number;
+  /** Hand name to display (e.g. "Full House") */
+  handName?: string;
+  /** Hand level */
+  handLevel?: number;
+}
+
+export class Sidebar extends GameObjects.Container {
+  private bg: GameObjects.Graphics;
+  private sidebarWidth: number;
+
+  // Text elements for updating
+  private titleText: GameObjects.Text;
+  private roundScoreText: GameObjects.Text;
+  private handNameText: GameObjects.Text;
+  private handLevelText: GameObjects.Text;
+  private milesBaseText: GameObjects.Text;
+  private multText: GameObjects.Text;
+  private milesBaseBg: GameObjects.Graphics;
+  private multBg: GameObjects.Graphics;
+  private daysText: GameObjects.Text;
+  private rerollsText: GameObjects.Text;
+  private moneyText: GameObjects.Text;
+  private legText: GameObjects.Text;
+  private targetText: GameObjects.Text;
+
+  private journeyInfoBtn: Button;
+  private optionsBtn: Button;
+
+  private onJourneyInfo: (() => void) | null = null;
+  private onOptions: (() => void) | null = null;
+
+  constructor(scene: Scene, width: number, height: number) {
+    super(scene, 0, 0);
+    this.sidebarWidth = width;
+
+    this.bg = scene.add.graphics();
+    this.add(this.bg);
+
+    this.drawBackground(width, height);
+    this.buildContent(scene, width, height);
+
+    this.setDepth(200);
+    this.setScrollFactor(0);
+    scene.add.existing(this);
+  }
+
+  private drawBackground(w: number, h: number): void {
+    this.bg.clear();
+    // Main background
+    this.bg.fillStyle(UI.SIDEBAR_BG, 0.95);
+    this.bg.fillRect(0, 0, w, h);
+    // Right border
+    this.bg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
+    this.bg.lineBetween(w, 0, w, h);
+  }
+
+  private buildContent(scene: Scene, w: number, _h: number): void {
+    const pad = UI.SIDEBAR_PADDING;
+    const cx = w / 2;
+    let y = pad;
+
+    // ─── Title Section (scene name) ───
+    const titleBg = scene.add.graphics();
+    titleBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    titleBg.fillRoundedRect(pad, y, w - pad * 2, 44, 6);
+    titleBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    titleBg.strokeRoundedRect(pad, y, w - pad * 2, 44, 6);
+    this.add(titleBg);
+
+    this.titleText = scene.add.text(cx, y + 22, 'SHOP', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '22px',
+      color: TEXT_COLORS.GOLD,
+      align: 'center',
+    }).setOrigin(0.5);
+    this.add(this.titleText);
+    y += 52;
+
+    // ─── Round Score Section ───
+    const scoreSectionH = 36;
+    const scoreBg = scene.add.graphics();
+    scoreBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    scoreBg.fillRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
+    scoreBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    scoreBg.strokeRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
+    this.add(scoreBg);
+
+    const scoreLabel = scene.add.text(pad + 8, y + scoreSectionH / 2, 'Round\nscore', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+      lineSpacing: -2,
+    }).setOrigin(0, 0.5);
+    this.add(scoreLabel);
+
+    this.roundScoreText = scene.add.text(w - pad - 8, y + scoreSectionH / 2, '0', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '20px',
+      color: TEXT_COLORS.PRIMARY,
+    }).setOrigin(1, 0.5);
+    this.add(this.roundScoreText);
+    y += scoreSectionH + UI.SIDEBAR_SECTION_GAP;
+
+    // ─── Hand Name / Level Display (above miles/mult) ───
+    const handDisplayH = 32;
+    this.handNameText = scene.add.text(cx, y + handDisplayH / 2, '', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '16px',
+      color: TEXT_COLORS.GOLD,
+      align: 'center',
+    }).setOrigin(0.5).setVisible(false);
+    this.add(this.handNameText);
+
+    this.handLevelText = scene.add.text(cx, y + handDisplayH / 2 + 1, '', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: TEXT_COLORS.MUTED,
+      align: 'center',
+    }).setOrigin(0.5, -0.5).setVisible(false);
+    this.add(this.handLevelText);
+    y += handDisplayH;
+
+    // ─── Miles/Mult Display (Balatro chips×mult style) ───
+    const scoreDisplayH = 48;
+    const scoreDisplayBg = scene.add.graphics();
+    scoreDisplayBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    scoreDisplayBg.fillRoundedRect(pad, y, w - pad * 2, scoreDisplayH, 6);
+    scoreDisplayBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    scoreDisplayBg.strokeRoundedRect(pad, y, w - pad * 2, scoreDisplayH, 6);
+    this.add(scoreDisplayBg);
+
+    // Miles base (blue pill)
+    const pillW = (w - pad * 2 - 36) / 2;
+    const pillH = 30;
+    const pillY = y + (scoreDisplayH - pillH) / 2;
+
+    this.milesBaseBg = scene.add.graphics();
+    this.milesBaseBg.fillStyle(COLORS.MILES_BG, 1);
+    this.milesBaseBg.fillRoundedRect(pad + 6, pillY, pillW, pillH, 4);
+    this.add(this.milesBaseBg);
+
+    this.milesBaseText = scene.add.text(pad + 6 + pillW / 2, pillY + pillH / 2, '0', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '18px',
+      color: TEXT_COLORS.PRIMARY,
+    }).setOrigin(0.5);
+    this.add(this.milesBaseText);
+
+    // "×" separator
+    const xText = scene.add.text(cx, pillY + pillH / 2, '×', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '16px',
+      color: TEXT_COLORS.SECONDARY,
+    }).setOrigin(0.5);
+    this.add(xText);
+
+    // Mult (red pill)
+    this.multBg = scene.add.graphics();
+    this.multBg.fillStyle(COLORS.MULT_BG, 1);
+    this.multBg.fillRoundedRect(w - pad - 6 - pillW, pillY, pillW, pillH, 4);
+    this.add(this.multBg);
+
+    this.multText = scene.add.text(w - pad - 6 - pillW / 2, pillY + pillH / 2, '0', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '18px',
+      color: TEXT_COLORS.PRIMARY,
+    }).setOrigin(0.5);
+    this.add(this.multText);
+    y += scoreDisplayH + UI.SIDEBAR_SECTION_GAP;
+
+    // ─── Days / Re-rolls Row ───
+    const rowH = 52;
+    const halfW = (w - pad * 2 - UI.SIDEBAR_SECTION_GAP) / 2;
+
+    // Travel Days
+    const daysBg = scene.add.graphics();
+    daysBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    daysBg.fillRoundedRect(pad, y, halfW, rowH, 6);
+    daysBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    daysBg.strokeRoundedRect(pad, y, halfW, rowH, 6);
+    this.add(daysBg);
+
+    const daysLabel = scene.add.text(pad + halfW / 2, y + 12, 'Travel Days', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+    }).setOrigin(0.5);
+    this.add(daysLabel);
+
+    this.daysText = scene.add.text(pad + halfW / 2, y + 34, '4', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '22px',
+      color: '#66aaff',
+    }).setOrigin(0.5);
+    this.add(this.daysText);
+
+    // Re-rolls
+    const rerollX = pad + halfW + UI.SIDEBAR_SECTION_GAP;
+    const rerollBg = scene.add.graphics();
+    rerollBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    rerollBg.fillRoundedRect(rerollX, y, halfW, rowH, 6);
+    rerollBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    rerollBg.strokeRoundedRect(rerollX, y, halfW, rowH, 6);
+    this.add(rerollBg);
+
+    const rerollLabel = scene.add.text(rerollX + halfW / 2, y + 12, 'Re-rolls', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+    }).setOrigin(0.5);
+    this.add(rerollLabel);
+
+    this.rerollsText = scene.add.text(rerollX + halfW / 2, y + 34, '3', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '22px',
+      color: '#ff6666',
+    }).setOrigin(0.5);
+    this.add(this.rerollsText);
+    y += rowH + UI.SIDEBAR_SECTION_GAP;
+
+    // ─── Journey Info Button ───
+    this.journeyInfoBtn = new Button(scene, cx, y + 20, 'Journey Info', w - pad * 2 - 8, 34);
+    this.journeyInfoBtn.onClick(() => { if (this.onJourneyInfo) this.onJourneyInfo(); });
+    this.add(this.journeyInfoBtn);
+    y += 46;
+
+    // ─── Money Display ───
+    const moneyH = 40;
+    const moneyBg = scene.add.graphics();
+    moneyBg.fillStyle(0x1a4a1a, 1);
+    moneyBg.fillRoundedRect(pad, y, w - pad * 2, moneyH, 6);
+    moneyBg.lineStyle(1, 0x2a6a2a, 0.8);
+    moneyBg.strokeRoundedRect(pad, y, w - pad * 2, moneyH, 6);
+    this.add(moneyBg);
+
+    this.moneyText = scene.add.text(cx, y + moneyH / 2, '$10', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '24px',
+      color: TEXT_COLORS.MONEY,
+    }).setOrigin(0.5);
+    this.add(this.moneyText);
+    y += moneyH + UI.SIDEBAR_SECTION_GAP;
+
+    // ─── Options Button ───
+    this.optionsBtn = new Button(scene, cx, y + 20, 'Options', w - pad * 2 - 8, 34);
+    this.optionsBtn.onClick(() => { if (this.onOptions) this.onOptions(); });
+    this.add(this.optionsBtn);
+    y += 46;
+
+    // ─── Leg / Target Info ───
+    const legH = 52;
+    const legBg = scene.add.graphics();
+    legBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    legBg.fillRoundedRect(pad, y, w - pad * 2, legH, 6);
+    legBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    legBg.strokeRoundedRect(pad, y, w - pad * 2, legH, 6);
+    this.add(legBg);
+
+    const legLabel = scene.add.text(pad + 8, y + 10, 'Leg', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+    });
+    this.add(legLabel);
+
+    this.legText = scene.add.text(pad + 8, y + 26, '1 / 8', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '16px',
+      color: TEXT_COLORS.PRIMARY,
+    });
+    this.add(this.legText);
+
+    const targetLabel = scene.add.text(w - pad - 8, y + 10, 'Target', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+    }).setOrigin(1, 0);
+    this.add(targetLabel);
+
+    this.targetText = scene.add.text(w - pad - 8, y + 26, '300 mi', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '16px',
+      color: TEXT_COLORS.SCORE_GREEN,
+    }).setOrigin(1, 0);
+    this.add(this.targetText);
+  }
+
+  // ─── Public API ───
+
+  updateData(data: Partial<SidebarData>): void {
+    if (data.title !== undefined) this.titleText.setText(data.title);
+    if (data.roundScore !== undefined) this.roundScoreText.setText(`${data.roundScore}`);
+    if (data.milesBase !== undefined) this.milesBaseText.setText(`${data.milesBase}`);
+    if (data.mult !== undefined) this.multText.setText(`${data.mult}`);
+    if (data.handName !== undefined) {
+      if (data.handName) {
+        this.handNameText.setText(data.handName);
+        this.handNameText.setVisible(true);
+      } else {
+        this.handNameText.setVisible(false);
+      }
+    }
+    if (data.handLevel !== undefined) {
+      if (data.handLevel > 0) {
+        this.handLevelText.setText(`lvl.${data.handLevel}`);
+        this.handLevelText.setVisible(true);
+      } else {
+        this.handLevelText.setVisible(false);
+      }
+    }
+    if (data.daysRemaining !== undefined && data.maxDays !== undefined) {
+      this.daysText.setText(`${data.daysRemaining}`);
+    } else if (data.daysRemaining !== undefined) {
+      this.daysText.setText(`${data.daysRemaining}`);
+    }
+    if (data.rerolls !== undefined) {
+      this.rerollsText.setText(`${data.rerolls}`);
+    }
+    if (data.leg !== undefined && data.totalLegs !== undefined) {
+      this.legText.setText(`${data.leg} / ${data.totalLegs}`);
+    }
+    if (data.targetMiles !== undefined) {
+      this.targetText.setText(`${data.targetMiles} mi`);
+    }
+
+    // Always refresh money from player state
+    const player = getPlayerState();
+    this.moneyText.setText(`$${player.economy.balance}`);
+  }
+
+  refreshMoney(): void {
+    const player = getPlayerState();
+    this.moneyText.setText(`$${player.economy.balance}`);
+  }
+
+  setJourneyInfoCallback(cb: () => void): void {
+    this.onJourneyInfo = cb;
+  }
+
+  setOptionsCallback(cb: () => void): void {
+    this.onOptions = cb;
+  }
+
+  getContentX(): number {
+    return this.sidebarWidth;
+  }
+
+  getSidebarWidth(): number {
+    return this.sidebarWidth;
+  }
+
+  // ─── Scoring Animation Helpers ───
+
+  /** Set miles value with a pop animation on the blue pill */
+  setMilesAnimated(value: number): void {
+    this.milesBaseText.setText(`${value}`);
+    this.scene.tweens.add({
+      targets: this.milesBaseText,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 80,
+      yoyo: true,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  /** Set mult value with a pop animation on the red pill */
+  setMultAnimated(value: number): void {
+    this.multText.setText(`${value}`);
+    this.scene.tweens.add({
+      targets: this.multText,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 80,
+      yoyo: true,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  /** Set round score with a pop animation */
+  setRoundScoreAnimated(value: number): void {
+    this.roundScoreText.setText(`${value}`);
+    this.scene.tweens.add({
+      targets: this.roundScoreText,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 100,
+      yoyo: true,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  /** Clear hand display */
+  clearHandDisplay(): void {
+    this.handNameText.setVisible(false);
+    this.handLevelText.setVisible(false);
+  }
+}

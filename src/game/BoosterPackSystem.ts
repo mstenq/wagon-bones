@@ -5,6 +5,7 @@ import { Die, PipEffect } from './types';
 import { createDie } from './DiceSystem';
 import { generateShopStock, EquipmentDef } from './ItemsSystem';
 import { DiceSelectionConfig, DiceSelectionEffectType, DiceSelectionEffectParams, pickRandomAura } from './DiceSelectionSystem';
+import { CHANCES, PACK_WEIGHTS } from './Constants';
 import packsData from '../data/packs.json';
 import supplyCardsData from '../data/supply_cards.json';
 import trailGuidesData from '../data/trail_guides.json';
@@ -42,8 +43,6 @@ function getPipEffectDefs(): PipEffectDef[] {
 }
 
 const PIP_EFFECT_DEFS = getPipEffectDefs();
-const PIP_EFFECT_CHANCE = 0.08; // 8% chance per effect per die
-const AURA_CHANCE = 0.50;      // 50% chance for aura (high for testing)
 
 /** Randomly apply pip effects to a die. Each effect has a low chance to trigger.
  *  The same effect is never applied twice. If not enough empty sides, skip that effect. */
@@ -52,7 +51,7 @@ function applyRandomPipEffects(die: Die): void {
   const shuffled = [...PIP_EFFECT_DEFS].sort(() => Math.random() - 0.5);
 
   for (const def of shuffled) {
-    if (Math.random() >= PIP_EFFECT_CHANCE) continue;
+    if (Math.random() >= CHANCES.PIP_EFFECT) continue;
 
     // Check if this pip effect is already on the die
     if (die.sidePips.some(p => p === def.pipEffect)) continue;
@@ -80,6 +79,7 @@ export type PackCategory = 'dice' | 'supply' | 'trail_guide' | 'frontier' | 'equ
 export type PackTier = 'normal' | 'jumbo' | 'mega';
 
 export interface PackDefinition {
+  id: string;
   category: PackCategory;
   tier: PackTier;
   name: string;
@@ -91,10 +91,13 @@ export interface PackDefinition {
 }
 
 export interface InstantEffect {
-  type: string;                // CREATE_DICE, DOUBLE_MONEY, TRADE_EQUIPMENT, etc.
+  type: string;                // CREATE_DICE, DOUBLE_MONEY, TRADE_EQUIPMENT, CREATE_EQUIPMENT, etc.
   enhancement?: string;        // for CREATE_DICE
   count?: number;              // for CREATE_DICE
   maxGain?: number;            // for DOUBLE_MONEY, TRADE_EQUIPMENT
+  rarity?: string;             // for CREATE_EQUIPMENT (target rarity)
+  excludeRarity?: string;      // for CREATE_EQUIPMENT (exclude rarity)
+  setMoneyZero?: boolean;      // for CREATE_EQUIPMENT (magic beans)
 }
 
 /** A generated item inside an opened pack */
@@ -132,17 +135,25 @@ let nextPackId = 0;
 
 // ─── Shop Generation ───
 
+/** Get effective weight for a pack def, applying category & tier multipliers */
+function getEffectiveWeight(def: PackDefinition): number {
+  const catMult = PACK_WEIGHTS[def.category] ?? 1;
+  const tierMult = PACK_WEIGHTS[def.tier] ?? 1;
+  return def.weight * catMult * tierMult;
+}
+
 /** Pick N random packs using weighted selection */
 export function generateShopPacks(count: number = 2): PackInstance[] {
-  const totalWeight = PACK_DEFS.reduce((sum, d) => sum + d.weight, 0);
+  const effectiveWeights = PACK_DEFS.map(d => getEffectiveWeight(d));
+  const totalWeight = effectiveWeights.reduce((sum, w) => sum + w, 0);
   const packs: PackInstance[] = [];
 
   for (let i = 0; i < count; i++) {
     let roll = Math.random() * totalWeight;
     let picked = PACK_DEFS[0];
-    for (const def of PACK_DEFS) {
-      roll -= def.weight;
-      if (roll <= 0) { picked = def; break; }
+    for (let j = 0; j < PACK_DEFS.length; j++) {
+      roll -= effectiveWeights[j];
+      if (roll <= 0) { picked = PACK_DEFS[j]; break; }
     }
     packs.push({ def: picked, id: `pack_${nextPackId++}` });
   }
@@ -188,7 +199,7 @@ function generateDicePackContents(count: number): PackItem[] {
     applyRandomPipEffects(die);
 
     // Random aura chance
-    if (Math.random() < AURA_CHANCE) {
+    if (Math.random() < CHANCES.DICE_AURA) {
       die.aura = pickRandomAura();
     }
 
@@ -277,6 +288,9 @@ function generateFrontierPackContents(count: number): PackItem[] {
         description: fe.description,
         skippable: true,
       };
+    }
+    if ('instantEffect' in fe && fe.instantEffect) {
+      item.instantEffect = fe.instantEffect as InstantEffect;
     }
     return item;
   });

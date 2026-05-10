@@ -4,6 +4,7 @@
 
 import { Die, DiceAura, PipEffect } from './types';
 import { getPlayerState } from './PlayerState';
+import { CHANCES } from './Constants';
 import diceAurasData from '../data/dice_auras.json';
 
 // ─── Effect Types ───
@@ -151,11 +152,11 @@ function applyClone(
 
 // ─── Aura ───
 
-/** Weighted random aura: 10% holy, 30% fire, 60% icy */
+/** Weighted random aura — thresholds from Constants.CHANCES */
 export function pickRandomAura(): DiceAura {
   const roll = Math.random();
-  if (roll < 0.10) return 'holy';
-  if (roll < 0.40) return 'fire';
+  if (roll < CHANCES.AURA_HOLY) return 'holy';
+  if (roll < CHANCES.AURA_HOLY + CHANCES.AURA_FIRE) return 'fire';
   return 'icy';
 }
 

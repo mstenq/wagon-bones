@@ -2,18 +2,19 @@
 // Displays day counter, dice remaining, rerolls, miles, target at top of screen.
 
 import { GameObjects, Scene } from 'phaser';
+import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 
-const HUD_Y = 20;
+const HUD_Y = UI.HUD_Y;
 const FONT_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
-  fontFamily: 'Arial',
+  fontFamily: FONTS.PRIMARY,
   fontSize: '18px',
-  color: '#ffffff',
+  color: TEXT_COLORS.PRIMARY,
 };
 
 const LABEL_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
-  fontFamily: 'Arial',
+  fontFamily: FONTS.PRIMARY,
   fontSize: '14px',
-  color: '#aaaaaa',
+  color: TEXT_COLORS.MUTED,
 };
 
 export class HUD extends GameObjects.Container {
@@ -30,8 +31,8 @@ export class HUD extends GameObjects.Container {
 
     // Background bar
     const bg = scene.add.graphics();
-    bg.fillStyle(0x1a1a2e, 0.85);
-    bg.fillRect(0, 0, w, 56);
+    bg.fillStyle(COLORS.BG_PRIMARY, UI.HUD_ALPHA);
+    bg.fillRect(0, 0, w, UI.HUD_HEIGHT);
     this.add(bg);
 
     this.dayText = this.createField(scene, w * 0.08, 'Day', '1 / 4');

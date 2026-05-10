@@ -32,7 +32,7 @@ Dust Path - $3 - if played hand contains straight 3 +50 miles
 Rail Line - $4 - if played hand contains straight 4 +80 miles
 Long Haul - $4 - if played hand contains straight 5 +100 miles
 
-Last Stand - $5 - +20 mult if 3 or fewer dice are scored
+22 Rifle - $5 - +20 mult if 3 or fewer dice are scored
 Bedroll - $8 - x1 mult for each empty equipment slot
 Silver Bullets - $5 - retrigger all dice held in hands (blue pips/gold dice/etc)
 Bank Note - $1 go up to $20 in debt
@@ -43,7 +43,7 @@ Quarry Stone - $6 - add one stone dice to collection when starting leg
 Six Shooter - $5 - x4 mult every 6th hand played
 Supply Wagon - $5 - 1 in 4 chance to get supply card when scored dice is "X" (changes per round)
 Loaded Dice - $4 - +0 - +23 mult (Random)
-Bandolier - $5 - retrigger all played dice on final hand of round
+Last Stand - $5 - retrigger all played dice on final hand of round
 Coupon Book - $4 - 1 free reroll per shop
 Lucky Find - $8 - if one dice is scored alone in first day add random enhancement
 Iron Furnace - $7 - gives x0.2 mult for each iron dice in collection
@@ -132,7 +132,7 @@ Matchmaker - $8 - x2 mult if hand contains a pair
 Choir Bell - $8 - x3 mult if hand contains a three of a kind
 Posse Wagon - $8 - x4 mult if hand contains a four of a kind
 Five Finger Fillet - $8 - x5 mult if hand contains a five of a kind
-Prairie Wind - $8 - x3 mult if hand contains a 5 straigt
+Prairie Wind - $8 - x3 mult if hand contains a 5 straight
 Express Train - $7 - +250 miles, -2 re-rolls
 Phantom Wagon - $8 - after 2 rounds, sell this card to duplicate a random item (removes ghost/haunted aura)
 Echo Chamber - $10 - copies the ability of the leftmost item

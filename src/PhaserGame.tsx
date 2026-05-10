@@ -1,7 +1,7 @@
 import { onCleanup, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import StartGame from './game/main';
-import { EventBus } from './game/EventBus';
+import { EventBus, Events } from './game/EventBus';
 
 export interface IRefPhaserGame {
     game: Phaser.Game | null;
@@ -27,7 +27,7 @@ export const PhaserGame = (props: IProps) => {
             props.ref({ game: gameInstance, scene: null });
         }
 
-        EventBus.on('current-scene-ready', (scene_instance: Phaser.Scene) => {
+        EventBus.on(Events.SCENE_READY, (scene_instance: Phaser.Scene) => {
 
             if (props.currentActiveScene)
             {
@@ -51,7 +51,7 @@ export const PhaserGame = (props: IProps) => {
                 setInstance({ game: null, scene: null });
             }
             
-            EventBus.removeListener('current-scene-ready');
+            EventBus.removeListener(Events.SCENE_READY);
             
         });
     });

@@ -5,6 +5,9 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
+import { COLORS } from '../../game/Constants';
+import type { ItemAura } from '../../game/ItemsSystem';
+import { applyAuraGlow, createAuraParticles } from './AuraFX';
 
 /** Generic data shape for any card type */
 export interface CardData {
@@ -13,6 +16,7 @@ export interface CardData {
   description: string;
   cost?: number;
   rarity?: string;
+  aura?: ItemAura | null;
 }
 
 export interface ItemCardOptions {
@@ -36,8 +40,8 @@ const SHADOW_ALPHA = 0.35;
 const PRICE_TAG_H = 26;
 const PRICE_TAG_GAP = 6;
 const TOOLTIP_PAD = 10;
-const TOOLTIP_BG = 0x1a1a2e;
-const TOOLTIP_BORDER = 0x555588;
+const TOOLTIP_BG = COLORS.TOOLTIP_BG;
+const TOOLTIP_BORDER = COLORS.TOOLTIP_BORDER;
 
 const RARITY_LABELS: Record<string, string> = {
   common:    'Common',
@@ -63,6 +67,10 @@ export class ItemCard extends GameObjects.Container {
   private tooltip: GameObjects.Container | null = null;
   private _cardW: number;
   private _cardH: number;
+  private cardImage: GameObjects.Image | null = null;
+  private auraEmitters: GameObjects.Particles.ParticleEmitter[] = [];
+  private auraTweens: Phaser.Tweens.Tween[] = [];
+  private auraGlowCleanup: (() => void) | null = null;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -78,6 +86,7 @@ export class ItemCard extends GameObjects.Container {
 
     this.drawCard();
     this.addContent(scale);
+    this.setupAuraVFX();
 
     // Sold overlay (hidden initially)
     this.soldOverlay = scene.add.graphics();
@@ -140,8 +149,47 @@ export class ItemCard extends GameObjects.Container {
     g.fillRoundedRect(-hw + SHADOW_OFFSET, -hh + SHADOW_OFFSET, w, h, CARD_RADIUS);
 
     // Card body — neutral dark background
-    g.fillStyle(0x2a2a3a, 1);
+    g.fillStyle(COLORS.BG_CARD, 1);
     g.fillRoundedRect(-hw, -hh, w, h, CARD_RADIUS);
+  }
+
+  private setupAuraVFX(): void {
+    const aura = this._def.aura;
+    if (!aura) return;
+
+    const hw = this._cardW / 2;
+    const hh = this._cardH / 2;
+
+    // Glow filter on the card background
+    const glowResult = applyAuraGlow(this.scene, this.cardBg as any, aura.id, {
+      strength: 8,
+      pulseMin: 0.3,
+      pulseMax: 1,
+    });
+    this.auraTweens.push(...glowResult.tweens);
+    this.auraGlowCleanup = glowResult.destroy;
+
+    // Ghost aura: invert + green tint, 70% transparent
+    if (aura.id === 'ghost') {
+      this.setAlpha(0.8);
+      if (this.cardImage) {
+        (this.cardImage as any).enableFilters();
+        const cm = (this.cardImage as any).filters.internal.addColorMatrix();
+        cm.colorMatrix.negative();
+      }
+      const tintOverlay = this.scene.add.graphics();
+      tintOverlay.fillStyle(0x44dd88, 0.3);
+      tintOverlay.fillRoundedRect(-hw, -hh, this._cardW, this._cardH, CARD_RADIUS);
+      this.add(tintOverlay);
+    }
+
+    // Particles around the card
+    const particleResult = createAuraParticles(this.scene, aura.id, hw, hh);
+    for (const em of particleResult.emitters) {
+      this.add(em);
+    }
+    this.auraEmitters.push(...particleResult.emitters);
+    this.auraTweens.push(...particleResult.tweens);
   }
 
   private addContent(scale: number): void {
@@ -191,6 +239,7 @@ export class ItemCard extends GameObjects.Container {
       }
 
       const img = this.scene.add.image(0, 0, roundedKey);
+      this.cardImage = img;
       this.add(img);
     }
 
@@ -287,6 +336,24 @@ export class ItemCard extends GameObjects.Container {
       tooltipChildren.push(rarityText);
     }
 
+    // Aura info (if present on EquipmentDef)
+    const aura = this._def.aura;
+    if (aura) {
+      const auraText = this.scene.add.text(
+        TOOLTIP_PAD,
+        bottomY + 6,
+        `✦ ${aura.name}: ${aura.description}`,
+        {
+          fontFamily: 'Arial',
+          fontSize: '11px',
+          color: '#ddaa44',
+          fontStyle: 'bold',
+        },
+      ).setOrigin(0, 0);
+      bottomY = bottomY + 6 + auraText.height;
+      tooltipChildren.push(auraText);
+    }
+
     // Compute size
     const contentWidth = tooltipChildren.reduce((max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0), 0);
     const tooltipW = contentWidth + TOOLTIP_PAD * 2;
@@ -329,6 +396,14 @@ export class ItemCard extends GameObjects.Container {
 
   destroy(fromScene?: boolean): void {
     this.hideTooltip();
+    for (const tw of this.auraTweens) tw.destroy();
+    this.auraTweens = [];
+    for (const em of this.auraEmitters) em.destroy();
+    this.auraEmitters = [];
+    if (this.auraGlowCleanup) {
+      this.auraGlowCleanup();
+      this.auraGlowCleanup = null;
+    }
     super.destroy(fromScene);
   }
 }

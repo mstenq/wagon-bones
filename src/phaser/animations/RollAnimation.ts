@@ -4,6 +4,7 @@
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Die } from '../../game/types';
+import { ANIM } from '../../game/Constants';
 
 export function playRollAnimation(
   scene: Scene,
@@ -11,9 +12,12 @@ export function playRollAnimation(
   finalDice: Die[],
   onComplete: () => void
 ): void {
-  const duration = 600;
-  const interval = 60;
+  const duration = ANIM.ROLL_DURATION;
+  const interval = ANIM.ROLL_INTERVAL;
   let elapsed = 0;
+
+  // Play dice rattle sound at start
+  scene.sound.play('sfx_dice_roll', { volume: 0.6 });
 
   const timer = scene.time.addEvent({
     delay: interval,
@@ -37,13 +41,16 @@ export function playRollAnimation(
       }
     }
 
+    // Play dice land sound
+    scene.sound.play('sfx_dice_land', { volume: 0.5 });
+
     // Bounce tween on each die
     for (const sprite of diceSprites) {
       scene.tweens.add({
         targets: sprite,
         scaleX: 1.15,
         scaleY: 0.9,
-        duration: 80,
+        duration: ANIM.ROLL_BOUNCE_DURATION,
         yoyo: true,
         ease: 'Quad.easeOut',
       });

@@ -5,6 +5,8 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { Die, PipEffect } from '../../game/types';
+import { DICE, COLORS } from '../../game/Constants';
+import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
 import diceAurasData from '../../data/dice_auras.json';
 import pipEnhancementsData from '../../data/pip_enhancements.json';
@@ -14,23 +16,23 @@ const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
 const AURA_INFO = new Map(diceAurasData.map(a => [a.id, a]));
 const PIP_INFO = new Map(pipEnhancementsData.map(p => [p.id, p]));
 
-const DICE_SIZE = 64;
-const DICE_RADIUS = 10;
-const PIP_RADIUS = 5;
-const BG_COLOR = 0xf5f0e1;
-const PIP_COLOR = 0x222222;
-const SELECTED_STROKE = 0xffcc00;
-const FORCED_STROKE = 0xff4444;
-const DEFAULT_STROKE = 0x444444;
-const GRIMY_COLOR = 0x6b5a3e;
-const INDICATOR_SIZE = 8;
-const INDICATOR_GAP = 2;
+const DICE_SIZE = DICE.SIZE;
+const DICE_RADIUS = DICE.RADIUS;
+const PIP_RADIUS = DICE.PIP_RADIUS;
+const BG_COLOR = DICE.BG_COLOR;
+const PIP_COLOR = DICE.PIP_COLOR;
+const SELECTED_STROKE = DICE.SELECTED_STROKE;
+const FORCED_STROKE = DICE.FORCED_STROKE;
+const DEFAULT_STROKE = DICE.DEFAULT_STROKE;
+const GRIMY_COLOR = DICE.GRIMY_COLOR;
+const INDICATOR_SIZE = DICE.INDICATOR_SIZE;
+const INDICATOR_GAP = DICE.INDICATOR_GAP;
 const MINI_SIZE = 36;
 const MINI_GAP = 4;
 const MINI_PIP_RADIUS = 3;
 const TOOLTIP_PAD = 10;
-const TOOLTIP_BG_COLOR = 0x1a1a2e;
-const TOOLTIP_BORDER_COLOR = 0x555588;
+const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
+const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
 
 // Pip positions for a standard die face, normalized to 0-1 range
 const PIP_POSITIONS: Record<number, [number, number][]> = {
@@ -51,6 +53,7 @@ export class DiceSprite extends GameObjects.Container {
   private tooltip: GameObjects.Container | null = null;
   private auraTweens: Phaser.Tweens.Tween[] = [];
   private auraEmitters: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+  private auraGlowCleanup: (() => void) | null = null;
   private _dieData: Die;
   private _selected: boolean = false;
   private _forced: boolean = false;
@@ -187,38 +190,34 @@ export class DiceSprite extends GameObjects.Container {
     this.auraTweens = [];
     for (const em of this.auraEmitters) em.destroy();
     this.auraEmitters = [];
+    if (this.auraGlowCleanup) {
+      this.auraGlowCleanup();
+      this.auraGlowCleanup = null;
+    }
 
     const aura = this._dieData.aura;
     if (!aura) return;
 
-    this.ensureParticleTextures();
-
     const half = DICE_SIZE / 2;
-    const color = getAuraColor(aura);
+    const color = getAuraPrimary(aura);
     const info = AURA_INFO.get(aura);
 
-    // Subtle pulsing border to identify aura type
-    this.auraGfx.lineStyle(2, color, 0.6);
-    this.auraGfx.strokeRoundedRect(-half - 2, -half - 2, DICE_SIZE + 4, DICE_SIZE + 4, DICE_RADIUS + 1);
-    this.auraTweens.push(
-      this.scene.tweens.add({
-        targets: this.auraGfx,
-        alpha: { from: 0.4, to: 0.9 },
-        duration: aura === 'fire' ? 500 : aura === 'icy' ? 2000 : 1200,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-    );
+    // Phaser 4 glow filter on the die background
+    const glowResult = applyAuraGlow(this.scene, this.bg as any, aura, {
+      strength: 6,
+      pulseMin: 0.4,
+      pulseMax: 1,
+    });
+    this.auraTweens.push(...glowResult.tweens);
+    this.auraGlowCleanup = glowResult.destroy;
 
-    // Particle effects per aura type
-    if (aura === 'fire') {
-      this.createFireParticles(half);
-    } else if (aura === 'icy') {
-      this.createIcyParticles(half);
-    } else if (aura === 'holy') {
-      this.createHolyParticles(half);
+    // Particle effects
+    const particleResult = createAuraParticles(this.scene, aura, half, half);
+    for (const em of particleResult.emitters) {
+      this.add(em);
     }
+    this.auraEmitters.push(...particleResult.emitters);
+    this.auraTweens.push(...particleResult.tweens);
 
     // Aura label below indicators (only in grab bag / booster pack)
     if (info && this._showAuraLabel) {
@@ -230,151 +229,6 @@ export class DiceSprite extends GameObjects.Container {
       }).setOrigin(0.5, 0);
       this.add(this.auraLabel);
     }
-  }
-
-  private ensureParticleTextures(): void {
-    const tm = this.scene.textures;
-    if (!tm.exists('aura_particle')) {
-      const gfx = this.scene.add.graphics();
-      // Soft glowing circle
-      gfx.fillStyle(0xffffff, 0.3);
-      gfx.fillCircle(8, 8, 8);
-      gfx.fillStyle(0xffffff, 0.6);
-      gfx.fillCircle(8, 8, 5);
-      gfx.fillStyle(0xffffff, 1);
-      gfx.fillCircle(8, 8, 2);
-      gfx.generateTexture('aura_particle', 16, 16);
-      gfx.destroy();
-    }
-    if (!tm.exists('aura_spark')) {
-      const gfx = this.scene.add.graphics();
-      gfx.fillStyle(0xffffff, 1);
-      gfx.fillCircle(3, 3, 3);
-      gfx.generateTexture('aura_spark', 6, 6);
-      gfx.destroy();
-    }
-  }
-
-  private createFireParticles(half: number): void {
-    // Rising flame particles from bottom edge
-    const flames = this.scene.add.particles(0, 0, 'aura_particle', {
-      speed: { min: 15, max: 50 },
-      angle: { min: -110, max: -70 },
-      scale: { start: 0.6, end: 0 },
-      alpha: { start: 0.8, end: 0 },
-      lifespan: { min: 400, max: 800 },
-      frequency: 35,
-      quantity: 1,
-      tint: [0xff4500, 0xff6600, 0xffaa00, 0xff2200],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-half, half - 8, DICE_SIZE, 8),
-      } as any,
-      maxAliveParticles: 18,
-    });
-    this.add(flames);
-    this.auraEmitters.push(flames);
-
-    // Ember sparks from edges
-    const embers = this.scene.add.particles(0, 0, 'aura_spark', {
-      speed: { min: 25, max: 70 },
-      angle: { min: -130, max: -50 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: { min: 300, max: 600 },
-      frequency: 80,
-      quantity: 1,
-      tint: [0xffdd00, 0xff8800, 0xff4400],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-half - 4, -half, DICE_SIZE + 8, DICE_SIZE),
-      } as any,
-      maxAliveParticles: 8,
-    });
-    this.add(embers);
-    this.auraEmitters.push(embers);
-  }
-
-  private createIcyParticles(half: number): void {
-    // Slow drifting ice crystals around the die
-    const crystals = this.scene.add.particles(0, 0, 'aura_spark', {
-      speed: { min: 5, max: 18 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.6, end: 0.1 },
-      alpha: { start: 0.8, end: 0 },
-      lifespan: { min: 1500, max: 2500 },
-      frequency: 100,
-      quantity: 1,
-      tint: [0x88ddff, 0xaaeeff, 0xffffff, 0x00bfff],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-half - 6, -half - 6, DICE_SIZE + 12, DICE_SIZE + 12),
-      } as any,
-      maxAliveParticles: 15,
-    });
-    this.add(crystals);
-    this.auraEmitters.push(crystals);
-
-    // Gentle frost mist falling downward
-    const mist = this.scene.add.particles(0, 0, 'aura_particle', {
-      speedX: { min: -10, max: 10 },
-      speedY: { min: 5, max: 15 },
-      scale: { start: 0.3, end: 0 },
-      alpha: { start: 0.4, end: 0 },
-      lifespan: { min: 2000, max: 3000 },
-      frequency: 200,
-      quantity: 1,
-      tint: 0xcceeFF,
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-half - 8, -half - 8, DICE_SIZE + 16, 8),
-      } as any,
-      maxAliveParticles: 8,
-    });
-    this.add(mist);
-    this.auraEmitters.push(mist);
-  }
-
-  private createHolyParticles(half: number): void {
-    // Rising golden sparkles
-    const sparkles = this.scene.add.particles(0, 0, 'aura_particle', {
-      speed: { min: 10, max: 30 },
-      angle: { min: -100, max: -80 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.9, end: 0 },
-      lifespan: { min: 800, max: 1400 },
-      frequency: 60,
-      quantity: 1,
-      tint: [0xfffacd, 0xffd700, 0xfff8b0],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-half - 4, -half, DICE_SIZE + 8, DICE_SIZE),
-      } as any,
-      maxAliveParticles: 15,
-    });
-    this.add(sparkles);
-    this.auraEmitters.push(sparkles);
-
-    // Soft halo glow above the die
-    const halo = this.scene.add.particles(0, -half - 4, 'aura_particle', {
-      speed: { min: 3, max: 10 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.7, end: 0 },
-      alpha: { start: 0.4, end: 0 },
-      lifespan: { min: 600, max: 1000 },
-      frequency: 120,
-      quantity: 1,
-      tint: 0xfffacd,
-      blendMode: 'ADD',
-      maxAliveParticles: 6,
-    });
-    this.add(halo);
-    this.auraEmitters.push(halo);
   }
 
   private drawPipIndicators(): void {
@@ -583,6 +437,10 @@ export class DiceSprite extends GameObjects.Container {
     this.auraTweens = [];
     for (const em of this.auraEmitters) em.destroy();
     this.auraEmitters = [];
+    if (this.auraGlowCleanup) {
+      this.auraGlowCleanup();
+      this.auraGlowCleanup = null;
+    }
     super.destroy(fromScene);
   }
 }
@@ -637,13 +495,6 @@ function getEnhancementPipColor(e: string): number {
 /** Accent bar color (slightly darker than bg) */
 function getEnhancementLabelColor(e: string): number {
   return getEnhancementColor(e);
-}
-
-function getAuraColor(a: string): number {
-  const colors: Record<string, number> = {
-    holy: 0xc8a800, fire: 0xff4500, icy: 0x0088cc,
-  };
-  return colors[a] ?? 0xffffff;
 }
 
 function getPipEffectColor(p: string): number {

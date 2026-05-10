@@ -1,7 +1,16 @@
 // ─── Items System (No Phaser imports) ───
-// Equipment definitions, shop stock generation.
+// Equipment definitions, shop stock generation, aura system.
 
 import allItems from '../data/items.json';
+import itemAurasData from '../data/item_auras.json';
+
+export interface ItemAura {
+  id: string;
+  name: string;
+  description: string;
+  costIncrease: number;
+  chance: number;
+}
 
 export interface EquipmentDef {
   id: string;
@@ -11,6 +20,7 @@ export interface EquipmentDef {
   description: string;
   effectType: string;
   effectParams: Record<string, unknown>;
+  aura?: ItemAura | null;
 }
 
 export interface EquipmentInstance {
@@ -19,16 +29,67 @@ export interface EquipmentInstance {
 }
 
 const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];
+const ITEM_AURAS: ItemAura[] = itemAurasData as ItemAura[];
 
 const SHOP_SIZE = 5;
 
-/** Generate a random shop stock of equipment */
+// ─── Aura Helpers ───
+
+/** Roll for a random aura. Returns null most of the time. */
+export function rollRandomItemAura(): ItemAura | null {
+  for (const aura of ITEM_AURAS) {
+    if (Math.random() < aura.chance) return { ...aura };
+  }
+  return null;
+}
+
+/** Apply a random aura to an EquipmentDef, returning a new copy with adjusted cost.
+ *  Items can only have one aura. */
+export function applyRandomAura(def: EquipmentDef): EquipmentDef {
+  if (def.aura) return def; // already has one
+  const aura = rollRandomItemAura();
+  if (!aura) return def;
+  return {
+    ...def,
+    aura,
+    cost: def.cost + aura.costIncrease,
+  };
+}
+
+// ─── Shop Stock ───
+
+/** Generate a random shop stock of equipment, with random aura rolls */
 export function generateShopStock(count: number = SHOP_SIZE): EquipmentDef[] {
   const shuffled = [...ITEMS_POOL].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+  return shuffled.slice(0, Math.min(count, shuffled.length)).map(applyRandomAura);
 }
 
 /** Get all equipment definitions */
 export function getAllEquipment(): EquipmentDef[] {
   return ITEMS_POOL;
+}
+
+// ─── Random Equipment Generation ───
+
+/** Generate a random piece of equipment filtered by rarity.
+ *  If no items match the filter, falls back to any rarity.
+ *  Applies a random aura roll. */
+export function generateRandomEquipment(options?: {
+  rarity?: string;
+  excludeRarity?: string;
+}): EquipmentDef {
+  let pool = [...ITEMS_POOL];
+
+  if (options?.rarity) {
+    const filtered = pool.filter(i => i.rarity === options.rarity);
+    if (filtered.length > 0) pool = filtered;
+  }
+
+  if (options?.excludeRarity) {
+    const filtered = pool.filter(i => i.rarity !== options.excludeRarity);
+    if (filtered.length > 0) pool = filtered;
+  }
+
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  return applyRandomAura({ ...picked });
 }

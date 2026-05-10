@@ -1,4 +1,4 @@
-import { EventBus } from '../EventBus';
+import { EventBus, Events } from '../EventBus';
 import { Scene } from 'phaser';
 
 export class GameOver extends Scene
@@ -26,7 +26,7 @@ export class GameOver extends Scene
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
         
-        EventBus.emit('current-scene-ready', this);
+        EventBus.emit(Events.SCENE_READY, this);
     }
 
     changeScene ()

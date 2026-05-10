@@ -166,7 +166,7 @@
     "name": "Even Odds",
     "cost": 4,
     "rarity": "common",
-    "description": "+4 mult when an even pip is scored",
+    "description": "+4 mult when an even number of pips is scored",
     "effectType": "PARITY_MULT",
     "effectParams": { "parity": "even", "value": 4 }
   },
@@ -175,7 +175,7 @@
     "name": "Odd Fellow",
     "cost": 4,
     "rarity": "common",
-    "description": "+31 miles when an odd pip is scored",
+    "description": "+31 miles when an odd number of pips is scored",
     "effectType": "PARITY_MILES",
     "effectParams": { "parity": "odd", "value": 31 }
   },

@@ -1,0 +1,186 @@
+// ─── Constants (No Phaser imports) ───
+// All magic numbers, colors, sizing, and config values in one file.
+// When tuning gameplay or visuals, change values here — not in game logic.
+
+// ─── Game Canvas ───
+export const GAME = {
+  WIDTH: 1024,
+  HEIGHT: 768,
+  BACKGROUND_COLOR: '#1a1a2e',
+  BACKGROUND_HEX: 0x1a1a2e,
+};
+
+// ─── Gameplay Defaults ───
+export const GAMEPLAY = {
+  MAX_DAYS: 4,
+  MAX_REROLLS: 2,
+  ROLL_SIZE: 5,
+  TARGET_MILES: 300,
+  STARTING_DICE: 10,
+  STARTING_MONEY: 10,
+  MAX_EQUIPMENT_SLOTS: 5,
+  SHOP_SLOTS: 2,
+  SHOP_REROLL_COST: 5,
+};
+
+// ─── RNG / Chance Tuning ───
+export const CHANCES = {
+  PIP_EFFECT: 0.08,         // 8% chance per pip effect per die in packs
+  DICE_AURA: 0.50,          // 50% chance for aura on pack dice (high for testing)
+  AURA_HOLY: 0.10,          // 10% of auras are holy
+  AURA_FIRE: 0.30,          // 30% of auras are fire (cumulative 40%)
+  AURA_ICY: 0.60,           // 60% of auras are icy  (remainder)
+};
+
+// ─── Pack Weight Multipliers ───
+// Multiply against each pack's base JSON weight to control shop generation.
+// Set a category to 0 to never see it, or crank it up for testing.
+export const PACK_WEIGHTS = {
+  // Category multipliers
+  dice: 1.0,
+  supply: 1.0,
+  trail_guide: 1.0,
+  frontier: 1.0,
+  equipment: 1.0,
+  // Tier multipliers (stacks with category)
+  normal: 1.0,
+  jumbo: 1.0,
+  mega: 1.0,
+};
+
+// ─── Colors (hex numbers for Phaser tints/fills) ───
+export const COLORS = {
+  // Backgrounds
+  BG_PRIMARY: 0x1a1a2e,
+  BG_DARK: 0x0a0a1a,
+  BG_FELT: 0x2a4a2a,
+  BG_CARD: 0x2a2a3a,
+  BG_PANEL: 0x1e1e3a,
+  BG_WIN: 0x1a3a1a,
+  BG_LOSE: 0x3a1a1a,
+
+  // Button
+  BTN_DEFAULT: 0x3a3a5c,
+  BTN_HOVER: 0x5a5a8c,
+  BTN_DISABLED: 0x2a2a3a,
+
+  // Tooltip
+  TOOLTIP_BG: 0x1a1a2e,
+  TOOLTIP_BORDER: 0x555588,
+
+  // Accents
+  GOLD: 0xffd700,
+  SELECTION: 0xffcc00,
+  SELECTION_BORDER: 0x44ff44,
+  SCORE_GREEN: 0x44ff44,
+  ERROR_RED: 0xff4444,
+  PANEL_BORDER: 0x6666aa,
+
+  // Sidebar sections
+  SIDEBAR_BG: 0x111122,
+  SIDEBAR_SECTION: 0x1a1a30,
+  SIDEBAR_SECTION_BORDER: 0x2a2a4a,
+
+  // Score display (Balatro-style chips/mult)
+  MILES_BG: 0x2266cc,
+  MULT_BG: 0xcc3333,
+};
+
+// ─── Text Colors (CSS strings for Phaser Text objects) ───
+export const TEXT_COLORS = {
+  PRIMARY: '#ffffff',
+  SECONDARY: '#cccccc',
+  MUTED: '#aaaaaa',
+  DISABLED: '#666666',
+  GOLD: '#ffcc00',
+  MONEY: '#ffd700',
+  SCORE_GREEN: '#44ff44',
+  ERROR_RED: '#ff4444',
+  WIN: '#44ff44',
+  LOSE: '#ff4444',
+  LABEL: '#888888',
+};
+
+// ─── Fonts ───
+export const FONTS = {
+  PRIMARY: 'Arial',
+  HEADING: 'Arial Black',
+};
+
+// ─── UI Layout ───
+export const UI = {
+  // Sidebar (Balatro-style left panel)
+  SIDEBAR_WIDTH_RATIO: 0.24,     // 24% of screen width
+  SIDEBAR_PADDING: 12,
+  SIDEBAR_BG: 0x111122,
+  SIDEBAR_BORDER: 0x333355,
+  SIDEBAR_SECTION_GAP: 8,
+
+  // Equipment bar (top of main area)
+  EQUIP_BAR_HEIGHT: 100,
+  EQUIP_CARD_SCALE: 0.38,
+  EQUIP_CARD_SPACING: 70,
+
+  // Supply bar (top-right)
+  SUPPLY_SLOT_SIZE: 60,
+  SUPPLY_SLOT_GAP: 8,
+
+  // Dice pouch (bottom-right indicator)
+  POUCH_SIZE: 56,
+  POUCH_MARGIN: 16,
+
+  // HUD (legacy — replaced by sidebar)
+  HUD_HEIGHT: 56,
+  HUD_Y: 20,
+  HUD_ALPHA: 0.85,
+
+  // Buttons
+  BTN_RADIUS: 8,
+  BTN_FONT_SIZE: '18px',
+
+  // Cards
+  CARD_RADIUS: 8,
+  CARD_SHADOW_OFFSET: 4,
+  CARD_SHADOW_ALPHA: 0.35,
+
+  // Game scene (main content area — right of sidebar)
+  HAND_Y_RATIO: 0.72,
+  ROLL_Y_RATIO: 0.50,
+  DICE_SPACING: 80,
+  FELT_PADDING: 12,
+  FELT_ALPHA: 0.4,
+  FELT_RADIUS: 16,
+
+  // Modal
+  MODAL_DIM_ALPHA: 0.7,
+  MODAL_BG: 0x151528,
+  MODAL_BORDER: 0x555588,
+  MODAL_RADIUS: 12,
+};
+
+// ─── Dice ───
+export const DICE = {
+  SIZE: 64,
+  RADIUS: 10,
+  PIP_RADIUS: 5,
+  BG_COLOR: 0xf5f0e1,
+  PIP_COLOR: 0x222222,
+  SELECTED_STROKE: 0xffcc00,
+  FORCED_STROKE: 0xff4444,
+  DEFAULT_STROKE: 0x444444,
+  GRIMY_COLOR: 0x6b5a3e,
+  INDICATOR_SIZE: 8,
+  INDICATOR_GAP: 2,
+};
+
+// ─── Animations ───
+export const ANIM = {
+  ROLL_DURATION: 600,
+  ROLL_INTERVAL: 60,
+  ROLL_BOUNCE_DURATION: 80,
+  SCORE_HIGHLIGHT_DURATION: 150,
+  SCORE_FINAL_FLASH_DELAY: 300,
+  SCORE_COMPLETE_DELAY: 400,
+  HOVER_DURATION: 100,
+  CARD_HOVER_SCALE: 1.05,
+};

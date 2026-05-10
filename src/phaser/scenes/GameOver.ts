@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
-import { EventBus } from '../../game/EventBus';
+import { EventBus, Events } from '../../game/EventBus';
 import { resetPlayerState } from '../../game/PlayerState';
+import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 
 export class GameOver extends Scene {
@@ -18,14 +19,14 @@ export class GameOver extends Scene {
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 
     const bg = this.add.graphics();
-    bg.fillStyle(data.won ? 0x1a3a1a : 0x3a1a1a, 1);
+    bg.fillStyle(data.won ? COLORS.BG_WIN : COLORS.BG_LOSE, 1);
     bg.fillRect(0, 0, width, height);
 
     const title = data.won ? 'LANDMARK REACHED!' : 'TRAIL ENDS HERE';
-    const color = data.won ? '#44ff44' : '#ff4444';
+    const color = data.won ? TEXT_COLORS.WIN : TEXT_COLORS.LOSE;
 
     this.add.text(width / 2, height * 0.34, title, {
-      fontFamily: 'Arial Black',
+      fontFamily: FONTS.HEADING,
       fontSize: '48px',
       color,
       stroke: '#000000',
@@ -34,9 +35,9 @@ export class GameOver extends Scene {
     }).setOrigin(0.5);
 
     this.add.text(width / 2, height * 0.44, `${data.totalMiles} / ${data.targetMiles} miles`, {
-      fontFamily: 'Arial',
+      fontFamily: FONTS.PRIMARY,
       fontSize: '28px',
-      color: '#ffffff',
+      color: TEXT_COLORS.PRIMARY,
       align: 'center',
     }).setOrigin(0.5);
 
@@ -46,7 +47,7 @@ export class GameOver extends Scene {
         this.scene.start('MainMenu');
       });
 
-    EventBus.emit('current-scene-ready', this);
+    EventBus.emit(Events.SCENE_READY, this);
   }
 
   private onResize(): void {

@@ -1,4 +1,4 @@
-// ─── Core Types (No Phaser imports) ───
+import { GAMEPLAY } from './Constants';
 
 export type PhaseState = 'SELECT' | 'ROLL' | 'SCORE' | 'DAY_END' | 'ROUND_END';
 
@@ -13,6 +13,13 @@ export enum HandType {
   FOUR_OF_A_KIND = 'FOUR_OF_A_KIND',
   FIVE_STRAIGHT = 'FIVE_STRAIGHT',
   FIVE_OF_A_KIND = 'FIVE_OF_A_KIND',
+}
+
+export interface HandStats {
+  level: number;        // starts at 1, increased by trail guide cards
+  timesPlayed: number;
+  milesPerLevel: number; // miles added per level (from trail guide data)
+  multPerLevel: number;  // mult added per level (from trail guide data)
 }
 
 export type DiceEnhancement =
@@ -69,10 +76,10 @@ export interface GameConfig {
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
-  maxDays: 4,
-  maxRerolls: 3,
-  rollSize: 5,
-  targetMiles: 300,
+  maxDays: GAMEPLAY.MAX_DAYS,
+  maxRerolls: GAMEPLAY.MAX_REROLLS,
+  rollSize: GAMEPLAY.ROLL_SIZE,
+  targetMiles: GAMEPLAY.TARGET_MILES,
 };
 
 export interface RoundState {
