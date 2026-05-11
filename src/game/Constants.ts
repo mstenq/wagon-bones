@@ -26,11 +26,11 @@ export const GAMEPLAY = {
 
 // ─── RNG / Chance Tuning ───
 export const CHANCES = {
-  PIP_EFFECT: 0.08,         // 8% chance per pip effect per die in packs
-  DICE_AURA: 0.50,          // 50% chance for aura on pack dice (high for testing)
-  AURA_HOLY: 0.10,          // 10% of auras are holy
-  AURA_FIRE: 0.30,          // 30% of auras are fire (cumulative 40%)
-  AURA_ICY: 0.10,           // 10% of auras are icy  (remainder)
+  STICKER_EFFECT: 0.08,      
+  DICE_AURA: 0.10,          
+  AURA_HOLY: 0.10,          
+  AURA_FIRE: 0.30,         
+  AURA_ICY: 0.10,           
 };
 
 // ─── Pack Weight Multipliers ───
@@ -154,6 +154,8 @@ export const UI = {
   HAND_Y_RATIO: 0.72,
   ROLL_Y_RATIO: 0.50,
   DICE_SPACING: 80,
+  DICE_ARC_HEIGHT: 12,      // max Y lift at center of arc (px)
+  DICE_ARC_ROTATION: 0.04,  // max rotation at edges (radians, ~2.3°)
   FELT_PADDING: 12,
   FELT_ALPHA: 0.4,
   FELT_RADIUS: 16,
@@ -183,6 +185,7 @@ export const ANIM = {
   ROLL_INTERVAL: 60,
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
+  SCORE_STEP_DELAY: 250,           // ms between each scoring step (dice, equip, held)
   SCORE_FINAL_FLASH_DELAY: 300,
   SCORE_COMPLETE_DELAY: 400,
   HOVER_DURATION: 100,

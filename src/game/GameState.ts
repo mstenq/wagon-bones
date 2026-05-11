@@ -187,20 +187,9 @@ export class GameState {
     const baseResult = scoreHand(leveledResult, player.equipment);
     console.log('[SCORE] After scoreHand: totalValue:', baseResult.totalValue, '| mult:', baseResult.mult, '| miles:', baseResult.miles);
 
-    // Apply equipment effects
-    console.log('[SCORE] Equipment:', player.equipment.map(e => `${e.def.name}(${e.def.effectType}, aura:${e.def.aura?.id ?? 'none'})`).join(', ') || 'none');
-
     // Determine held-in-hand dice (rolled but not scored)
     const scoredIds = new Set(this.state.selectedForScore.map(d => d.id));
     const heldDice = this.state.rolledDice.filter(d => !scoredIds.has(d.id));
-
-    const result = applyEquipmentEffects(baseResult, player.equipment, {
-      handResult: leveledResult,
-      scoringDice: this.state.selectedForScore,
-      heldDice,
-      rerollsRemaining: this.state.rerollsRemaining,
-      equipmentCount: player.equipment.length,
-    });
 
     // Step 4: Process held-in-hand abilities (steel dice, held equipment)
     const heldResult = processHeldInHand(heldDice, player.equipment);
@@ -208,27 +197,35 @@ export class GameState {
       player.economy.earn(heldResult.moneyEarned);
     }
 
-    // Apply held-in-hand mult bonuses to the final result
-    let finalMult = result.mult + heldResult.bonusMult;
-    finalMult = Math.floor(finalMult * heldResult.xMult);
-    const finalMiles = Math.floor(result.miles / result.mult * finalMult);
-
-    const finalResult: ScoreResult = {
-      handResult: result.handResult,
-      totalValue: result.totalValue,
-      miles: finalMiles,
-      mult: finalMult,
+    // Apply held-in-hand mult bonuses to the base result before independent equipment
+    const heldMult = (baseResult.mult + heldResult.bonusMult) * heldResult.xMult;
+    const afterHeldResult: ScoreResult = {
+      handResult: baseResult.handResult,
+      totalValue: baseResult.totalValue,
+      miles: (baseResult.handResult.baseMiles + baseResult.totalValue) * heldMult,
+      mult: heldMult,
     };
+    console.log('[SCORE] After held-in-hand: mult:', afterHeldResult.mult, '| miles:', afterHeldResult.miles);
+
+    // Step 5: Apply independent equipment effects (Dynamite, Horseshoe, auras, etc.)
+    console.log('[SCORE] Equipment:', player.equipment.map(e => `${e.def.name}(${e.def.effectType}, aura:${e.def.aura?.id ?? 'none'})`).join(', ') || 'none');
+    const finalResult = applyEquipmentEffects(afterHeldResult, player.equipment, {
+      handResult: leveledResult,
+      scoringDice: this.state.selectedForScore,
+      heldDice,
+      rerollsRemaining: this.state.rerollsRemaining,
+      equipmentCount: player.equipment.length,
+    });
 
     // Attach held animation steps for the rendering layer
     (finalResult as any)._heldSteps = heldResult.animSteps;
 
-    console.log('[SCORE] After held-in-hand: miles:', finalResult.miles, '| mult:', finalResult.mult);
+    console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
 
     // Record hand played
     player.recordHandPlayed(handType);
 
-    this.state.totalMiles += finalResult.miles;
+    this.state.totalMiles += Math.floor(finalResult.miles);
     this.state.phase = 'DAY_END';
     this.emit('score-calculated', finalResult);
     this.emit('phase-change', this.state.phase);

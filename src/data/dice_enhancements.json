@@ -18,8 +18,8 @@
     "color": "0xc4a055"
   },
   {
-    "id": "iron",
-    "name": "Iron",
+    "id": "steel",
+    "name": "Steel",
     "description": "x1.5 Mult when not part of scored hand",
     "color": "0xa8a8b0"
   },

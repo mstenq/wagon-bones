@@ -12,6 +12,11 @@ export class MainMenu extends Scene {
   create() {
     const { width, height } = this.scale;
 
+    // Start background music if not already playing
+    if (!this.sound.get('bg_music_1')?.isPlaying) {
+      this.sound.play('bg_music_1', { loop: true, volume: 0.3 });
+    }
+
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 

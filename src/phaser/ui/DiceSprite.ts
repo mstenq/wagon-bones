@@ -58,6 +58,7 @@ function dodecahedronOuterVerts(cx: number, cy: number, rShoulder: number, rTip:
 }
 
 export class DiceSprite extends GameObjects.Container {
+  static suppressTooltips = false;
   private bg: GameObjects.Graphics;
   private valueText: GameObjects.Text;
   private stickerText: GameObjects.Text | null = null;
@@ -324,7 +325,7 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   private showTooltip(): void {
-    if (this.tooltip) return;
+    if (this.tooltip || DiceSprite.suppressTooltips) return;
 
     // Get world position (handles nested containers)
     const matrix = this.getWorldTransformMatrix();
@@ -430,7 +431,7 @@ function getEnhancementColor(e: string): number {
     bone: 0xd4c9a8, 
     lucky: 0x4caf50, 
     wooden: 0x8b6914,
-    iron: 0x808080, 
+    steel: 0x808080, 
     gold: 0xcaab02, 
     loaded: 0xcc3333,
     diamond: 0x00bcd4, 
@@ -446,7 +447,7 @@ function getEnhancementBgColor(e: string): number {
     bone:    0xe8dcc8,  // warm cream/bone
     lucky:   0xc8f0c8,  // light green
     wooden:  0xc4a055,  // wood brown
-    iron:    0xa8a8b0,  // steel grey
+    steel:    0xa8a8b0,  // steel grey
     gold:    0xffe870,  // bright gold
     loaded:  0xf0a0a0,  // soft red
     diamond: 0xa0e8f0,  // light cyan
@@ -462,7 +463,7 @@ function getEnhancementPipColor(e: string): number {
     bone:    0x5a4a2a,  // dark brown
     lucky:   0x1a5a1a,  // dark green
     wooden:  0x3a2a00,  // dark brown
-    iron:    0x2a2a3a,  // dark blue-grey
+    steel:    0x2a2a3a,  // dark blue-grey
     gold:    0x8a6a00,  // dark gold
     loaded:  0x6a0000,  // dark red
     diamond: 0x004a5a,  // dark teal

@@ -152,50 +152,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   // Sound for hand detection
   scene.sound.play('sfx_chips1', { volume: 0.5 });
 
-  const EQUIP_STEP_DELAY = 250;
-
   let index = 0;
 
   function scoreNextDie() {
     if (index >= scoringSprites.length) {
-      // All dice scored — now trigger independent equipment one by one
-      const independentEquip = getIndependentTriggeredEquip(equipment, result.handResult.type, {
-        rerollsRemaining: (result as any)._rerollsRemaining ?? 0,
-        scoringDice: result.handResult.scoringDice,
-        equipmentCount: equipment.length,
-      });
-
-      if (independentEquip.length > 0) {
-        let equipIdx = 0;
-        function triggerNextEquip() {
-          if (equipIdx >= independentEquip.length) {
-            startHeldInHandPhase();
-            return;
-          }
-          const entry = independentEquip[equipIdx];
-          wiggleEquipCard(scene, equipBar, entry.index);
-
-          if (entry.type === 'mult') {
-            currentMult += entry.value;
-            sidebar.setMultAnimated(currentMult);
-            scene.sound.play('sfx_multhit1', { volume: 0.35, detune: equipIdx * 60 });
-          } else if (entry.type === 'miles') {
-            currentMiles += entry.value;
-            sidebar.setMilesAnimated(currentMiles);
-            scene.sound.play('sfx_chips2', { volume: 0.35, detune: equipIdx * 60 });
-          } else if (entry.type === 'xmult') {
-            currentMult = Math.floor(currentMult * entry.value);
-            sidebar.setMultAnimated(currentMult);
-            scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
-          }
-
-          equipIdx++;
-          scene.time.delayedCall(EQUIP_STEP_DELAY, triggerNextEquip);
-        }
-        scene.time.delayedCall(200, triggerNextEquip);
-      } else {
-        startHeldInHandPhase();
-      }
+      // All dice scored — Step 4: held-in-hand, then Step 5: independent equipment
+      startHeldInHandPhase();
       return;
     }
 
@@ -271,12 +233,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             scene.sound.play('sfx_chips2', { volume: 0.3, detune: 200 });
           }
           tIdx++;
-          scene.time.delayedCall(EQUIP_STEP_DELAY, triggerNextPerDie);
+          scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextPerDie);
         }
-        scene.time.delayedCall(120, triggerNextPerDie);
+        scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextPerDie);
       } else {
         index++;
-        scene.time.delayedCall(ANIM.SCORE_HIGHLIGHT_DURATION + 100, scoreNextDie);
+        scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, scoreNextDie);
       }
     });
   }
@@ -286,7 +248,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   function startHeldInHandPhase() {
     const heldSteps: HeldAnimStep[] = (result as any)._heldSteps ?? [];
     if (heldSteps.length === 0) {
-      finishScoring();
+      startIndependentEquipPhase();
       return;
     }
 
@@ -296,11 +258,10 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     for (const s of heldSprites) heldSpriteMap.set(s.dieData.id, s);
 
     let stepIdx = 0;
-    const HELD_STEP_DELAY = 300;
 
     function animateNextHeldStep() {
       if (stepIdx >= heldSteps.length) {
-        finishScoring();
+        startIndependentEquipPhase();
         return;
       }
 
@@ -311,7 +272,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       if (sprite) {
         const origX = sprite.x;
         const origY = sprite.y;
-        const shakeDuration = 50;
+        const shakeDuration = 60;
         const shakeCount = 3;
         const shakeIntensity = 3;
 
@@ -357,7 +318,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         sidebar.setMultAnimated(currentMult);
         scene.sound.play('sfx_multhit1', { volume: 0.3, detune: stepIdx * 50 });
       } else if (step.type === 'xmult') {
-        currentMult = Math.floor(currentMult * step.value);
+        currentMult = currentMult * step.value;
         sidebar.setMultAnimated(currentMult);
         scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
       } else if (step.type === 'money') {
@@ -365,11 +326,53 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       }
 
       stepIdx++;
-      scene.time.delayedCall(HELD_STEP_DELAY, animateNextHeldStep);
+      scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, animateNextHeldStep);
     }
 
     // Small pause before starting held phase
-    scene.time.delayedCall(200, animateNextHeldStep);
+    scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, animateNextHeldStep);
+  }
+
+  // ─── Independent Equipment Animation Phase (Step 5) ───
+
+  function startIndependentEquipPhase() {
+    const independentEquip = getIndependentTriggeredEquip(equipment, result.handResult.type, {
+      rerollsRemaining: (result as any)._rerollsRemaining ?? 0,
+      scoringDice: result.handResult.scoringDice,
+      equipmentCount: equipment.length,
+    });
+
+    if (independentEquip.length > 0) {
+      let equipIdx = 0;
+      function triggerNextEquip() {
+        if (equipIdx >= independentEquip.length) {
+          finishScoring();
+          return;
+        }
+        const entry = independentEquip[equipIdx];
+        wiggleEquipCard(scene, equipBar, entry.index);
+
+        if (entry.type === 'mult') {
+          currentMult += entry.value;
+          sidebar.setMultAnimated(currentMult);
+          scene.sound.play('sfx_multhit1', { volume: 0.35, detune: equipIdx * 60 });
+        } else if (entry.type === 'miles') {
+          currentMiles += entry.value;
+          sidebar.setMilesAnimated(currentMiles);
+          scene.sound.play('sfx_chips2', { volume: 0.35, detune: equipIdx * 60 });
+        } else if (entry.type === 'xmult') {
+          currentMult = currentMult * entry.value;
+          sidebar.setMultAnimated(currentMult);
+          scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
+        }
+
+        equipIdx++;
+        scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextEquip);
+      }
+      scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextEquip);
+    } else {
+      finishScoring();
+    }
   }
 
   function finishScoring() {
@@ -386,5 +389,5 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   }
 
   // Start the scoring sequence after a short delay
-  scene.time.delayedCall(300, scoreNextDie);
+  scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, scoreNextDie);
 }

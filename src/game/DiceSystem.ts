@@ -296,9 +296,9 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
     }
   }
 
-  const mult = Math.floor((handResult.baseMult + bonusMult) * xMult);
+  const mult = (handResult.baseMult + bonusMult) * xMult;
   const miles = (handResult.baseMiles + totalValue) * mult;
-  console.log(`  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalValue} value) * floor((${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult) = ${miles} miles (mult: ${mult})`);
+  console.log(`  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalValue} value) * (${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult = ${miles} miles (mult: ${mult})`);
   return { handResult, totalValue, miles, mult };
 }
 

@@ -23,7 +23,7 @@ const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_doll
 /** Randomly apply a sticker to a die (small chance) */
 function applyRandomSticker(die: Die): void {
   if (die.sticker) return; // already has one
-  if (Math.random() >= CHANCES.PIP_EFFECT) return;
+  if (Math.random() >= CHANCES.STICKER_EFFECT) return;
   die.sticker = ALL_STICKERS[Math.floor(Math.random() * ALL_STICKERS.length)];
 }
 
@@ -145,7 +145,7 @@ export function generatePackContents(def: PackDefinition): PackItem[] {
 
 function generateDicePackContents(count: number): PackItem[] {
   const items: PackItem[] = [];
-  const enhancements = ['bone', 'lucky', 'wooden', 'iron', 'gold', 'loaded', 'blurry', null, null, null] as const;
+  const enhancements = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'blurry'] as const;
 
   for (let i = 0; i < count; i++) {
     const enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];

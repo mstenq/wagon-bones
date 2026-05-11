@@ -12,6 +12,8 @@ import { ItemCard } from './ItemCard';
 import type { GameState } from '../../game/GameState';
 import type { PlayerState } from '../../game/PlayerState';
 
+const CARD_VERTICAL_OFFSET = 20
+
 export class EquipmentBar extends GameObjects.Container {
   private bg: GameObjects.Graphics;
   private cards: ItemCard[] = [];
@@ -94,7 +96,7 @@ export class EquipmentBar extends GameObjects.Container {
     const spacing = UI.EQUIP_CARD_SPACING;
     const totalW = (equipment.length - 1) * spacing;
     const startX = this.barWidth / 2 - totalW / 2;
-    const cy = (this.barHeight / 2) - 20;
+    const cy = (this.barHeight / 2) - CARD_VERTICAL_OFFSET;
 
     for (let i = 0; i < equipment.length; i++) {
       const equip = equipment[i];
@@ -353,7 +355,7 @@ export class EquipmentBar extends GameObjects.Container {
 
       // Snap to final position with a decaying spring settle
       const positions = this.getCardXPositions(this.cards.length);
-      const cy = this.barHeight / 2;
+      const cy = (this.barHeight / 2) - CARD_VERTICAL_OFFSET;
       const overshoot = Phaser.Math.Clamp(
         finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
         -ANIM.CARD_DRAG_SWING_MAX,

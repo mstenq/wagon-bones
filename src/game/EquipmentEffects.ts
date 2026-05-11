@@ -105,7 +105,7 @@ export function applyEquipmentEffects(
   // Apply holy aura xMult (multiplicative, applied last)
   for (const equip of equipment) {
     if (equip.def.aura?.id === 'holy') {
-      finalMult = Math.floor(finalMult * 1.5);
+      finalMult = finalMult * 1.5;
       console.log(`  [equip] ${equip.def.name} HOLY aura: x1.5 mult (finalMult: ${finalMult})`);
     }
   }

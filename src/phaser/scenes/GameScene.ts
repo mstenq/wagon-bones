@@ -4,11 +4,12 @@
 // Balatro-inspired layout: sidebar left, equipment top, dice center, pouch bottom-right.
 
 import { Scene } from 'phaser';
+import * as Phaser from 'phaser'
 import { EventBus, Events } from '../../game/EventBus';
 import { GameState } from '../../game/GameState';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { getPlayerState } from '../../game/PlayerState';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
@@ -79,6 +80,10 @@ export class GameScene extends Scene {
   // Drag-to-reorder (play area)
   private draggingSprite: DiceSprite | null = null;
   private wasDragging: boolean = false;
+  private dragOffsetX: number = 0;
+  private dragOffsetY: number = 0;
+  private dragPrevX: number = 0;
+  private dragVelocityX: number = 0;
 
   // Refresh prompt overlay
   private refreshOverlay: Phaser.GameObjects.Container | null = null;
@@ -513,7 +518,9 @@ export class GameScene extends Scene {
     const startX = this.contentCX - totalWidth / 2;
 
     for (let i = 0; i < dice.length; i++) {
-      const sprite = new DiceSprite(this, startX + i * DICE_SPACING, y, dice[i]);
+      const arc = this.getArcOffset(i, dice.length);
+      const sprite = new DiceSprite(this, startX + i * DICE_SPACING, y + arc.y, dice[i]);
+      sprite.rotation = arc.rotation;
       sprite.setDepth(10);
       sprites.push(sprite);
     }
@@ -590,15 +597,33 @@ export class GameScene extends Scene {
       : (a: DiceSprite, b: DiceSprite) => b.dieData.value - a.dieData.value;
     this.rollSprites.sort(cmp);
 
+    const rollY = this.scale.height * UI.ROLL_Y_RATIO;
     const totalWidth = (this.rollSprites.length - 1) * DICE_SPACING;
     const startX = this.contentCX - totalWidth / 2;
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
-      sprite.x = startX + i * DICE_SPACING;
-      // Update lock icon position
+      const arc = this.getArcOffset(i, this.rollSprites.length);
+      const targetX = startX + i * DICE_SPACING;
+      const targetY = rollY + arc.y;
+
+      this.tweens.add({
+        targets: sprite,
+        x: targetX,
+        y: targetY,
+        rotation: arc.rotation,
+        duration: 250,
+        ease: 'Power2',
+      });
+
+      // Animate lock icon position
       if (this.lockIcons[i]) {
-        this.lockIcons[i].x = sprite.x;
-        this.lockIcons[i].y = sprite.y + 46;
+        this.tweens.add({
+          targets: this.lockIcons[i],
+          x: targetX,
+          y: targetY + 46,
+          duration: 250,
+          ease: 'Power2',
+        });
         this.lockIcons[i].setVisible(this.lockedDiceIds.has(sprite.dieData.id));
       }
     }
@@ -863,16 +888,19 @@ export class GameScene extends Scene {
   private repositionPlayArea(animated: boolean): void {
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < this.playAreaSprites.length; i++) {
+      const arc = this.getArcOffset(i, this.playAreaSprites.length);
       if (animated) {
         this.tweens.add({
           targets: this.playAreaSprites[i],
           x: positions[i],
-          y: this.playAreaY,
+          y: this.playAreaY + arc.y,
+          rotation: arc.rotation,
           duration: 200,
           ease: 'Power2',
         });
       } else {
-        this.playAreaSprites[i].setPosition(positions[i], this.playAreaY);
+        this.playAreaSprites[i].setPosition(positions[i], this.playAreaY + arc.y);
+        this.playAreaSprites[i].rotation = arc.rotation;
       }
     }
   }
@@ -915,10 +943,12 @@ export class GameScene extends Scene {
 
     // Animate new sprite to play area
     this.animating = true;
+    const newArc = this.getArcOffset(targetIdx, this.playAreaSprites.length);
     this.tweens.add({
       targets: newSprite,
       x: positions[targetIdx],
-      y: this.playAreaY,
+      y: this.playAreaY + newArc.y,
+      rotation: newArc.rotation,
       duration: 300,
       ease: 'Back.easeOut',
       onComplete: () => {
@@ -928,9 +958,12 @@ export class GameScene extends Scene {
 
     // Reposition existing play area sprites to accommodate
     for (let i = 0; i < this.playAreaSprites.length - 1; i++) {
+      const arc = this.getArcOffset(i, this.playAreaSprites.length);
       this.tweens.add({
         targets: this.playAreaSprites[i],
         x: positions[i],
+        y: this.playAreaY + arc.y,
+        rotation: arc.rotation,
         duration: 200,
         ease: 'Power2',
       });
@@ -982,10 +1015,12 @@ export class GameScene extends Scene {
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < this.playAreaSprites.length; i++) {
       const sprite = this.playAreaSprites[i];
+      const arc = this.getArcOffset(i, this.playAreaSprites.length);
       this.tweens.add({
         targets: sprite,
         x: positions[i],
-        y: this.playAreaY,
+        y: this.playAreaY + arc.y,
+        rotation: arc.rotation,
         duration: 300,
         ease: 'Back.easeOut',
         delay: i >= this.playAreaSprites.length - total ? (i - (this.playAreaSprites.length - total)) * 40 : 0,
@@ -1075,9 +1110,12 @@ export class GameScene extends Scene {
     // Reposition play area
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < this.playAreaSprites.length; i++) {
+      const arc = this.getArcOffset(i, this.playAreaSprites.length);
       this.tweens.add({
         targets: this.playAreaSprites[i],
         x: positions[i],
+        y: this.playAreaY + arc.y,
+        rotation: arc.rotation,
         duration: 200,
         ease: 'Power2',
       });
@@ -1110,10 +1148,19 @@ export class GameScene extends Scene {
     return Array.from({ length: count }, (_, i) => startX + i * DICE_SPACING);
   }
 
+  /** Get Balatro-style arc Y offset and rotation for a die at index i in a row of count */
+  private getArcOffset(i: number, count: number): { y: number; rotation: number } {
+    if (count <= 1) return { y: 0, rotation: 0 };
+    const t = i / (count - 1) - 0.5; // -0.5 to 0.5
+    const y = -UI.DICE_ARC_HEIGHT * (1 - 4 * t * t); // negative = up, parabola peak at center
+    const rotation = t * UI.DICE_ARC_ROTATION * 2; // fan out from center
+    return { y, rotation };
+  }
+
   private setupDragHandlers(): void {
     this.input.dragDistanceThreshold = 8;
 
-    this.input.on('dragstart', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+    this.input.on('dragstart', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
       if (this.animating) return;
       const sprite = gameObject as DiceSprite;
       const list = this.getDraggableList();
@@ -1121,22 +1168,48 @@ export class GameScene extends Scene {
 
       this.draggingSprite = sprite;
       this.wasDragging = true;
+      this.dragOffsetX = pointer.worldX - sprite.x;
+      this.dragOffsetY = pointer.worldY - sprite.y;
+      this.dragPrevX = pointer.worldX;
+      this.dragVelocityX = 0;
+
+      // Hide tooltip during drag
+      sprite.emit('pointerout');
+      DiceSprite.suppressTooltips = true;
+
       sprite.setDepth(30);
+      sprite.scaleX = 1.1;
+      sprite.scaleY = 1.1;
     });
 
-    this.input.on('drag', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject, dragX: number) => {
+    this.input.on('drag', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
       if (!this.draggingSprite || gameObject !== this.draggingSprite) return;
       const list = this.getDraggableList();
       if (!list) return;
 
-      this.draggingSprite.x = dragX;
+      // Track velocity for momentum swing
+      const dx = pointer.worldX - this.dragPrevX;
+      this.dragVelocityX = this.dragVelocityX * ANIM.CARD_DRAG_SWING_DAMPING + dx * (1 - ANIM.CARD_DRAG_SWING_DAMPING);
+      this.dragPrevX = pointer.worldX;
+
+      // Apply swing rotation
+      const swing = Phaser.Math.Clamp(
+        this.dragVelocityX * ANIM.CARD_DRAG_SWING_FACTOR,
+        -ANIM.CARD_DRAG_SWING_MAX,
+        ANIM.CARD_DRAG_SWING_MAX,
+      );
+      this.draggingSprite.rotation = swing;
+
+      // Follow pointer with offset
+      this.draggingSprite.x = pointer.worldX - this.dragOffsetX;
+      this.draggingSprite.y = pointer.worldY - this.dragOffsetY + ANIM.CARD_DRAG_LIFT_Y;
 
       // Calculate which slot the dragged sprite should occupy
       const positions = this.getRowXPositions(list.length);
       let newIndex = 0;
       let minDist = Infinity;
       for (let i = 0; i < positions.length; i++) {
-        const dist = Math.abs(dragX - positions[i]);
+        const dist = Math.abs(this.draggingSprite.x - positions[i]);
         if (dist < minDist) {
           minDist = dist;
           newIndex = i;
@@ -1149,11 +1222,15 @@ export class GameScene extends Scene {
         list.splice(newIndex, 0, this.draggingSprite);
 
         // Animate non-dragged sprites to their new slots
+        const rowY = this.getDraggableRowY();
         for (let i = 0; i < list.length; i++) {
           if (list[i] === this.draggingSprite) continue;
+          const arc = this.getArcOffset(i, list.length);
           this.tweens.add({
             targets: list[i],
             x: positions[i],
+            y: rowY + arc.y,
+            rotation: arc.rotation,
             duration: 150,
             ease: 'Power2',
           });
@@ -1172,19 +1249,53 @@ export class GameScene extends Scene {
       if (!list) return;
 
       const sprite = this.draggingSprite;
+      const finalVelocity = this.dragVelocityX;
       sprite.setDepth(list === this.rollSprites ? 10 : 20);
       this.draggingSprite = null;
+      this.dragVelocityX = 0;
+      DiceSprite.suppressTooltips = false;
 
-      // Snap to final position
+      // Spring settle with overshoot like equipment cards
       const positions = this.getRowXPositions(list.length);
       const idx = list.indexOf(sprite);
       const rowY = this.getDraggableRowY();
-      this.tweens.add({
+      const arc = this.getArcOffset(idx, list.length);
+
+      const overshoot = Phaser.Math.Clamp(
+        finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
+        -ANIM.CARD_DRAG_SWING_MAX,
+        ANIM.CARD_DRAG_SWING_MAX,
+      );
+      const dur = ANIM.CARD_DRAG_SETTLE_DURATION;
+
+      this.tweens.chain({
         targets: sprite,
-        x: positions[idx],
-        y: rowY,
-        duration: 150,
-        ease: 'Power2',
+        tweens: [
+          {
+            x: positions[idx],
+            y: rowY + arc.y,
+            rotation: overshoot + arc.rotation,
+            scaleX: 1,
+            scaleY: 1,
+            duration: dur * 0.3,
+            ease: 'Sine.easeOut',
+          },
+          {
+            rotation: -overshoot * 0.4 + arc.rotation,
+            duration: dur * 0.25,
+            ease: 'Sine.easeInOut',
+          },
+          {
+            rotation: overshoot * 0.1 + arc.rotation,
+            duration: dur * 0.2,
+            ease: 'Sine.easeInOut',
+          },
+          {
+            rotation: arc.rotation,
+            duration: dur * 0.25,
+            ease: 'Sine.easeIn',
+          },
+        ],
       });
 
       if (list === this.rollSprites) {
@@ -1197,12 +1308,15 @@ export class GameScene extends Scene {
   private repositionLockIcons(positions: number[]): void {
     // Rebuild lock icons to match the new sprite order
     const lockStates = this.rollSprites.map(s => this.lockedDiceIds.has(s.dieData.id));
+    const rollY = this.scale.height * UI.ROLL_Y_RATIO;
     for (let i = 0; i < this.lockIcons.length; i++) {
       const icon = this.lockIcons[i];
       if (i < positions.length) {
+        const arc = this.getArcOffset(i, this.rollSprites.length);
         this.tweens.add({
           targets: icon,
           x: positions[i],
+          y: rollY + arc.y + 46,
           duration: 150,
           ease: 'Power2',
         });

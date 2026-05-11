@@ -1,6 +1,6 @@
 [
-  { "id": "coffee_tin", "name": "Coffee Tin", "description": "Create 2 iron dice",
-    "instantEffect": { "type": "CREATE_DICE", "enhancement": "iron", "count": 2 } },
+  { "id": "coffee_tin", "name": "Coffee Tin", "description": "Create 2 steel dice",
+    "instantEffect": { "type": "CREATE_DICE", "enhancement": "steel", "count": 2 } },
   { "id": "buzzards", "name": "Buzzards", "description": "Create 2 bone dice",
     "instantEffect": { "type": "CREATE_DICE", "enhancement": "bone", "count": 2 } },
   { "id": "rabbits_foot", "name": "Rabbit's Foot", "description": "Create 2 lucky dice",
