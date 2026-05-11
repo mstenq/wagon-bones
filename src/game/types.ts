@@ -23,7 +23,7 @@ export interface HandStats {
 }
 
 export type DiceEnhancement =
-  | 'bone' | 'lucky' | 'wooden' | 'iron'
+  | 'bone' | 'lucky' | 'wooden' | 'iron' | 'steel'
   | 'gold' | 'loaded' | 'diamond' | 'stone' | 'blurry'
   | null;
 

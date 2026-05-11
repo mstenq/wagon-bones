@@ -84,13 +84,17 @@ Instead of decks, we instead choose a character, and the character affects how t
    - Base effect (Miles): The dice activates its base effect, giving the accorded amount of miles. Bonus miles are included in this value (Items like Cowboy Boots can add these bonus miles).
    - Dice Modifiers: Dice modifiers activate in the following order: enhancements, then gold/purple/blue pip enhancements (red are for retrigger phase), then aura.
    - 'On scored' Items: Items that activate on a played and scored dice will activate their effects. When multiple Items are triggered by the same card, they activate from left to right. Examples include Mile Marker's scaling, Lucky Number, and The Devil’s Hand.
-   - Retriggers: Each retrigger repeats the previous activation sequence (from base effects to scored card dependent Jokers) one more time. Multiple retriggers stack additively. Red bullet pips would go first, followed by retriggering Jokers like "Last Stand" from left to right. 
-4. Item Editions and 'Independent' Items: Items are checked from left to right to score any Aura (foil, holographic and polychrome) and activate Independent abilities:
+   - Retriggers: Each retrigger repeats the previous activation sequence (from base effects to scored card dependent Jokers) one more time. Multiple retriggers stack additively. Red bullet pips would go first, followed by retriggering Jokers like "Last Stand" from left to right.
+4. Held in hand abilities: Dice in hand are checked from left to right if they can activate in-hand abilities. The sequence for each card is similar to scored cards.
+   - Enhancement (Steel dice): Currently Steel is the only dice modifier to activate in-hand for each hand.
+   - 'On held' Equipment: Equipment that activate on dice still held in hand will activate their effects. When multiple Items are triggered by a single dice, they activate from left to right. Examples include "Bottom Dollar", "The Thirteenth Crossing", and "Ace in the Hole".
+   -  Retriggers: Same as those of scored dice, retriggers of dice in hand stack additively. Red bullet stickers will activate first, then "Double Down" and any other item copying its effect from left to right. 
+5. Item Editions and 'Independent' Items: Items are checked from left to right to score any Aura (foil, holographic and polychrome) and activate Independent abilities:
    - Fire or Ice aura bonus.
    - 'Independent' Items: Items that trigger after all the playing cards are scored will activate their base ability. These do not get affected by retriggers. Examples include "Campfire Stories", "Matchmaker", and "Blessed Herd".
    - Items dependent on other Items (currently, only "Collector’s Case").
    - Holy aura bonus (This goes last for greater xMult affect).
-5. Then the miles are multipled against the xmult and the score is determined. Professions like "Accountant Henry Pritchard" will balance the miles and mult the two numbers before multiplying.
+6. Then the miles are multipled against the xmult and the score is determined. Professions like "Accountant Henry Pritchard" will balance the miles and mult the two numbers before multiplying.
 
 ## Also See:
 GAME_BOSS_OVERVIEW.md

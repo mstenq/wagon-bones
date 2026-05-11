@@ -1,4 +1,4 @@
-## Update to make it more like cubito
+## Potential Update to make it more like cubito
 
 The biggest change is removing hand types from the game and instead having dice that show blank/bullet/coin/foot/star.
 

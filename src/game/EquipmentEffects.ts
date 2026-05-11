@@ -7,6 +7,7 @@ import { EquipmentInstance } from './ItemsSystem';
 export interface ScoringContext {
   handResult: HandResult;
   scoringDice: Die[];
+  heldDice: Die[];           // dice rolled but not scored (held in hand)
   rerollsRemaining: number;
   equipmentCount: number;
 }
@@ -168,6 +169,118 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
   }
 
   return { moneyEarned, destroyedIndices };
+}
+
+// ─── Held-in-Hand Processing (Step 4) ───
+
+export interface HeldAnimStep {
+  dieId: string;
+  type: 'mult' | 'xmult' | 'money';
+  value: number;
+  source: string;        // e.g. 'STEEL', equipment name
+  equipIndex?: number;   // index in equipment array (for wiggle)
+}
+
+interface HeldInHandResult {
+  bonusMult: number;
+  xMult: number;
+  moneyEarned: number;
+  animSteps: HeldAnimStep[];
+}
+
+/**
+ * Process held-in-hand abilities for dice that were rolled but not scored.
+ * Sequence per die (left to right): steel enhancement → equipment triggers → retriggers.
+ * Retriggers: red_bullet sticker first, then Double Down equipment.
+ */
+export function processHeldInHand(
+  heldDice: Die[],
+  equipment: EquipmentInstance[],
+): HeldInHandResult {
+  let bonusMult = 0;
+  let xMult = 1;
+  let moneyEarned = 0;
+  const animSteps: HeldAnimStep[] = [];
+
+  // Count retriggers from Double Down equipment
+  const doubleDownCount = equipment.filter(e => e.def.effectType === 'HELD_RETRIGGER').length;
+
+  // Find the lowest held die value for Bottom Dollar
+  const lowestValue = heldDice.length > 0
+    ? Math.min(...heldDice.map(d => d.value))
+    : 0;
+
+  console.log('[SCORE] Step 4: Held-in-hand abilities');
+  console.log(`  [held] Held dice: ${heldDice.map(d => `${d.id}(value:${d.value}, enh:${d.enhancement}, sticker:${d.sticker})`).join(', ') || 'none'}`);
+
+  for (const die of heldDice) {
+    // Calculate how many times this die triggers:
+    // 1 base + red_bullet sticker retrigger + Double Down retriggers
+    const hasRedBullet = die.sticker === 'red_bullet';
+    const triggers = 1 + (hasRedBullet ? 1 : 0) + doubleDownCount;
+
+    for (let t = 0; t < triggers; t++) {
+      const triggerLabel = t === 0 ? '' : ` (retrigger ${t})`;
+
+      // Steel enhancement: x1.5 mult per trigger
+      if (die.enhancement === 'steel') {
+        xMult *= 1.5;
+        animSteps.push({ dieId: die.id, type: 'xmult', value: 1.5, source: 'STEEL' });
+        console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${xMult})`);
+      }
+
+      // Equipment triggers on held dice
+      for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+        const equip = equipment[eIdx];
+        const { effectType, effectParams } = equip.def;
+        const p = effectParams as Record<string, unknown>;
+
+        switch (effectType) {
+          case 'HELD_LOWEST_MULT':
+            // Bottom Dollar: adds double the rank of the lowest held die to mult
+            if (die.value === lowestValue) {
+              bonusMult += lowestValue * 2;
+              animSteps.push({ dieId: die.id, type: 'mult', value: lowestValue * 2, source: equip.def.name, equipIndex: eIdx });
+              console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${lowestValue * 2} mult (bonusMult: ${bonusMult})`);
+            }
+            break;
+
+          case 'HELD_PIP_XMULT':
+            // Ace in the Hole: each matching pip gives xMult
+            if (die.value === (p.pip as number)) {
+              xMult *= p.value as number;
+              animSteps.push({ dieId: die.id, type: 'xmult', value: p.value as number, source: equip.def.name, equipIndex: eIdx });
+              console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value} mult (xMult: ${xMult})`);
+            }
+            break;
+
+          case 'HELD_PIP_MULT':
+            // The Eleventh Crossing: each matching pip gives +mult
+            if (die.value === (p.pip as number)) {
+              bonusMult += p.value as number;
+              animSteps.push({ dieId: die.id, type: 'mult', value: p.value as number, source: equip.def.name, equipIndex: eIdx });
+              console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
+            }
+            break;
+
+          case 'HELD_ENHANCED_MONEY':
+            // Prospector's Pouch: each enhanced die has chance to give money
+            if (die.enhancement !== null) {
+              const [num, den] = p.chance as [number, number];
+              if (Math.random() < num / den) {
+                moneyEarned += p.value as number;
+                animSteps.push({ dieId: die.id, type: 'money', value: p.value as number, source: equip.def.name, equipIndex: eIdx });
+                console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value} (total: $${moneyEarned})`);
+              }
+            }
+            break;
+        }
+      }
+    }
+  }
+
+  console.log(`  [held] Totals: bonusMult: ${bonusMult}, xMult: ${xMult}, money: $${moneyEarned}`);
+  return { bonusMult, xMult, moneyEarned, animSteps };
 }
 
 // ─── Helpers ───

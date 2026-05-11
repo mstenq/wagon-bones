@@ -26,7 +26,7 @@
   {
     "id": "gold",
     "name": "Gold",
-    "description": "Earn $1 when scored",
+    "description": "Earn $3 when dice is not scored",
     "color": "0xffe870"
   },
   {
@@ -44,7 +44,7 @@
   {
     "id": "stone",
     "name": "Stone",
-    "description": "No value, counts as 50 base miles",
+    "description": "No dice values, counts as 50 base miles and is always scored",
     "color": "0x888888"
   },
   {

@@ -361,6 +361,80 @@ const items: ItemDef[] = [
     effectParams: { value: 4 },
     hintDisplay: () => [[money('+$4')]],
   },
+
+  // ─── Held-in-Hand Items ───
+  {
+    id: 'double_down',
+    name: 'Double Down',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Retrigger all held-in-hand abilities',
+    effectType: 'HELD_RETRIGGER',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[text('Retrigger'), condition('held dice')]],
+  },
+  {
+    id: 'bottom_dollar',
+    name: 'Bottom Dollar',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Adds double the rank of lowest held-in-hand die to mult',
+    effectType: 'HELD_LOWEST_MULT',
+    effectParams: {},
+    hintDisplay: (game) => {
+      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
+      if (held.length > 0) {
+        const lowest = Math.min(...held.map(d => d.value));
+        return [[mult(`+${lowest * 2}`), condition('lowest held')]];
+      }
+      return [[mult('+?'), condition('lowest held')]];
+    },
+  },
+  {
+    id: 'ace_in_the_hole',
+    name: 'Ace in the Hole',
+    cost: 8,
+    rarity: 'rare',
+    description: 'Each 1 held in hand gives x1.5 mult',
+    effectType: 'HELD_PIP_XMULT',
+    effectParams: { pip: 1, value: 1.5 },
+    hintDisplay: (game) => {
+      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
+      const count = held.filter(d => d.value === 1).length;
+      if (count > 0) return [[mult(`x${1.5 ** count}`), condition(`${count}x 1s held`)]];
+      return [[mult('x1.5'), condition('per 1 held')], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'prospectors_pouch',
+    name: "Prospector's Pouch",
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Each enhanced die held in hand has a 1 in 2 chance to give $1',
+    effectType: 'HELD_ENHANCED_MONEY',
+    effectParams: { chance: [1, 2], value: 1 },
+    hintDisplay: (game) => {
+      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
+      const enhanced = held.filter(d => d.enhancement !== null).length;
+      if (enhanced > 0) return [[money(`$1`), odds('1 in 2'), condition(`${enhanced} enhanced`)]];
+      return [[money('$1'), odds('1 in 2'), condition('enhanced held')]];
+    },
+  },
+  {
+    id: 'eleventh_crossing',
+    name: 'The Eleventh Crossing',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Each 11 held in hand gives +11 mult',
+    effectType: 'HELD_PIP_MULT',
+    effectParams: { pip: 11, value: 11 },
+    hintDisplay: (game) => {
+      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
+      const count = held.filter(d => d.value === 11).length;
+      if (count > 0) return [[mult(`+${count * 11}`), condition(`${count}x 11s held`)]];
+      return [[mult('+11'), condition('per 11 held')], [inactive('Inactive')]];
+    },
+  },
 ];
 
 export default items;

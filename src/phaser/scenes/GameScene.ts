@@ -126,7 +126,7 @@ export class GameScene extends Scene {
     const btnY = height - 30;
     this.readyBtn = new Button(this, this.contentCX, btnY, 'Roll Selected', 200, 40).onClick(() => this.onReadyToRoll());
     this.rollBtn = new Button(this, this.contentCX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
-    this.rerollBtn = new Button(this, this.contentCX - 110, btnY, 'Re-roll All', 180, 40).onClick(() => this.onReroll());
+    this.rerollBtn = new Button(this, this.contentCX - 110, btnY, 'Re-roll All', 200, 40).onClick(() => this.onReroll());
     this.scoreBtn = new Button(this, this.contentCX + 110, btnY, 'Score Hand', 160, 40).onClick(() => this.onScore());
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
 
@@ -557,7 +557,7 @@ export class GameScene extends Scene {
       this.readyBtn.setText(`Too Many (max ${MAX_SELECT_FOR_ROLL})`);
       this.readyBtn.setEnabled(false);
     } else {
-      this.readyBtn.setText('Roll 5 Dice');
+      this.readyBtn.setText(`Roll ${MAX_SELECT_FOR_ROLL} Dice`);
     }
 
     // Refresh add buttons on all stacks
@@ -574,8 +574,8 @@ export class GameScene extends Scene {
     this.rerollBtn.setText(
       hasRerolls
         ? (lockedCount === 0
-          ? `Re-roll All (${this.gameState.state.rerollsRemaining} left)`
-          : `Re-roll ${rerollCount} (${this.gameState.state.rerollsRemaining} left)`)
+          ? `Re-roll All (${this.gameState.state.rerollsRemaining} remaining)`
+          : `Re-roll ${rerollCount} (${this.gameState.state.rerollsRemaining} remaining)`)
         : 'No Re-rolls'
     );
 

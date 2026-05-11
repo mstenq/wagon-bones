@@ -141,7 +141,7 @@ export const UI = {
   BTN_FONT_SIZE: '18px',
 
   // Cards
-  CARD_W: 140,
+  CARD_W: 133,
   CARD_H: 200,
   CARD_RADIUS: 12,
   CARD_SHADOW_OFFSET: 4,

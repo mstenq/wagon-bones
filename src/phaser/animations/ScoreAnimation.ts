@@ -9,6 +9,7 @@ import { Die, ScoreResult } from '../../game/types';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { EquipmentInstance } from '../../game/ItemsSystem';
+import { HeldAnimStep } from '../../game/EquipmentEffects';
 import { ANIM } from '../../game/Constants';
 
 export interface ScoreAnimationConfig {
@@ -168,7 +169,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         let equipIdx = 0;
         function triggerNextEquip() {
           if (equipIdx >= independentEquip.length) {
-            finishScoring();
+            startHeldInHandPhase();
             return;
           }
           const entry = independentEquip[equipIdx];
@@ -193,7 +194,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         }
         scene.time.delayedCall(200, triggerNextEquip);
       } else {
-        finishScoring();
+        startHeldInHandPhase();
       }
       return;
     }
@@ -278,6 +279,97 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         scene.time.delayedCall(ANIM.SCORE_HIGHLIGHT_DURATION + 100, scoreNextDie);
       }
     });
+  }
+
+  // ─── Held-in-Hand Animation Phase (Step 4) ───
+
+  function startHeldInHandPhase() {
+    const heldSteps: HeldAnimStep[] = (result as any)._heldSteps ?? [];
+    if (heldSteps.length === 0) {
+      finishScoring();
+      return;
+    }
+
+    // Get held dice sprites (rolled but not scored)
+    const heldSprites = diceSprites.filter(s => !scoringIds.has(s.dieData.id));
+    const heldSpriteMap = new Map<string, DiceSprite>();
+    for (const s of heldSprites) heldSpriteMap.set(s.dieData.id, s);
+
+    let stepIdx = 0;
+    const HELD_STEP_DELAY = 300;
+
+    function animateNextHeldStep() {
+      if (stepIdx >= heldSteps.length) {
+        finishScoring();
+        return;
+      }
+
+      const step = heldSteps[stepIdx];
+      const sprite = heldSpriteMap.get(step.dieId);
+
+      // Shake the held die sprite
+      if (sprite) {
+        const origX = sprite.x;
+        const origY = sprite.y;
+        const shakeDuration = 50;
+        const shakeCount = 3;
+        const shakeIntensity = 3;
+
+        let shakeStep = 0;
+        scene.time.addEvent({
+          delay: shakeDuration,
+          repeat: shakeCount * 2 - 1,
+          callback: () => {
+            shakeStep++;
+            if (shakeStep % 2 === 1) {
+              sprite.x = origX + (Math.random() > 0.5 ? shakeIntensity : -shakeIntensity);
+              sprite.y = origY + (Math.random() > 0.5 ? 1 : -1);
+            } else {
+              sprite.x = origX;
+              sprite.y = origY;
+            }
+          },
+        });
+
+        // Scale pop after shake
+        scene.time.delayedCall(shakeDuration * shakeCount * 2, () => {
+          sprite.x = origX;
+          sprite.y = origY;
+          scene.tweens.add({
+            targets: sprite,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 100,
+            yoyo: true,
+            ease: 'Back.easeOut',
+          });
+        });
+      }
+
+      // Wiggle triggering equipment card
+      if (step.equipIndex !== undefined) {
+        wiggleEquipCard(scene, equipBar, step.equipIndex);
+      }
+
+      // Update sidebar values and play sound
+      if (step.type === 'mult') {
+        currentMult += step.value;
+        sidebar.setMultAnimated(currentMult);
+        scene.sound.play('sfx_multhit1', { volume: 0.3, detune: stepIdx * 50 });
+      } else if (step.type === 'xmult') {
+        currentMult = Math.floor(currentMult * step.value);
+        sidebar.setMultAnimated(currentMult);
+        scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
+      } else if (step.type === 'money') {
+        scene.sound.play('sfx_chips1', { volume: 0.25, detune: 300 });
+      }
+
+      stepIdx++;
+      scene.time.delayedCall(HELD_STEP_DELAY, animateNextHeldStep);
+    }
+
+    // Small pause before starting held phase
+    scene.time.delayedCall(200, animateNextHeldStep);
   }
 
   function finishScoring() {
