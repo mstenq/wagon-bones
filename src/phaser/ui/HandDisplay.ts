@@ -44,7 +44,7 @@ export class HandDisplay extends GameObjects.Container {
     this.handName.setText(hr.name);
     this.scoreText.setText(`+${result.miles} miles`);
     this.detailText.setText(
-      `(${hr.baseMiles} base + ${result.totalPips} pips) × ${result.mult} mult`
+      `(${hr.baseMiles} base + ${result.totalValue} value) × ${result.mult} mult`
     );
     this.setVisible(true);
   }

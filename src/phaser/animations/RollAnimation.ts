@@ -1,5 +1,5 @@
 // ─── RollAnimation ───
-// Animates dice "tumbling" by rapidly changing pip values before landing on final value.
+// Animates dice "tumbling" by rapidly changing values before landing on final value.
 
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
@@ -25,8 +25,8 @@ export function playRollAnimation(
     callback: () => {
       elapsed += interval;
       for (const sprite of diceSprites) {
-        // Show random pips during tumble
-        const tempData = { ...sprite.dieData, pips: Math.ceil(Math.random() * 6) };
+        // Show random values during tumble
+        const tempData = { ...sprite.dieData, value: Math.ceil(Math.random() * 12) };
         sprite.setDieData(tempData);
       }
     },

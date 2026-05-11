@@ -32,7 +32,7 @@
   {
     "id": "loaded",
     "name": "Loaded",
-    "description": "Double the odds of one chosen side being rolled",
+    "description": "Double the odds of one chosen value being rolled",
     "color": "0xf0a0a0"
   },
   {
@@ -44,7 +44,7 @@
   {
     "id": "stone",
     "name": "Stone",
-    "description": "No pips, counts as 50 base miles",
+    "description": "No value, counts as 50 base miles",
     "color": "0x888888"
   },
   {

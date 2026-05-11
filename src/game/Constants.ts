@@ -14,9 +14,10 @@ export const GAME = {
 export const GAMEPLAY = {
   MAX_DAYS: 4,
   MAX_REROLLS: 2,
-  ROLL_SIZE: 5,
+  ROLL_SIZE: 8,
+  SCORE_SIZE: 5,
   TARGET_MILES: 600,
-  STARTING_DICE: 10,
+  STARTING_DICE: 50,
   STARTING_MONEY: 10,
   MAX_EQUIPMENT_SLOTS: 5,
   SHOP_SLOTS: 4,
@@ -168,15 +169,12 @@ export const UI = {
 export const DICE = {
   SIZE: 64,
   RADIUS: 10,
-  PIP_RADIUS: 5,
   BG_COLOR: 0xf5f0e1,
   PIP_COLOR: 0x222222,
   SELECTED_STROKE: 0xffcc00,
   FORCED_STROKE: 0xff4444,
   DEFAULT_STROKE: 0x444444,
   GRIMY_COLOR: 0x6b5a3e,
-  INDICATOR_SIZE: 8,
-  INDICATOR_GAP: 2,
 };
 
 // ─── Animations ───

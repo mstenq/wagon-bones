@@ -68,6 +68,11 @@ export class GameScene extends Scene {
   // Lock icons
   private lockIcons: Phaser.GameObjects.Text[] = [];
 
+  // Sort controls
+  private sortOrder: 'asc' | 'desc' = 'asc';
+  private sortAscBtn: Button;
+  private sortDescBtn: Button;
+
   // Animation lock
   private animating: boolean = false;
 
@@ -124,6 +129,11 @@ export class GameScene extends Scene {
     this.rerollBtn = new Button(this, this.contentCX - 110, btnY, 'Re-roll All', 180, 40).onClick(() => this.onReroll());
     this.scoreBtn = new Button(this, this.contentCX + 110, btnY, 'Score Hand', 160, 40).onClick(() => this.onScore());
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
+
+    // Sort buttons (small, positioned above the main buttons)
+    const sortY = btnY - 50;
+    this.sortAscBtn = new Button(this, this.contentCX - 50, sortY, '↑ Low', 80, 28).onClick(() => this.setSortOrder('asc'));
+    this.sortDescBtn = new Button(this, this.contentCX + 50, sortY, '↓ High', 80, 28).onClick(() => this.setSortOrder('desc'));
 
     this.hideAllButtons();
 
@@ -272,10 +282,12 @@ export class GameScene extends Scene {
     this.animating = true;
     playRollAnimation(this, this.rollSprites, rolled, () => {
       this.animating = false;
+      this.sortAndRepositionDice();
       this.setupRollSpriteInteraction();
 
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
+      this.showSortButtons();
       this.updateRollButtons();
 
       this.instructionText.setText(
@@ -347,6 +359,8 @@ export class GameScene extends Scene {
 
     this.rerollBtn.setVisible(true);
     this.scoreBtn.setVisible(true);
+    this.showSortButtons();
+    this.sortAndRepositionDice();
     this.updateRollButtons();
 
     this.instructionText.setText(
@@ -443,6 +457,7 @@ export class GameScene extends Scene {
           const updated = rolled.find(d => d.id === sprite.dieData.id);
           if (updated) sprite.setDieData(updated);
         }
+        this.sortAndRepositionDice();
         this.updateRollButtons();
       });
 
@@ -452,7 +467,10 @@ export class GameScene extends Scene {
 
   private onScore(): void {
     if (this.animating) return;
-    const ids = this.gameState.state.rolledDice.map(d => d.id);
+    const ids = this.gameState.state.rolledDice
+      .filter(d => this.lockedDiceIds.has(d.id))
+      .map(d => d.id);
+    if (ids.length === 0) return;
 
     const success = this.gameState.selectForScore(ids);
     if (!success) return;
@@ -524,6 +542,8 @@ export class GameScene extends Scene {
     this.rerollBtn.setVisible(false);
     this.scoreBtn.setVisible(false);
     this.continueBtn.setVisible(false);
+    this.sortAscBtn.setVisible(false);
+    this.sortDescBtn.setVisible(false);
   }
 
   private updateDrawButtons(): void {
@@ -559,8 +579,46 @@ export class GameScene extends Scene {
         : 'No Re-rolls'
     );
 
-    this.scoreBtn.setEnabled(true);
-    this.scoreBtn.setText('Score Hand');
+    this.scoreBtn.setEnabled(lockedCount > 0);
+    this.scoreBtn.setText(lockedCount > 0 ? `Score ${lockedCount} Dice` : 'Lock Dice to Score');
+  }
+
+  /** Sort roll sprites by die value and reposition them with lock icons */
+  private sortAndRepositionDice(): void {
+    const cmp = this.sortOrder === 'asc'
+      ? (a: DiceSprite, b: DiceSprite) => a.dieData.value - b.dieData.value
+      : (a: DiceSprite, b: DiceSprite) => b.dieData.value - a.dieData.value;
+    this.rollSprites.sort(cmp);
+
+    const totalWidth = (this.rollSprites.length - 1) * DICE_SPACING;
+    const startX = this.contentCX - totalWidth / 2;
+    for (let i = 0; i < this.rollSprites.length; i++) {
+      const sprite = this.rollSprites[i];
+      sprite.x = startX + i * DICE_SPACING;
+      // Update lock icon position
+      if (this.lockIcons[i]) {
+        this.lockIcons[i].x = sprite.x;
+        this.lockIcons[i].y = sprite.y + 46;
+        this.lockIcons[i].setVisible(this.lockedDiceIds.has(sprite.dieData.id));
+      }
+    }
+  }
+
+  private setSortOrder(order: 'asc' | 'desc'): void {
+    this.sortOrder = order;
+    this.sortAndRepositionDice();
+    this.updateSortButtonStyles();
+  }
+
+  private showSortButtons(): void {
+    this.sortAscBtn.setVisible(true);
+    this.sortDescBtn.setVisible(true);
+    this.updateSortButtonStyles();
+  }
+
+  private updateSortButtonStyles(): void {
+    this.sortAscBtn.setEnabled(this.sortOrder !== 'asc');
+    this.sortDescBtn.setEnabled(this.sortOrder !== 'desc');
   }
 
   private updateHUD(): void {
@@ -674,8 +732,7 @@ export class GameScene extends Scene {
 
   /** Generate a grouping key for dice with the same properties (ignoring current face value) */
   private getDiceGroupKey(die: Die): string {
-    const sidePipsKey = die.sidePips ? die.sidePips.join(',') : '';
-    return `${die.enhancement || ''}|${die.aura || ''}|${sidePipsKey}|${die.isGrimy}`;
+    return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}|${die.isGrimy}`;
   }
 
   /** Calculate target X positions for all non-empty stacks */

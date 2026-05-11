@@ -27,8 +27,8 @@ export type DiceEnhancement =
   | 'gold' | 'loaded' | 'diamond' | 'stone' | 'blurry'
   | null;
 
-export type PipEffect =
-  | 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_diamond'
+export type DiceSticker =
+  | 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon'
   | null;
 
 export type DiceAura =
@@ -37,9 +37,9 @@ export type DiceAura =
 
 export interface Die {
   id: string;
-  pips: number;          // 1-6, or 0 for stone dice
+  value: number;         // 1-12, or 0 for stone dice
   enhancement: DiceEnhancement;
-  sidePips: PipEffect[];  // length 6, one per side (index 0 = side showing 1 pip, etc.)
+  sticker: DiceSticker;  // whole-die effect (like Balatro seals)
   aura: DiceAura;
   isGrimy: boolean;      // face hidden until selected
 }
@@ -63,15 +63,16 @@ export interface HandResult {
 
 export interface ScoreResult {
   handResult: HandResult;
-  totalPips: number;     // sum of scoring dice pips (base miles from dice)
-  miles: number;         // (handBaseMiles + totalPips) * mult
+  totalValue: number;    // sum of scoring dice values (base miles from dice)
+  miles: number;         // (handBaseMiles + totalValue) * mult
   mult: number;
 }
 
 export interface GameConfig {
   maxDays: number;
   maxRerolls: number;      // re-rolls per day (resets each day)
-  rollSize: number;       // dice selected for rolling (default 5)
+  rollSize: number;       // dice drawn from pouch and rolled (default 8)
+  scoreSize: number;      // max dice player selects to score (default 5)
   targetMiles: number;    // miles to beat this leg
 }
 
@@ -79,6 +80,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   maxDays: GAMEPLAY.MAX_DAYS,
   maxRerolls: GAMEPLAY.MAX_REROLLS,
   rollSize: GAMEPLAY.ROLL_SIZE,
+  scoreSize: GAMEPLAY.SCORE_SIZE,
   targetMiles: GAMEPLAY.TARGET_MILES,
 };
 

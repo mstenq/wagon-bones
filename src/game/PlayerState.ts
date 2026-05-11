@@ -20,6 +20,7 @@ export interface ProfessionDef {
 const DEFAULT_STARTING_MONEY = GAMEPLAY.STARTING_MONEY;
 const DEFAULT_MAX_EQUIPMENT_SLOTS = GAMEPLAY.MAX_EQUIPMENT_SLOTS;
 const DEFAULT_SHOP_SLOTS = GAMEPLAY.SHOP_SLOTS;
+const DEFAULT_STARTING_DICE = GAMEPLAY.STARTING_DICE;
 const SHOP_REROLL_COST = GAMEPLAY.SHOP_REROLL_COST;
 
 export class PlayerState {
@@ -36,7 +37,7 @@ export class PlayerState {
 
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
-    this.dice = createPouch(10);
+    this.dice = createPouch(DEFAULT_STARTING_DICE);
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.shopSlots = DEFAULT_SHOP_SLOTS;

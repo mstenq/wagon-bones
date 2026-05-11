@@ -15,9 +15,9 @@ let nextDieId = 0;
 export function createDie(overrides?: Partial<Die>): Die {
   return {
     id: `die_${nextDieId++}`,
-    pips: Math.ceil(Math.random() * 6),
+    value: Math.ceil(Math.random() * 12),
     enhancement: null,
-    sidePips: [null, null, null, null, null, null],
+    sticker: null,
     aura: null,
     isGrimy: false,
     ...overrides,
@@ -31,7 +31,7 @@ export function createPouch(count: number): Die[] {
 // ─── Rolling ───
 
 export function rollDie(die: Die): Die {
-  return { ...die, pips: Math.ceil(Math.random() * 6) };
+  return { ...die, value: Math.ceil(Math.random() * 12) };
 }
 
 export function rollDice(dice: Die[]): Die[] {
@@ -57,13 +57,13 @@ export function returnToPouch(pouch: Die[], dice: Die[]): Die[] {
 function getFrequencies(dice: Die[]): Map<number, number> {
   const freq = new Map<number, number>();
   for (const d of dice) {
-    freq.set(d.pips, (freq.get(d.pips) || 0) + 1);
+    freq.set(d.value, (freq.get(d.value) || 0) + 1);
   }
   return freq;
 }
 
 function findLongestStraight(dice: Die[]): number[] {
-  const unique = [...new Set(dice.map(d => d.pips))].sort((a, b) => a - b);
+  const unique = [...new Set(dice.map(d => d.value))].sort((a, b) => a - b);
   let best: number[] = [];
   let current: number[] = [unique[0]];
 
@@ -109,12 +109,12 @@ export function detectBestHand(dice: Die[]): HandResult {
   // Five straight
   if (straight.length >= 5) {
     const straightSet = new Set(straight.slice(0, 5));
-    const scoringDice = dice.filter(d => straightSet.has(d.pips));
-    // Take only one die per pip value
+    const scoringDice = dice.filter(d => straightSet.has(d.value));
+    // Take only one die per value
     const used = new Set<number>();
     const uniqueDice = scoringDice.filter(d => {
-      if (used.has(d.pips)) return false;
-      used.add(d.pips);
+      if (used.has(d.value)) return false;
+      used.add(d.value);
       return true;
     });
     return buildResult(HandType.FIVE_STRAIGHT, uniqueDice.slice(0, 5));
@@ -123,7 +123,7 @@ export function detectBestHand(dice: Die[]): HandResult {
   // Four of a kind
   if (counts[0] >= 4) {
     const pip = [...freq.entries()].find(([, c]) => c >= 4)![0];
-    const scoring = dice.filter(d => d.pips === pip).slice(0, 4);
+    const scoring = dice.filter(d => d.value === pip).slice(0, 4);
     return buildResult(HandType.FOUR_OF_A_KIND, scoring);
   }
 
@@ -132,8 +132,8 @@ export function detectBestHand(dice: Die[]): HandResult {
     const threePip = [...freq.entries()].find(([, c]) => c >= 3)![0];
     const twoPip = [...freq.entries()].find(([p, c]) => c >= 2 && p !== threePip)![0];
     const scoring = [
-      ...dice.filter(d => d.pips === threePip).slice(0, 3),
-      ...dice.filter(d => d.pips === twoPip).slice(0, 2),
+      ...dice.filter(d => d.value === threePip).slice(0, 3),
+      ...dice.filter(d => d.value === twoPip).slice(0, 2),
     ];
     return buildResult(HandType.FULL_HOUSE, scoring);
   }
@@ -143,8 +143,8 @@ export function detectBestHand(dice: Die[]): HandResult {
     const straightSet = new Set(straight.slice(0, 4));
     const used = new Set<number>();
     const scoringDice = dice.filter(d => {
-      if (!straightSet.has(d.pips) || used.has(d.pips)) return false;
-      used.add(d.pips);
+      if (!straightSet.has(d.value) || used.has(d.value)) return false;
+      used.add(d.value);
       return true;
     });
     return buildResult(HandType.FOUR_STRAIGHT, scoringDice.slice(0, 4));
@@ -153,7 +153,7 @@ export function detectBestHand(dice: Die[]): HandResult {
   // Three of a kind
   if (counts[0] >= 3) {
     const pip = [...freq.entries()].find(([, c]) => c >= 3)![0];
-    return buildResult(HandType.THREE_OF_A_KIND, dice.filter(d => d.pips === pip).slice(0, 3));
+    return buildResult(HandType.THREE_OF_A_KIND, dice.filter(d => d.value === pip).slice(0, 3));
   }
 
   // Three straight
@@ -161,8 +161,8 @@ export function detectBestHand(dice: Die[]): HandResult {
     const straightSet = new Set(straight.slice(0, 3));
     const used = new Set<number>();
     const scoringDice = dice.filter(d => {
-      if (!straightSet.has(d.pips) || used.has(d.pips)) return false;
-      used.add(d.pips);
+      if (!straightSet.has(d.value) || used.has(d.value)) return false;
+      used.add(d.value);
       return true;
     });
     return buildResult(HandType.THREE_STRAIGHT, scoringDice.slice(0, 3));
@@ -172,8 +172,8 @@ export function detectBestHand(dice: Die[]): HandResult {
   if (counts[0] >= 2 && counts[1] >= 2) {
     const pairs = [...freq.entries()].filter(([, c]) => c >= 2).map(([p]) => p);
     const scoring = [
-      ...dice.filter(d => d.pips === pairs[0]).slice(0, 2),
-      ...dice.filter(d => d.pips === pairs[1]).slice(0, 2),
+      ...dice.filter(d => d.value === pairs[0]).slice(0, 2),
+      ...dice.filter(d => d.value === pairs[1]).slice(0, 2),
     ];
     return buildResult(HandType.TWO_PAIR, scoring);
   }
@@ -181,11 +181,11 @@ export function detectBestHand(dice: Die[]): HandResult {
   // Pair
   if (counts[0] >= 2) {
     const pip = [...freq.entries()].find(([, c]) => c >= 2)![0];
-    return buildResult(HandType.PAIR, dice.filter(d => d.pips === pip).slice(0, 2));
+    return buildResult(HandType.PAIR, dice.filter(d => d.value === pip).slice(0, 2));
   }
 
   // High value — best single die
-  const best = [...dice].sort((a, b) => b.pips - a.pips);
+  const best = [...dice].sort((a, b) => b.value - a.value);
   return buildResult(HandType.HIGH_VALUE, [best[0]]);
 }
 
@@ -193,10 +193,10 @@ export function detectBestHand(dice: Die[]): HandResult {
 
 /**
  * Calculate score for a played hand.
- * miles = (handBaseMiles + sum of scoring dice pips) × handBaseMult
+ * miles = (handBaseMiles + sum of scoring dice values) × handBaseMult
  */
 export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]): ScoreResult {
-  let totalPips = 0;
+  let totalValue = 0;
   let bonusMult = 0;
   let xMult = 1;
   const player = getPlayerState();
@@ -204,13 +204,13 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   console.log('  [scoreHand] Step 3: Per-die scoring');
   // Step 3: Per-die scoring (left to right)
   for (const die of handResult.scoringDice) {
-    // Base effect — pips as miles (stone dice have 0 pips but add 50 miles)
+    // Base effect — value as miles (stone dice have 0 value but add 50 miles)
     if (die.enhancement === 'stone') {
-      totalPips += 50;
-      console.log(`  [scoreHand]   Die ${die.id}: STONE +50 miles (total: ${totalPips})`);
+      totalValue += 50;
+      console.log(`  [scoreHand]   Die ${die.id}: STONE +50 miles (total: ${totalValue})`);
     } else {
-      totalPips += die.pips;
-      console.log(`  [scoreHand]   Die ${die.id}: +${die.pips} pips (total: ${totalPips})`);
+      totalValue += die.value;
+      console.log(`  [scoreHand]   Die ${die.id}: +${die.value} value (total: ${totalValue})`);
     }
 
     // Dice enhancement effects
@@ -220,8 +220,8 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         console.log(`  [scoreHand]   Die ${die.id} BONE: +4 mult (bonusMult: ${bonusMult})`);
         break;
       case 'wooden':
-        totalPips += 10;
-        console.log(`  [scoreHand]   Die ${die.id} WOODEN: +10 miles (totalPips: ${totalPips})`);
+        totalValue += 10;
+        console.log(`  [scoreHand]   Die ${die.id} WOODEN: +10 miles (totalValue: ${totalValue})`);
         break;
       case 'gold':
         player.economy.earn(1);
@@ -253,8 +253,8 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         console.log(`  [scoreHand]   Die ${die.id} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
         break;
       case 'icy':
-        totalPips += 50;
-        console.log(`  [scoreHand]   Die ${die.id} ICY aura: +50 pips (totalPips: ${totalPips})`);
+        totalValue += 50;
+        console.log(`  [scoreHand]   Die ${die.id} ICY aura: +50 miles (totalValue: ${totalValue})`);
         break;
       case 'holy':
         xMult *= 1.5;
@@ -269,27 +269,27 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       switch (effectType) {
         case 'PIP_MULT':
-          if (die.pips === (p.pip as number)) {
+          if (die.value === (p.pip as number)) {
             bonusMult += p.value as number;
             console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
           }
           break;
         case 'PIP_MILES':
-          if (die.pips === (p.pip as number)) {
-            totalPips += p.value as number;
-            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalPips: ${totalPips})`);
+          if (die.value === (p.pip as number)) {
+            totalValue += p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`);
           }
           break;
         case 'PARITY_MULT':
-          if (matchesParity(die.pips, p.parity as string)) {
+          if (matchesParity(die.value, p.parity as string)) {
             bonusMult += p.value as number;
             console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
           }
           break;
         case 'PARITY_MILES':
-          if (matchesParity(die.pips, p.parity as string)) {
-            totalPips += p.value as number;
-            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalPips: ${totalPips})`);
+          if (matchesParity(die.value, p.parity as string)) {
+            totalValue += p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`);
           }
           break;
       }
@@ -297,13 +297,13 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   }
 
   const mult = Math.floor((handResult.baseMult + bonusMult) * xMult);
-  const miles = (handResult.baseMiles + totalPips) * mult;
-  console.log(`  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalPips} pips) * floor((${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult) = ${miles} miles (mult: ${mult})`);
-  return { handResult, totalPips, miles, mult };
+  const miles = (handResult.baseMiles + totalValue) * mult;
+  console.log(`  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalValue} value) * floor((${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult) = ${miles} miles (mult: ${mult})`);
+  return { handResult, totalValue, miles, mult };
 }
 
-function matchesParity(pips: number, parity: string): boolean {
-  if (parity === 'even') return pips % 2 === 0;
-  if (parity === 'odd') return pips % 2 !== 0;
+function matchesParity(value: number, parity: string): boolean {
+  if (parity === 'even') return value % 2 === 0;
+  if (parity === 'odd') return value % 2 !== 0;
   return false;
 }

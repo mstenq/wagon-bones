@@ -1,55 +1,68 @@
 // ─── DiceSprite ───
-// Phaser Container that renders a die as a rounded rect with pip dots.
+// Phaser Container that renders a d12 die with a number on the front face.
 // Reads from a Die data object — no game logic here.
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { Die, PipEffect } from '../../game/types';
+import { Die } from '../../game/types';
 import { DICE, COLORS } from '../../game/Constants';
 import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
 import diceAurasData from '../../data/dice_auras.json';
-import pipEnhancementsData from '../../data/pip_enhancements.json';
+import stickerData from '../../data/pip_enhancements.json';
 
 // Lookup maps for descriptions
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
 const AURA_INFO = new Map(diceAurasData.map(a => [a.id, a]));
-const PIP_INFO = new Map(pipEnhancementsData.map(p => [p.id, p]));
+const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
-const DICE_RADIUS = DICE.RADIUS;
-const PIP_RADIUS = DICE.PIP_RADIUS;
 const BG_COLOR = DICE.BG_COLOR;
 const PIP_COLOR = DICE.PIP_COLOR;
 const SELECTED_STROKE = DICE.SELECTED_STROKE;
 const FORCED_STROKE = DICE.FORCED_STROKE;
 const DEFAULT_STROKE = DICE.DEFAULT_STROKE;
 const GRIMY_COLOR = DICE.GRIMY_COLOR;
-const INDICATOR_SIZE = DICE.INDICATOR_SIZE;
-const INDICATOR_GAP = DICE.INDICATOR_GAP;
-const MINI_SIZE = 36;
-const MINI_GAP = 4;
-const MINI_PIP_RADIUS = 3;
 const TOOLTIP_PAD = 10;
 const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
 
-// Pip positions for a standard die face, normalized to 0-1 range
-const PIP_POSITIONS: Record<number, [number, number][]> = {
-  1: [[0.5, 0.5]],
-  2: [[0.25, 0.25], [0.75, 0.75]],
-  3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
-  4: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]],
-  5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]],
-  6: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.5], [0.75, 0.5], [0.25, 0.75], [0.75, 0.75]],
-};
+// Dodecahedron geometry constants
+const D12_INNER_RADIUS = 19;   // Front face pentagon circumradius
+const D12_SHOULDER_RADIUS = 26; // Shoulder points (same angles as inner verts)
+const D12_TIP_RADIUS = 30;     // Tip points (between inner verts)
+const D12_ROTATION = -90;      // Starting angle so vertex points up
+
+/** Compute vertices of a regular pentagon */
+function pentagonVerts(cx: number, cy: number, radius: number, startAngleDeg: number): [number, number][] {
+  const verts: [number, number][] = [];
+  for (let i = 0; i < 5; i++) {
+    const angle = (startAngleDeg + i * 72) * Math.PI / 180;
+    verts.push([cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)]);
+  }
+  return verts;
+}
+
+/** Get the 10-point outer boundary (decagon) alternating tip and shoulder points */
+function dodecahedronOuterVerts(cx: number, cy: number, rShoulder: number, rTip: number, startAngleDeg: number): [number, number][] {
+  const verts: [number, number][] = [];
+  for (let i = 0; i < 5; i++) {
+    // Shoulder point (same angle as inner vertex)
+    const sAngle = (startAngleDeg + i * 72) * Math.PI / 180;
+    verts.push([cx + rShoulder * Math.cos(sAngle), cy + rShoulder * Math.sin(sAngle)]);
+    // Tip point (midpoint angle between inner vertices)
+    const tAngle = (startAngleDeg + 36 + i * 72) * Math.PI / 180;
+    verts.push([cx + rTip * Math.cos(tAngle), cy + rTip * Math.sin(tAngle)]);
+  }
+  return verts;
+}
 
 export class DiceSprite extends GameObjects.Container {
   private bg: GameObjects.Graphics;
-  private pipGraphics: GameObjects.Graphics;
+  private valueText: GameObjects.Text;
+  private stickerText: GameObjects.Text | null = null;
   private auraGfx: GameObjects.Graphics;
   private auraLabel: GameObjects.Text | null = null;
-  private indicatorContainer: GameObjects.Container | null = null;
   private tooltip: GameObjects.Container | null = null;
   private auraTweens: Phaser.Tweens.Tween[] = [];
   private auraEmitters: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
@@ -67,8 +80,14 @@ export class DiceSprite extends GameObjects.Container {
 
     this.auraGfx = scene.add.graphics();
     this.bg = scene.add.graphics();
-    this.pipGraphics = scene.add.graphics();
-    this.add([this.auraGfx, this.bg, this.pipGraphics]);
+    this.valueText = scene.add.text(0, 0, '', {
+      fontFamily: 'Arial Black',
+      fontSize: '18px',
+      color: '#222222',
+      stroke: '#00000033',
+      strokeThickness: 1,
+    }).setOrigin(0.5, 0.5);
+    this.add([this.auraGfx, this.bg, this.valueText]);
 
     this.setSize(DICE_SIZE, DICE_SIZE);
     this.setInteractive(
@@ -77,7 +96,6 @@ export class DiceSprite extends GameObjects.Container {
     );
 
     this.redraw();
-    this.drawPipIndicators();
     this.drawAuraFX();
 
     this.on('pointerover', this.showTooltip, this);
@@ -97,7 +115,6 @@ export class DiceSprite extends GameObjects.Container {
   setDieData(data: Die): void {
     this._dieData = data;
     this.redraw();
-    this.drawPipIndicators();
     this.drawAuraFX();
   }
 
@@ -127,55 +144,130 @@ export class DiceSprite extends GameObjects.Container {
 
   private redraw(): void {
     this.bg.clear();
-    this.pipGraphics.clear();
 
-    const half = DICE_SIZE / 2;
     const isGrimy = this._dieData.isGrimy;
-
-    // Background
     const hasEnhancement = !!this._dieData.enhancement;
     const bgColor = isGrimy ? GRIMY_COLOR : (hasEnhancement ? getEnhancementBgColor(this._dieData.enhancement!) : BG_COLOR);
     const strokeColor = this._forced ? FORCED_STROKE : (this._selected ? SELECTED_STROKE : DEFAULT_STROKE);
     const strokeWidth = (this._selected || this._forced) ? 3 : 1;
 
-    this.bg.fillStyle(bgColor, 1);
-    this.bg.fillRoundedRect(-half, -half, DICE_SIZE, DICE_SIZE, DICE_RADIUS);
-    this.bg.lineStyle(strokeWidth, strokeColor, 1);
-    this.bg.strokeRoundedRect(-half, -half, DICE_SIZE, DICE_SIZE, DICE_RADIUS);
+    // Darker shade for side faces (angling away from viewer)
+    const sideColor = isGrimy ? darkenColor(GRIMY_COLOR, 0.75) : (hasEnhancement ? darkenColor(getEnhancementBgColor(this._dieData.enhancement!), 0.8) : darkenColor(BG_COLOR, 0.82));
+    const edgeColor = isGrimy ? darkenColor(GRIMY_COLOR, 0.5) : darkenColor(bgColor, 0.6);
 
-    // Enhancement label at bottom
+    // Compute geometry
+    const inner = pentagonVerts(0, 0, D12_INNER_RADIUS, D12_ROTATION);
+    const shoulders = pentagonVerts(0, 0, D12_SHOULDER_RADIUS, D12_ROTATION);
+    const tips = pentagonVerts(0, 0, D12_TIP_RADIUS, D12_ROTATION + 36);
+    const outerDecagon = dodecahedronOuterVerts(0, 0, D12_SHOULDER_RADIUS, D12_TIP_RADIUS, D12_ROTATION);
+
+    // 1. Fill outer decagonal silhouette (die body)
+    this.bg.fillStyle(sideColor, 1);
+    this.bg.beginPath();
+    this.bg.moveTo(outerDecagon[0][0], outerDecagon[0][1]);
+    for (let i = 1; i < 10; i++) {
+      this.bg.lineTo(outerDecagon[i][0], outerDecagon[i][1]);
+    }
+    this.bg.closePath();
+    this.bg.fillPath();
+
+    // 2. Draw 5 side face pentagons with subtle shading variation
+    for (let k = 0; k < 5; k++) {
+      const next = (k + 1) % 5;
+      // Side face k: inner[k], shoulders[k], tips[k], shoulders[next], inner[next]
+      this.bg.fillStyle(sideColor, 1);
+      this.bg.beginPath();
+      this.bg.moveTo(inner[k][0], inner[k][1]);
+      this.bg.lineTo(shoulders[k][0], shoulders[k][1]);
+      this.bg.lineTo(tips[k][0], tips[k][1]);
+      this.bg.lineTo(shoulders[next][0], shoulders[next][1]);
+      this.bg.lineTo(inner[next][0], inner[next][1]);
+      this.bg.closePath();
+      this.bg.fillPath();
+
+      // Edge lines for side faces
+      this.bg.lineStyle(1, edgeColor, 0.6);
+      this.bg.beginPath();
+      this.bg.moveTo(inner[k][0], inner[k][1]);
+      this.bg.lineTo(shoulders[k][0], shoulders[k][1]);
+      this.bg.lineTo(tips[k][0], tips[k][1]);
+      this.bg.lineTo(shoulders[next][0], shoulders[next][1]);
+      this.bg.lineTo(inner[next][0], inner[next][1]);
+      this.bg.closePath();
+      this.bg.strokePath();
+    }
+
+    // 3. Fill center pentagon (front face)
+    this.bg.fillStyle(bgColor, 1);
+    this.bg.beginPath();
+    this.bg.moveTo(inner[0][0], inner[0][1]);
+    for (let i = 1; i < 5; i++) {
+      this.bg.lineTo(inner[i][0], inner[i][1]);
+    }
+    this.bg.closePath();
+    this.bg.fillPath();
+
+    // Inner pentagon edge
+    this.bg.lineStyle(1, edgeColor, 0.8);
+    this.bg.beginPath();
+    this.bg.moveTo(inner[0][0], inner[0][1]);
+    for (let i = 1; i < 5; i++) {
+      this.bg.lineTo(inner[i][0], inner[i][1]);
+    }
+    this.bg.closePath();
+    this.bg.strokePath();
+
+    // 4. Outer stroke (selection indicator)
+    this.bg.lineStyle(strokeWidth, strokeColor, 1);
+    this.bg.beginPath();
+    this.bg.moveTo(outerDecagon[0][0], outerDecagon[0][1]);
+    for (let i = 1; i < 10; i++) {
+      this.bg.lineTo(outerDecagon[i][0], outerDecagon[i][1]);
+    }
+    this.bg.closePath();
+    this.bg.strokePath();
+
+    // Enhancement accent on front face edge
     if (this._dieData.enhancement && !isGrimy) {
       const labelColor = getEnhancementLabelColor(this._dieData.enhancement);
-      // Small text label would be ideal but we use a colored accent bar
-      this.bg.fillStyle(labelColor, 0.5);
-      this.bg.fillRect(-half + 2, half - 10, DICE_SIZE - 4, 8);
+      this.bg.lineStyle(2, labelColor, 0.7);
+      this.bg.beginPath();
+      this.bg.moveTo(inner[3][0], inner[3][1]);
+      this.bg.lineTo(inner[4][0], inner[4][1]);
+      this.bg.closePath();
+      this.bg.strokePath();
     }
 
-    // Aura glow — now handled by drawAuraFX()
-
-    // Pips (only if not grimy)
-    if (!isGrimy && this._dieData.pips > 0) {
-      const positions = PIP_POSITIONS[this._dieData.pips] || [];
-      // Per-side pip color: check sidePips for the current face
-      const currentSidePip = this._dieData.sidePips?.[this._dieData.pips - 1] ?? null;
-      const pipColor = currentSidePip
-        ? getPipEffectColor(currentSidePip)
-        : (hasEnhancement ? getEnhancementPipColor(this._dieData.enhancement!) : PIP_COLOR);
-      this.pipGraphics.fillStyle(pipColor, 1);
-
-      const inset = 12;
-      const area = DICE_SIZE - inset * 2;
-      for (const [nx, ny] of positions) {
-        const px = -half + inset + nx * area;
-        const py = -half + inset + ny * area;
-        this.pipGraphics.fillCircle(px, py, PIP_RADIUS);
-      }
+    // Number text on front face (only if not grimy)
+    if (!isGrimy && this._dieData.value > 0) {
+      const textColor = hasEnhancement ? getEnhancementPipColor(this._dieData.enhancement!) : PIP_COLOR;
+      this.valueText.setStyle({
+        fontFamily: 'Arial Black',
+        fontSize: this._dieData.value >= 10 ? '15px' : '18px',
+        color: '#' + textColor.toString(16).padStart(6, '0'),
+        stroke: '#00000033',
+        strokeThickness: 1,
+      });
+      this.valueText.setText(`${this._dieData.value}`);
+      this.valueText.setVisible(true);
+    } else {
+      this.valueText.setVisible(false);
     }
 
-    // Question mark for grimy dice
-    if (isGrimy) {
-      // Drawn as text would be better but Graphics-only approach:
-      // We'll just skip pips — the grimy color signals "unknown"
+    // Sticker icon (small colored symbol in bottom-right of front face)
+    if (this.stickerText) {
+      this.stickerText.destroy();
+      this.stickerText = null;
+    }
+    if (!isGrimy && this._dieData.sticker) {
+      const stickerIcon = getStickerIcon(this._dieData.sticker);
+      const stickerColor = getStickerColor(this._dieData.sticker);
+      this.stickerText = this.scene.add.text(10, 8, stickerIcon, {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        color: '#' + stickerColor.toString(16).padStart(6, '0'),
+      }).setOrigin(0.5, 0.5);
+      this.add(this.stickerText);
     }
   }
 
@@ -231,39 +323,6 @@ export class DiceSprite extends GameObjects.Container {
     }
   }
 
-  private drawPipIndicators(): void {
-    if (this.indicatorContainer) {
-      this.indicatorContainer.destroy();
-      this.indicatorContainer = null;
-    }
-
-    if (this._dieData.isGrimy) return;
-
-    const sp = this._dieData.sidePips;
-    if (!sp || !sp.some(e => e !== null)) return;
-
-    const half = DICE_SIZE / 2;
-    const totalWidth = 6 * INDICATOR_SIZE + 5 * INDICATOR_GAP;
-    const startX = -totalWidth / 2;
-    const topY = half + 3;
-
-    this.indicatorContainer = this.scene.add.container(0, 0);
-    this.add(this.indicatorContainer);
-
-    const gfx = this.scene.add.graphics();
-    for (let i = 0; i < 6; i++) {
-      const eff = sp[i];
-      const sx = startX + i * (INDICATOR_SIZE + INDICATOR_GAP);
-      if (eff) {
-        gfx.fillStyle(getPipEffectColor(eff), 1);
-      } else {
-        gfx.fillStyle(0x999999, 0.3);
-      }
-      gfx.fillRect(sx, topY, INDICATOR_SIZE, INDICATOR_SIZE);
-    }
-    this.indicatorContainer.add(gfx);
-  }
-
   private showTooltip(): void {
     if (this.tooltip) return;
 
@@ -299,18 +358,12 @@ export class DiceSprite extends GameObjects.Container {
       lines.push('Grimy (face hidden)');
     }
 
-    // Pip effect summary
-    const pipCounts = new Map<string, number>();
-    for (const pip of this._dieData.sidePips) {
-      if (pip) {
-        pipCounts.set(pip, (pipCounts.get(pip) || 0) + 1);
-      }
-    }
-    for (const [pip, count] of pipCounts) {
-      const info = PIP_INFO.get(pip);
-      const pipName = info ? info.name : pip.replace(/_/g, ' ');
-      const pipDesc = info ? ` - ${info.description}` : '';
-      lines.push(`${count}× ${pipName}${pipDesc}`);
+    // Sticker info
+    if (this._dieData.sticker) {
+      const info = STICKER_INFO.get(this._dieData.sticker);
+      const stickerName = info ? info.name : this._dieData.sticker.replace(/_/g, ' ');
+      const stickerDesc = info ? ` - ${info.description}` : '';
+      lines.push(`${getStickerIcon(this._dieData.sticker)} ${stickerName}${stickerDesc}`);
     }
 
     const infoText = this.scene.add.text(0, 0, lines.join('\n'), {
@@ -318,22 +371,11 @@ export class DiceSprite extends GameObjects.Container {
       fontSize: '13px',
       color: '#dddddd',
       lineSpacing: 4,
+      wordWrap: { width: 280 },
     }).setOrigin(0, 0);
 
-    // --- 2x3 mini dice grid ---
-    const GRID_COLS = 3;
-    const GRID_ROWS = 2;
-    const gridWidth = GRID_COLS * MINI_SIZE + (GRID_COLS - 1) * MINI_GAP;
-    const gridHeight = GRID_ROWS * MINI_SIZE + (GRID_ROWS - 1) * MINI_GAP;
-
-    const textWidth = infoText.width;
-    const textHeight = infoText.height;
-
-    const contentWidth = Math.max(textWidth, gridWidth);
-    const contentHeight = textHeight + 8 + gridHeight;
-
-    const tooltipWidth = contentWidth + TOOLTIP_PAD * 2;
-    const tooltipHeight = contentHeight + TOOLTIP_PAD * 2;
+    const tooltipWidth = infoText.width + TOOLTIP_PAD * 2;
+    const tooltipHeight = infoText.height + TOOLTIP_PAD * 2;
 
     // Background
     const bg = this.scene.add.graphics();
@@ -346,18 +388,6 @@ export class DiceSprite extends GameObjects.Container {
     // Position text
     infoText.setPosition(TOOLTIP_PAD, TOOLTIP_PAD);
     this.tooltip.add(infoText);
-
-    // Draw mini dice grid
-    const gridStartX = TOOLTIP_PAD + (contentWidth - gridWidth) / 2;
-    const gridStartY = TOOLTIP_PAD + textHeight + 8;
-
-    for (let i = 0; i < 6; i++) {
-      const col = i % GRID_COLS;
-      const row = Math.floor(i / GRID_COLS);
-      const mx = gridStartX + col * (MINI_SIZE + MINI_GAP);
-      const my = gridStartY + row * (MINI_SIZE + MINI_GAP);
-      this.drawMiniDieFace(mx, my, i + 1, this._dieData.sidePips[i]);
-    }
 
     // Position tooltip above the die
     let tx = worldX - tooltipWidth / 2;
@@ -379,56 +409,6 @@ export class DiceSprite extends GameObjects.Container {
       this.tooltip.destroy();
       this.tooltip = null;
     }
-  }
-
-  private drawMiniDieFace(
-    x: number, y: number,
-    pips: number,
-    sidePip: PipEffect,
-  ): void {
-    if (!this.tooltip) return;
-
-    const gfx = this.scene.add.graphics();
-    const die = this._dieData;
-
-    // Background
-    const bgColor = die.enhancement
-      ? getEnhancementBgColor(die.enhancement)
-      : BG_COLOR;
-    gfx.fillStyle(bgColor, 1);
-    gfx.fillRoundedRect(x, y, MINI_SIZE, MINI_SIZE, 4);
-
-    // Border — colored if side has pip effect
-    if (sidePip) {
-      gfx.lineStyle(2, getPipEffectColor(sidePip), 1);
-    } else {
-      gfx.lineStyle(1, 0x444444, 0.6);
-    }
-    gfx.strokeRoundedRect(x, y, MINI_SIZE, MINI_SIZE, 4);
-
-    // Pips
-    const positions = PIP_POSITIONS[pips] || [];
-    const pipColor = sidePip
-      ? getPipEffectColor(sidePip)
-      : (die.enhancement ? getEnhancementPipColor(die.enhancement) : PIP_COLOR);
-    gfx.fillStyle(pipColor, 1);
-    const inset = 8;
-    const area = MINI_SIZE - inset * 2;
-    for (const [nx, ny] of positions) {
-      const px = x + inset + nx * area;
-      const py = y + inset + ny * area;
-      gfx.fillCircle(px, py, MINI_PIP_RADIUS);
-    }
-
-    this.tooltip.add(gfx);
-
-    // Side number label
-    const label = this.scene.add.text(x + MINI_SIZE - 3, y + 2, `${pips}`, {
-      fontFamily: 'Arial',
-      fontSize: '9px',
-      color: '#888888',
-    }).setOrigin(1, 0);
-    this.tooltip.add(label);
   }
 
   destroy(fromScene?: boolean): void {
@@ -497,12 +477,30 @@ function getEnhancementLabelColor(e: string): number {
   return getEnhancementColor(e);
 }
 
-function getPipEffectColor(p: string): number {
+function getStickerColor(s: string): number {
   const colors: Record<string, number> = {
-    purple_flower: 0x9c27b0, 
+    purple_flower: 0x9c27b0,
     red_bullet: 0xf44336,
-    golden_dollar: 0xffd700, 
-    blue_diamond: 0x2196f3,
+    golden_dollar: 0xffd700,
+    blue_moon: 0x2196f3,
   };
-  return colors[p] ?? PIP_COLOR;
+  return colors[s] ?? 0xffffff;
+}
+
+function getStickerIcon(s: string): string {
+  const icons: Record<string, string> = {
+    purple_flower: '✿',
+    red_bullet: '•',
+    golden_dollar: '$',
+    blue_moon: '☽',
+  };
+  return icons[s] ?? '?';
+}
+
+/** Darken a hex color by a factor (0=black, 1=unchanged) */
+function darkenColor(color: number, factor: number): number {
+  const r = Math.floor(((color >> 16) & 0xff) * factor);
+  const g = Math.floor(((color >> 8) & 0xff) * factor);
+  const b = Math.floor((color & 0xff) * factor);
+  return (r << 16) | (g << 8) | b;
 }

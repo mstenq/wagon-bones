@@ -19,11 +19,11 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
-import pipEnhancementsData from '../../data/pip_enhancements.json';
+import stickerData from '../../data/pip_enhancements.json';
 import trailGuidesData from '../../data/trail_guides.json';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
-const PIP_INFO = new Map(pipEnhancementsData.map(p => [p.id, p]));
+const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
 
 const CARD_W = 130;
 const CARD_H = 180;
@@ -196,18 +196,11 @@ export class BoosterPackScene extends Scene {
       diceSprite = new DiceSprite(this, 0, -8, item.die, { showAuraLabel: true });
       container.add(diceSprite);
 
-      // Build description lines — short labels only
-      const descLines: string[] = [];
-      const pipCounts = new Map<string, number>();
-      for (const pip of item.die.sidePips) {
-        if (pip) pipCounts.set(pip, (pipCounts.get(pip) || 0) + 1);
-      }
-      for (const [pip, count] of pipCounts) {
-        const info = PIP_INFO.get(pip);
-        descLines.push(`${count}× ${info ? info.name : pip.replace(/_/g, ' ')}`);
-      }
-      if (descLines.length > 0) {
-        const descText = this.add.text(0, CARD_H / 2 - 12, descLines.join('\n'), {
+      // Sticker label if present
+      if (item.die.sticker) {
+        const sInfo = STICKER_INFO.get(item.die.sticker);
+        const stickerLabel = sInfo ? sInfo.name : item.die.sticker.replace(/_/g, ' ');
+        const descText = this.add.text(0, CARD_H / 2 - 12, stickerLabel, {
           fontFamily: FONTS.PRIMARY,
           fontSize: '11px',
           color: '#5a4a2a',

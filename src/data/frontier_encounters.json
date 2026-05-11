@@ -2,45 +2,45 @@
   {
     "id": "gold_rush",
     "name": "Gold Rush",
-    "description": "Add gold pips to one dice on 3 sides",
+    "description": "Add golden dollar sticker to one die",
     "diceSelection": {
       "drawCount": 5,
       "pickCount": 1,
-      "effectType": "ADD_PIP_EFFECT",
-      "effectParams": { "pipEffect": "golden_dollar", "sideCount": 3 }
+      "effectType": "ADD_STICKER",
+      "effectParams": { "sticker": "golden_dollar" }
     }
   },
   {
     "id": "snake_oil_salesman",
     "name": "Snake Oil Salesman",
-    "description": "Add purple pips to one dice on 2 sides",
+    "description": "Add purple flower sticker to one die",
     "diceSelection": {
       "drawCount": 5,
       "pickCount": 1,
-      "effectType": "ADD_PIP_EFFECT",
-      "effectParams": { "pipEffect": "purple_flower", "sideCount": 2 }
+      "effectType": "ADD_STICKER",
+      "effectParams": { "sticker": "purple_flower" }
     }
   },
   {
     "id": "spirit_guide",
     "name": "Spirit Guide",
-    "description": "Add blue pips to one dice on 1 side",
+    "description": "Add blue moon sticker to one die",
     "diceSelection": {
       "drawCount": 5,
       "pickCount": 1,
-      "effectType": "ADD_PIP_EFFECT",
-      "effectParams": { "pipEffect": "blue_moon", "sideCount": 1 }
+      "effectType": "ADD_STICKER",
+      "effectParams": { "sticker": "blue_moon" }
     }
   },
   {
     "id": "deputize",
     "name": "Deputize",
-    "description": "Add red pips to one dice on 3 sides",
+    "description": "Add red bullet sticker to one die",
     "diceSelection": {
       "drawCount": 5,
       "pickCount": 1,
-      "effectType": "ADD_PIP_EFFECT",
-      "effectParams": { "pipEffect": "red_bullet", "sideCount": 3 }
+      "effectType": "ADD_STICKER",
+      "effectParams": { "sticker": "red_bullet" }
     }
   },
   { "id": "blood_moon", "name": "Blood Moon", "description": "Add ghost aura to random item, -1 re-roll" },

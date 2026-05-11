@@ -2,7 +2,7 @@
 // Handles the common pattern: draw N dice from player pool, player picks some, apply effect.
 // Used by supply cards (mirage, shallow_grave) and frontier encounters (gold_rush, etc.).
 
-import { Die, DiceAura, PipEffect } from './types';
+import { Die, DiceAura, DiceSticker } from './types';
 import { getPlayerState } from './PlayerState';
 import { CHANCES } from './Constants';
 import diceAurasData from '../data/dice_auras.json';
@@ -12,13 +12,12 @@ import diceAurasData from '../data/dice_auras.json';
 export type DiceSelectionEffectType =
   | 'DESTROY'           // shallow_grave: destroy selected dice
   | 'COPY'              // seeing_double: duplicate selected die
-  | 'ADD_PIP_EFFECT'    // gold_rush, snake_oil, spirit_guide, deputize
+  | 'ADD_STICKER'       // gold_rush, snake_oil, spirit_guide, deputize
   | 'CLONE'             // mirage: left die becomes a copy of right die
   | 'APPLY_AURA';       // spirit_shaman: apply a random aura
 
 export interface DiceSelectionEffectParams {
-  pipEffect?: PipEffect;      // for ADD_PIP_EFFECT
-  sideCount?: number;          // how many sides to color (for ADD_PIP_EFFECT)
+  sticker?: DiceSticker;       // for ADD_STICKER
   copyCount?: number;          // how many copies (for COPY)
   aura?: DiceAura;             // for APPLY_AURA (if null, picks random)
 }
@@ -69,12 +68,11 @@ export function applyDiceSelectionEffect(
       return applyDestroy(player, selectedDice);
     case 'COPY':
       return applyCopy(player, selectedDice, config.effectParams.copyCount ?? 2);
-    case 'ADD_PIP_EFFECT':
-      return applyAddPipEffect(
+    case 'ADD_STICKER':
+      return applyAddSticker(
         player,
         selectedDice,
-        config.effectParams.pipEffect!,
-        config.effectParams.sideCount ?? 1,
+        config.effectParams.sticker!,
       );
     case 'CLONE':
       return applyClone(player, selectedDice);
@@ -106,29 +104,18 @@ function applyCopy(
   return `Created ${copyCount} copies`;
 }
 
-function applyAddPipEffect(
+function applyAddSticker(
   player: ReturnType<typeof getPlayerState>,
   selectedDice: Die[],
-  pipEffect: PipEffect,
-  sideCount: number,
+  sticker: DiceSticker,
 ): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
   const original = player.dice.find(d => d.id === die.id);
   if (!original) return 'Die not found';
 
-  // Pick random sides that don't already have this effect
-  const availableSides = original.sidePips
-    .map((eff, i) => ({ eff, side: i }))
-    .filter(s => s.eff !== pipEffect);
-
-  const shuffled = availableSides.sort(() => Math.random() - 0.5);
-  const toColor = shuffled.slice(0, Math.min(sideCount, shuffled.length));
-
-  for (const s of toColor) {
-    original.sidePips[s.side] = pipEffect;
-  }
-  return `Added ${pipEffect} to ${toColor.length} side(s)`;
+  original.sticker = sticker;
+  return `Applied ${sticker} sticker`;
 }
 
 function applyClone(
@@ -141,9 +128,9 @@ function applyClone(
   if (!left || !right) return 'Dice not found';
 
   // Left becomes a copy of right (keep left's id)
-  left.pips = right.pips;
+  left.value = right.value;
   left.enhancement = right.enhancement;
-  left.sidePips = [...right.sidePips];
+  left.sticker = right.sticker;
   left.aura = right.aura;
   left.isGrimy = right.isGrimy;
 

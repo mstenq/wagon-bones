@@ -126,7 +126,7 @@ export class GameState {
 
     this.state.rolledDice = this.state.rolledDice.map(d => {
       if (diceIds.includes(d.id)) {
-        return { ...d, pips: Math.ceil(Math.random() * 6) };
+        return { ...d, value: Math.ceil(Math.random() * 12) };
       }
       return d;
     });
@@ -143,7 +143,7 @@ export class GameState {
   /** Select which of the rolled dice to score. */
   selectForScore(diceIds: string[]): boolean {
     if (this.state.phase !== 'ROLL') return false;
-    if (diceIds.length < 1 || diceIds.length > this.config.rollSize) return false;
+    if (diceIds.length < 1 || diceIds.length > this.config.scoreSize) return false;
 
     const selected = this.state.rolledDice.filter(d => diceIds.includes(d.id));
     if (selected.length !== diceIds.length) return false;
@@ -165,7 +165,7 @@ export class GameState {
     this.state.currentHandType = handResult.type;
     this.state.handHistory.push(handResult.type);
     console.log('[SCORE] Step 0: Hand detected:', handResult.name, '| baseMiles:', handResult.baseMiles, '| baseMult:', handResult.baseMult);
-    console.log('[SCORE] Scoring dice:', this.state.selectedForScore.map(d => `${d.id}(pips:${d.pips}, aura:${d.aura}, enh:${d.enhancement})`).join(', '));
+    console.log('[SCORE] Scoring dice:', this.state.selectedForScore.map(d => `${d.id}(value:${d.value}, aura:${d.aura}, enh:${d.enhancement})`).join(', '));
 
     // Apply hand level scaling before scoring
     const player = getPlayerState();
@@ -185,7 +185,7 @@ export class GameState {
     console.log('[SCORE] After leveling: baseMiles:', leveledResult.baseMiles, '| baseMult:', leveledResult.baseMult);
 
     const baseResult = scoreHand(leveledResult, player.equipment);
-    console.log('[SCORE] After scoreHand: totalPips:', baseResult.totalPips, '| mult:', baseResult.mult, '| miles:', baseResult.miles);
+    console.log('[SCORE] After scoreHand: totalValue:', baseResult.totalValue, '| mult:', baseResult.mult, '| miles:', baseResult.miles);
 
     // Apply equipment effects
     console.log('[SCORE] Equipment:', player.equipment.map(e => `${e.def.name}(${e.def.effectType}, aura:${e.def.aura?.id ?? 'none'})`).join(', ') || 'none');

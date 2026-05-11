@@ -1,7 +1,7 @@
 // ─── Booster Pack System (No Phaser imports) ───
 // Defines pack types, tiers, weighted selection, and content generation.
 
-import { Die, PipEffect } from './types';
+import { Die, DiceSticker } from './types';
 import { createDie } from './DiceSystem';
 import { generateShopStock, EquipmentDef } from './ItemsSystem';
 import { DiceSelectionConfig, DiceSelectionEffectType, DiceSelectionEffectParams, pickRandomAura } from './DiceSelectionSystem';
@@ -11,66 +11,20 @@ import supplyCardsData from '../data/supply_cards.json';
 import trailGuidesData from '../data/trail_guides.json';
 import frontierEncountersData from '../data/frontier_encounters.json';
 import diceEnhancementsData from '../data/dice_enhancements.json';
-import pipEnhancementsData from '../data/pip_enhancements.json';
+import stickerData from '../data/pip_enhancements.json';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
-const PIP_ENHANCEMENT_INFO = new Map(pipEnhancementsData.map(p => [p.id, p]));
+const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
 
-// ─── Pip Effect Definitions (derived from frontier encounters) ───
+// ─── Sticker Definitions ───
 
-interface PipEffectDef {
-  pipEffect: PipEffect;
-  sideCount: number;
-}
+const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
 
-/** Extract ADD_PIP_EFFECT definitions from frontier encounters as source of truth */
-function getPipEffectDefs(): PipEffectDef[] {
-  const defs: PipEffectDef[] = [];
-  const seen = new Set<string>();
-  for (const fe of frontierEncountersData) {
-    if ('diceSelection' in fe && fe.diceSelection) {
-      const ds = fe.diceSelection as { effectType: string; effectParams: { pipEffect?: string; sideCount?: number } };
-      if (ds.effectType === 'ADD_PIP_EFFECT' && ds.effectParams.pipEffect && !seen.has(ds.effectParams.pipEffect)) {
-        seen.add(ds.effectParams.pipEffect);
-        defs.push({
-          pipEffect: ds.effectParams.pipEffect as PipEffect,
-          sideCount: ds.effectParams.sideCount ?? 1,
-        });
-      }
-    }
-  }
-  return defs;
-}
-
-const PIP_EFFECT_DEFS = getPipEffectDefs();
-
-/** Randomly apply pip effects to a die. Each effect has a low chance to trigger.
- *  The same effect is never applied twice. If not enough empty sides, skip that effect. */
-function applyRandomPipEffects(die: Die): void {
-  // Shuffle effects so priority is random
-  const shuffled = [...PIP_EFFECT_DEFS].sort(() => Math.random() - 0.5);
-
-  for (const def of shuffled) {
-    if (Math.random() >= CHANCES.PIP_EFFECT) continue;
-
-    // Check if this pip effect is already on the die
-    if (die.sidePips.some(p => p === def.pipEffect)) continue;
-
-    // Count available (empty) sides
-    const emptyIndices: number[] = [];
-    for (let i = 0; i < 6; i++) {
-      if (die.sidePips[i] === null) emptyIndices.push(i);
-    }
-
-    // Need enough empty sides for the full effect
-    if (emptyIndices.length < def.sideCount) continue;
-
-    // Pick random empty sides to apply to
-    const picked = emptyIndices.sort(() => Math.random() - 0.5).slice(0, def.sideCount);
-    for (const idx of picked) {
-      die.sidePips[idx] = def.pipEffect;
-    }
-  }
+/** Randomly apply a sticker to a die (small chance) */
+function applyRandomSticker(die: Die): void {
+  if (die.sticker) return; // already has one
+  if (Math.random() >= CHANCES.PIP_EFFECT) return;
+  die.sticker = ALL_STICKERS[Math.floor(Math.random() * ALL_STICKERS.length)];
 }
 
 // ─── Types ───
@@ -196,7 +150,7 @@ function generateDicePackContents(count: number): PackItem[] {
   for (let i = 0; i < count; i++) {
     const enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];
     const die = createDie({ enhancement: enhancement as Die['enhancement'] });
-    applyRandomPipEffects(die);
+    applyRandomSticker(die);
 
     // Random aura chance
     if (Math.random() < CHANCES.DICE_AURA) {
@@ -206,9 +160,9 @@ function generateDicePackContents(count: number): PackItem[] {
     const enhInfo = enhancement ? ENHANCEMENT_INFO.get(enhancement) : null;
     const enhName = enhInfo ? enhInfo.name : 'Standard';
     const descParts = [enhInfo ? enhInfo.description : 'Standard dice'];
-    for (const [pip, count] of describePipEffects(die)) {
-      const info = PIP_ENHANCEMENT_INFO.get(pip);
-      if (info) descParts.push(`${count}× ${info.name}`);
+    if (die.sticker) {
+      const stickerInfo = STICKER_INFO.get(die.sticker);
+      if (stickerInfo) descParts.push(stickerInfo.name);
     }
 
     items.push({
@@ -220,14 +174,6 @@ function generateDicePackContents(count: number): PackItem[] {
     });
   }
   return items;
-}
-
-function describePipEffects(die: Die): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const pip of die.sidePips) {
-    if (pip) counts.set(pip, (counts.get(pip) || 0) + 1);
-  }
-  return counts;
 }
 
 function generateSupplyPackContents(count: number): PackItem[] {

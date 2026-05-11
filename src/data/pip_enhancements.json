@@ -2,29 +2,25 @@
   {
     "id": "purple_flower",
     "name": "Purple Flower",
-    "description": "If face up side scores, gain a supply card",
-    "color": "0x9c27b0",
-    "sideCount": 2
+    "description": "When this die scores, gain a supply card",
+    "color": "0x9c27b0"
   },
   {
     "id": "red_bullet",
     "name": "Red Bullet",
-    "description": "If face up side scores, trigger dice twice",
-    "color": "0xf44336",
-    "sideCount": 3
+    "description": "When this die scores, trigger it twice",
+    "color": "0xf44336"
   },
   {
     "id": "golden_dollar",
     "name": "Golden Dollar",
-    "description": "If face up side scores, earn $3",
-    "color": "0xffd700",
-    "sideCount": 3
+    "description": "When this die scores, earn $3",
+    "color": "0xffd700"
   },
   {
     "id": "blue_moon",
     "name": "Blue Moon",
-    "description": "If face up side scores, gain a trail guide for the scored hand (Must have room)",
-    "color": "0x2196f3",
-    "sideCount": 1
+    "description": "When this die scores, gain a trail guide for the scored hand",
+    "color": "0x2196f3"
   }
 ]

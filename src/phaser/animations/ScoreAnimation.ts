@@ -30,20 +30,20 @@ function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _hand
     const p = effectParams as Record<string, unknown>;
     switch (effectType) {
       case 'PIP_MULT':
-        if (die.pips === (p.pip as number)) triggered.push({ index: i, type: 'mult', value: p.value as number });
+        if (die.value === (p.pip as number)) triggered.push({ index: i, type: 'mult', value: p.value as number });
         break;
       case 'PIP_MILES':
-        if (die.pips === (p.pip as number)) triggered.push({ index: i, type: 'miles', value: p.value as number });
+        if (die.value === (p.pip as number)) triggered.push({ index: i, type: 'miles', value: p.value as number });
         break;
       case 'PARITY_MULT': {
         const parity = p.parity as string;
-        const matches = parity === 'odd' ? die.pips % 2 !== 0 : die.pips % 2 === 0;
+        const matches = parity === 'odd' ? die.value % 2 !== 0 : die.value % 2 === 0;
         if (matches) triggered.push({ index: i, type: 'mult', value: p.value as number });
         break;
       }
       case 'PARITY_MILES': {
         const parity = p.parity as string;
-        const matches = parity === 'odd' ? die.pips % 2 !== 0 : die.pips % 2 === 0;
+        const matches = parity === 'odd' ? die.value % 2 !== 0 : die.value % 2 === 0;
         if (matches) triggered.push({ index: i, type: 'miles', value: p.value as number });
         break;
       }
@@ -242,9 +242,9 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         ease: 'Back.easeOut',
       });
 
-      // Add this die's pips to miles
-      const pipMiles = die.enhancement === 'stone' ? 50 : die.pips;
-      currentMiles += pipMiles;
+      // Add this die's value to miles
+      const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
+      currentMiles += dieMiles;
       sidebar.setMilesAnimated(currentMiles);
       scene.sound.play('sfx_chips2', { volume: 0.3, detune: index * 80 });
 

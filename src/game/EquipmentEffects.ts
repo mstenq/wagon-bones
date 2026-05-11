@@ -97,7 +97,7 @@ export function applyEquipmentEffects(
 
   console.log(`  [equip] Step 4 totals: bonusMiles: ${bonusMiles}, bonusMult: ${bonusMult}`);
 
-  const totalPips = baseResult.totalPips;
+  const totalValue = baseResult.totalValue;
   const baseMiles = baseResult.handResult.baseMiles;
   let finalMult = baseResult.mult + bonusMult;
 
@@ -109,12 +109,12 @@ export function applyEquipmentEffects(
     }
   }
 
-  const finalMiles = (baseMiles + totalPips + bonusMiles) * finalMult;
-  console.log(`  [equip] Final: (${baseMiles} base + ${totalPips} pips + ${bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`);
+  const finalMiles = (baseMiles + totalValue + bonusMiles) * finalMult;
+  console.log(`  [equip] Final: (${baseMiles} base + ${totalValue} value + ${bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`);
 
   return {
     handResult: baseResult.handResult,
-    totalPips,
+    totalValue,
     miles: finalMiles,
     mult: finalMult,
   };
