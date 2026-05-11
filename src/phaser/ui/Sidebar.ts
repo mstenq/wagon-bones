@@ -2,9 +2,10 @@
 // Balatro-style left panel showing game state info.
 // Used in both ShopScene and GameScene for consistency.
 
+import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
+import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
 import { Button } from './Button';
 
 export interface SidebarData {
@@ -58,6 +59,9 @@ export class Sidebar extends GameObjects.Container {
   private journeyInfoBtn: Button;
   private optionsBtn: Button;
 
+  private professionContainer: GameObjects.Container;
+  private profTooltip: GameObjects.Container | null = null;
+
   private onJourneyInfo: (() => void) | null = null;
   private onOptions: (() => void) | null = null;
 
@@ -107,6 +111,164 @@ export class Sidebar extends GameObjects.Container {
     }).setOrigin(0.5);
     this.add(this.titleText);
     y += 52;
+
+    // ─── Profession Display ───
+    const player = getPlayerState();
+    const profImgSize = 120;
+    const profH = 130;
+    this.professionContainer = scene.add.container(0, 0);
+    this.add(this.professionContainer);
+
+    if (player.profession) {
+      const profY = y; // capture for tooltip closure
+
+      const profBg = scene.add.graphics();
+      profBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+      profBg.fillRoundedRect(pad, y, w - pad * 2, profH, 6);
+      profBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+      profBg.strokeRoundedRect(pad, y, w - pad * 2, profH, 6);
+      this.professionContainer.add(profBg);
+
+      const imgKey = `prof_${player.profession.id}`;
+      if (scene.textures.exists(imgKey)) {
+        const profImg = scene.add.image(pad + 6 + profImgSize / 2, y + profH / 2, imgKey);
+        const tex = profImg.texture.getSourceImage();
+        const imgScale = profImgSize / Math.max(tex.width, tex.height);
+        profImg.setScale(imgScale);
+        this.professionContainer.add(profImg);
+      }
+
+      // Right side content area
+      const rightX = pad + 12 + profImgSize;
+      const rightW = w - pad * 2 - (rightX - pad);
+      const rightEdge = (rightX + rightW )- pad;
+
+      // Title
+      const profNameText = scene.add.text(rightX, y + 8, player.profession.title, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.GOLD,
+      });
+      this.professionContainer.add(profNameText);
+
+      // Full name
+      const profCharName = scene.add.text(rightX, y + 28, player.profession.name, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.SECONDARY,
+        wordWrap: { width: rightW },
+      });
+      this.professionContainer.add(profCharName);
+
+      // Money (green box, left-aligned)
+      const moneyBoxH = 28;
+      const moneyBoxY = y + 54;
+      const moneyBoxBg = scene.add.graphics();
+      moneyBoxBg.fillStyle(0x1a4a1a, 1);
+      moneyBoxBg.fillRoundedRect(rightX, moneyBoxY, rightW - pad, moneyBoxH, 4);
+      moneyBoxBg.lineStyle(1, 0x2a6a2a, 0.8);
+      moneyBoxBg.strokeRoundedRect(rightX, moneyBoxY, rightW - pad, moneyBoxH, 4);
+      this.professionContainer.add(moneyBoxBg);
+
+      this.moneyText = scene.add.text(rightX + 8, moneyBoxY + moneyBoxH / 2, '$10', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '18px',
+        color: TEXT_COLORS.MONEY,
+      }).setOrigin(0, 0.5);
+      this.professionContainer.add(this.moneyText);
+
+      // Leg info (hugging bottom with inner padding)
+      const bottomLabelY = y + profH - 40;
+      const bottomValueY = y + profH - 24;
+
+      const legLabel = scene.add.text(rightX, bottomLabelY, 'Leg', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '10px',
+        color: TEXT_COLORS.MUTED,
+      });
+      this.professionContainer.add(legLabel);
+
+      this.legText = scene.add.text(rightX, bottomValueY, '1 / 8', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: TEXT_COLORS.PRIMARY,
+      });
+      this.professionContainer.add(this.legText);
+
+      // Target info (hugging bottom-right)
+      const targetLabel = scene.add.text(rightEdge, bottomLabelY, 'Target', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '10px',
+        color: TEXT_COLORS.MUTED,
+      }).setOrigin(1, 0);
+      this.professionContainer.add(targetLabel);
+
+      this.targetText = scene.add.text(rightEdge, bottomValueY, '300 mi', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: TEXT_COLORS.SCORE_GREEN,
+      }).setOrigin(1, 0);
+      this.professionContainer.add(this.targetText);
+
+      // Hover hitzone for tooltip
+      const hitZone = scene.add.graphics();
+      hitZone.fillStyle(0x000000, 0);
+      hitZone.fillRect(pad, y, w - pad * 2, profH);
+      this.professionContainer.add(hitZone);
+      hitZone.setInteractive(
+        new Phaser.Geom.Rectangle(pad, y, w - pad * 2, profH),
+        Phaser.Geom.Rectangle.Contains
+      );
+
+      hitZone.on('pointerover', () => {
+        this.showProfTooltip(scene, w, profY + profH + 4, player.profession!);
+      });
+      hitZone.on('pointerout', () => {
+        this.hideProfTooltip();
+      });
+
+      y += profH + UI.SIDEBAR_SECTION_GAP;
+    } else {
+      // No profession — show money and leg as standalone sections (fallback)
+      const moneyH = 40;
+      const moneyBg = scene.add.graphics();
+      moneyBg.fillStyle(0x1a4a1a, 1);
+      moneyBg.fillRoundedRect(pad, y, w - pad * 2, moneyH, 6);
+      moneyBg.lineStyle(1, 0x2a6a2a, 0.8);
+      moneyBg.strokeRoundedRect(pad, y, w - pad * 2, moneyH, 6);
+      this.add(moneyBg);
+
+      this.moneyText = scene.add.text(cx, y + moneyH / 2, '$10', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: TEXT_COLORS.MONEY,
+      }).setOrigin(0.5);
+      this.add(this.moneyText);
+      y += moneyH + UI.SIDEBAR_SECTION_GAP;
+
+      const legH = 52;
+      const legBg = scene.add.graphics();
+      legBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+      legBg.fillRoundedRect(pad, y, w - pad * 2, legH, 6);
+      legBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+      legBg.strokeRoundedRect(pad, y, w - pad * 2, legH, 6);
+      this.add(legBg);
+
+      this.legText = scene.add.text(pad + 8, y + 26, '1 / 8', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.PRIMARY,
+      });
+      this.add(this.legText);
+
+      this.targetText = scene.add.text(w - pad - 8, y + 26, '300 mi', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.SCORE_GREEN,
+      }).setOrigin(1, 0);
+      this.add(this.targetText);
+      y += legH + UI.SIDEBAR_SECTION_GAP;
+    }
 
     // ─── Round Score Section ───
     const scoreSectionH = 36;
@@ -256,65 +418,11 @@ export class Sidebar extends GameObjects.Container {
     this.add(this.journeyInfoBtn);
     y += 46;
 
-    // ─── Money Display ───
-    const moneyH = 40;
-    const moneyBg = scene.add.graphics();
-    moneyBg.fillStyle(0x1a4a1a, 1);
-    moneyBg.fillRoundedRect(pad, y, w - pad * 2, moneyH, 6);
-    moneyBg.lineStyle(1, 0x2a6a2a, 0.8);
-    moneyBg.strokeRoundedRect(pad, y, w - pad * 2, moneyH, 6);
-    this.add(moneyBg);
-
-    this.moneyText = scene.add.text(cx, y + moneyH / 2, '$10', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '24px',
-      color: TEXT_COLORS.MONEY,
-    }).setOrigin(0.5);
-    this.add(this.moneyText);
-    y += moneyH + UI.SIDEBAR_SECTION_GAP;
-
     // ─── Options Button ───
     this.optionsBtn = new Button(scene, cx, y + 20, 'Options', w - pad * 2 - 8, 34);
     this.optionsBtn.onClick(() => { if (this.onOptions) this.onOptions(); });
     this.add(this.optionsBtn);
     y += 46;
-
-    // ─── Leg / Target Info ───
-    const legH = 52;
-    const legBg = scene.add.graphics();
-    legBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    legBg.fillRoundedRect(pad, y, w - pad * 2, legH, 6);
-    legBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    legBg.strokeRoundedRect(pad, y, w - pad * 2, legH, 6);
-    this.add(legBg);
-
-    const legLabel = scene.add.text(pad + 8, y + 10, 'Leg', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
-    });
-    this.add(legLabel);
-
-    this.legText = scene.add.text(pad + 8, y + 26, '1 / 8', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '16px',
-      color: TEXT_COLORS.PRIMARY,
-    });
-    this.add(this.legText);
-
-    const targetLabel = scene.add.text(w - pad - 8, y + 10, 'Target', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
-    }).setOrigin(1, 0);
-    this.add(targetLabel);
-
-    this.targetText = scene.add.text(w - pad - 8, y + 26, '300 mi', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '16px',
-      color: TEXT_COLORS.SCORE_GREEN,
-    }).setOrigin(1, 0);
-    this.add(this.targetText);
   }
 
   // ─── Public API ───
@@ -426,5 +534,49 @@ export class Sidebar extends GameObjects.Container {
   clearHandDisplay(): void {
     this.handNameText.setVisible(false);
     this.handLevelText.setVisible(false);
+  }
+
+  // ─── Profession Tooltip ───
+
+  private showProfTooltip(scene: Scene, sidebarW: number, tooltipY: number, prof: ProfessionDef): void {
+    this.hideProfTooltip();
+    const pad = 10;
+    const tooltipW = sidebarW - UI.SIDEBAR_PADDING * 2;
+
+    // Title + name + description
+    const titleText = scene.add.text(pad + 4, pad, `${prof.title} ${prof.name}`, {
+      fontFamily: FONTS.HEADING,
+      fontSize: '13px',
+      color: TEXT_COLORS.GOLD,
+      wordWrap: { width: tooltipW - pad * 2 - 8 },
+    });
+
+    const descText = scene.add.text(pad + 4, pad + titleText.height + 6, prof.description, {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '12px',
+      color: TEXT_COLORS.SECONDARY,
+      wordWrap: { width: tooltipW - pad * 2 - 8 },
+      lineSpacing: 2,
+    });
+
+    const tooltipH = pad + titleText.height + 6 + descText.height + pad;
+
+    const bg = scene.add.graphics();
+    bg.fillStyle(COLORS.TOOLTIP_BG, 0.95);
+    bg.fillRoundedRect(0, 0, tooltipW, tooltipH, 6);
+    bg.lineStyle(1, COLORS.TOOLTIP_BORDER, 1);
+    bg.strokeRoundedRect(0, 0, tooltipW, tooltipH, 6);
+
+    this.profTooltip = scene.add.container(UI.SIDEBAR_PADDING, tooltipY);
+    this.profTooltip.add([bg, titleText, descText]);
+    this.profTooltip.setDepth(300);
+    this.add(this.profTooltip);
+  }
+
+  private hideProfTooltip(): void {
+    if (this.profTooltip) {
+      this.profTooltip.destroy();
+      this.profTooltip = null;
+    }
   }
 }

@@ -4,6 +4,7 @@ import allTrailGuides from '../../data/trail_guides.json';
 import allSupplyCards from '../../data/supply_cards.json';
 import allFrontierEncounters from '../../data/frontier_encounters.json';
 import packsData from '../../data/packs.json';
+import professionsData from '../../data/professions.json';
 
 export class Preloader extends Scene {
   constructor() {
@@ -38,6 +39,11 @@ export class Preloader extends Scene {
     // Load frontier encounter images
     for (const fe of allFrontierEncounters) {
       this.load.image(`fe_${fe.id}`, `assets/trail-encounters/${fe.id}.png`);
+    }
+
+    // Load profession images
+    for (const prof of professionsData) {
+      this.load.image(`prof_${prof.id}`, `assets/professions/${prof.id}.png`);
     }
 
     // Load sound effects

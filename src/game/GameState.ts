@@ -70,9 +70,21 @@ export class GameState {
     // Apply equipment config modifiers (rerolls)
     const player = getPlayerState();
     const mods = getConfigModifiers(player.equipment);
+    let rerollBonus = mods.rerollsBonus;
+    let dayBonus = 0;
+
+    // Apply profession modifiers
+    if (player.profession) {
+      const m = player.profession.modifiers as Record<string, unknown>;
+      if (typeof m.rerolls === 'number') rerollBonus += m.rerolls;
+      if (typeof m.days === 'number') dayBonus += m.days;
+    }
+
     this.config = {
       ...this.config,
-      maxRerolls: DEFAULT_CONFIG.maxRerolls + mods.rerollsBonus,
+      maxRerolls: DEFAULT_CONFIG.maxRerolls + rerollBonus,
+      maxDays: DEFAULT_CONFIG.maxDays + dayBonus,
+      rollSize: player.handSize,
     };
 
     this.state = this.createInitialState();

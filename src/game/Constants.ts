@@ -103,7 +103,7 @@ export const TEXT_COLORS = {
 
 // ─── Fonts ───
 export const FONTS = {
-  PRIMARY: 'Arial',
+  PRIMARY: 'sans-serif',
   HEADING: 'Arial Black',
 };
 

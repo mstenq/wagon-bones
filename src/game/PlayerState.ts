@@ -7,6 +7,15 @@ import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { GAMEPLAY } from './Constants';
 import trailGuidesData from '../data/trail_guides.json';
+import professionsData from '../data/professions.json';
+
+export interface ProfessionDef {
+  id: string;
+  title: string;
+  name: string;
+  description: string;
+  modifiers: Record<string, unknown>;
+}
 
 const DEFAULT_STARTING_MONEY = GAMEPLAY.STARTING_MONEY;
 const DEFAULT_MAX_EQUIPMENT_SLOTS = GAMEPLAY.MAX_EQUIPMENT_SLOTS;
@@ -22,6 +31,8 @@ export class PlayerState {
   shopSlots: number; // how many items appear in the shop (upgradeable via vouchers)
   leg: number; // current leg of the journey (1-8)
   handStats: Map<HandType, HandStats>; // level & play count per hand type
+  profession: ProfessionDef | null = null; // selected profession
+  handSize: number = GAMEPLAY.ROLL_SIZE; // dice selected for rolling
 
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
@@ -31,6 +42,29 @@ export class PlayerState {
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
     this.handStats = PlayerState.createDefaultHandStats();
+  }
+
+  /** Apply profession modifiers after selection */
+  applyProfession(professionId: string): void {
+    const prof = professionsData.find(p => p.id === professionId);
+    if (!prof) return;
+    this.profession = prof as ProfessionDef;
+    const m = prof.modifiers as Record<string, unknown>;
+
+    // Starting money bonus
+    if (typeof m.startingMoney === 'number') {
+      this.economy.earn(m.startingMoney);
+    }
+
+    // Equipment slot modifiers
+    if (typeof m.equipmentSlots === 'number') {
+      this.maxEquipmentSlots += m.equipmentSlots;
+    }
+
+    // Hand size modifier
+    if (typeof m.handSize === 'number') {
+      this.handSize += m.handSize;
+    }
   }
 
   /** Create default hand stats: level 1, 0 plays, per-level bonuses from trail guide data */
@@ -176,6 +210,8 @@ export class PlayerState {
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
     this.handStats = PlayerState.createDefaultHandStats();
+    this.profession = null;
+    this.handSize = GAMEPLAY.ROLL_SIZE;
   }
 }
 
