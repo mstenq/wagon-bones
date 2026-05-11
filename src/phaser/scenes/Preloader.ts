@@ -65,6 +65,7 @@ export class Preloader extends Scene {
     this.load.audio('sfx_timpani', 'assets/sounds/timpani.ogg');
     this.load.audio('sfx_generic1', 'assets/sounds/generic1.ogg');
     this.load.audio('sfx_explosion', 'assets/sounds/explosion1.ogg');
+    this.load.audio('sfx_negative', 'assets/sounds/negative.ogg');
     this.load.audio('sfx_glass1', 'assets/sounds/glass1.ogg');
     this.load.audio('sfx_paper1', 'assets/sounds/paper1.ogg');
     this.load.audio('sfx_card_fan', 'assets/sounds/cardFan2.ogg');

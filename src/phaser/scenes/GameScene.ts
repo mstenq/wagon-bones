@@ -475,7 +475,7 @@ export class GameScene extends Scene {
         targetMiles: this.gameState.config.targetMiles,
       });
     } else if (outcome === 'lost') {
-      this.sound.play('sfx_explosion', { volume: 0.5 });
+      this.sound.play('sfx_negative', { volume: 0.5 });
       this.scene.start('GameOver', {
         won: false,
         totalMiles: this.gameState.state.totalMiles,
