@@ -5,7 +5,7 @@ import { Die, HandType, HandStats, BossDef } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
-import { processEquipmentOnSell } from './EquipmentEffects';
+import { processEquipmentOnSell, processEquipmentOnShopReroll } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
@@ -46,6 +46,7 @@ export class PlayerState {
   handStats: Map<HandType, HandStats>; // level & play count per hand type
   profession: ProfessionDef | null = null; // selected profession
   handSize: number = GAMEPLAY.ROLL_SIZE; // dice selected for rolling
+  shopRerollCount: number = 0; // number of rerolls this shop visit (resets each visit)
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
 
   constructor() {
@@ -169,17 +170,23 @@ export class PlayerState {
   }
 
   get shopRerollCost(): number {
-    return SHOP_REROLL_COST;
+    return SHOP_REROLL_COST + this.shopRerollCount;
   }
 
   canRerollShop(): boolean {
-    return this.economy.balance >= SHOP_REROLL_COST;
+    return this.economy.balance >= this.shopRerollCost;
   }
 
   payShopReroll(): boolean {
     if (!this.canRerollShop()) return false;
-    this.economy.spend(SHOP_REROLL_COST);
+    this.economy.spend(this.shopRerollCost);
+    this.shopRerollCount++;
+    processEquipmentOnShopReroll(this.equipment);
     return true;
+  }
+
+  resetShopRerolls(): void {
+    this.shopRerollCount = 0;
   }
 
   get equipmentSlotsFree(): number {

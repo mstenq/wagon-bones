@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { die, diceWithValue, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
-import { processEndOfRound, processEquipmentOnShopReroll, processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import { processEndOfRound, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -114,22 +114,49 @@ describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
     expect(result.mult).toBe(1);
   });
 
-  test('gains +2 mult per shop reroll', () => {
-    const inst = item('bargain_bin');
-    processEquipmentOnShopReroll([inst]);
-    expect(inst.state.mult).toBe(2);
+  test('gains +2 mult per shop reroll via payShopReroll', () => {
+    const { player } = setupGame({
+      equipment: [item('bargain_bin')],
+      money: 100,
+    });
+    player.payShopReroll();
+    const bargain = player.equipment[0];
+    expect(bargain.state.mult).toBe(2);
 
-    processEquipmentOnShopReroll([inst]);
-    expect(inst.state.mult).toBe(4);
+    player.payShopReroll();
+    expect(bargain.state.mult).toBe(4);
+  });
+
+  test('reroll cost increases by $1 per reroll', () => {
+    const { player } = setupGame({ money: 100 });
+    const baseCost = player.shopRerollCost;
+    player.payShopReroll();
+    expect(player.shopRerollCost).toBe(baseCost + 1);
+    player.payShopReroll();
+    expect(player.shopRerollCost).toBe(baseCost + 2);
+  });
+
+  test('reroll cost resets via resetShopRerolls', () => {
+    const { player } = setupGame({ money: 100 });
+    const baseCost = player.shopRerollCost;
+    player.payShopReroll();
+    player.payShopReroll();
+    expect(player.shopRerollCost).toBe(baseCost + 2);
+    player.resetShopRerolls();
+    expect(player.shopRerollCost).toBe(baseCost);
   });
 
   test('accumulated mult applied during scoring', () => {
-    const inst = item('bargain_bin');
-    processEquipmentOnShopReroll([inst]);
-    processEquipmentOnShopReroll([inst]);
-    processEquipmentOnShopReroll([inst]);
+    const { player } = setupGame({
+      equipment: [item('bargain_bin')],
+      money: 100,
+    });
+    player.payShopReroll();
+    player.payShopReroll();
+    player.payShopReroll();
     // 3 rerolls × +2 = +6
 
+    const inst = player.equipment[0];
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],

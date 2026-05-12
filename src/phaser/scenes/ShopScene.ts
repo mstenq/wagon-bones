@@ -38,6 +38,7 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     if (!this.stock) {
       this.stock = generateShopStock(player.shopSlots);
+      player.resetShopRerolls();
     }
     if (!this.packs) {
       this.packs = generateShopPacks(2);

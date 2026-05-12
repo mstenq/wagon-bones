@@ -18,7 +18,7 @@
     "title": "Banker",
     "name": "Charles Whitlock",
     "description": "Starts with $20",
-    "modifiers": { "startingMoney": 20 }
+    "modifiers": { "startingMoney": 2000 }
   },
   {
     "id": "outlaw",
