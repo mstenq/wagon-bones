@@ -47,6 +47,18 @@ const TOOLTIP_PAD = UI.CARD_TOOLTIP_PAD;
 const TOOLTIP_BG = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER = COLORS.TOOLTIP_BORDER;
 
+export interface CardActionTabConfig {
+  label: string;
+  color: number;
+  textColor?: string;
+  callback: () => void;
+}
+
+interface ActionTabInstance {
+  container: GameObjects.Container;
+  config: CardActionTabConfig;
+}
+
 const RARITY_LABELS: Record<string, string> = {
   common:    'Common',
   uncommon:  'Uncommon',
@@ -76,6 +88,8 @@ export class ItemCard extends GameObjects.Container {
   private auraTweens: Phaser.Tweens.Tween[] = [];
   private auraGlowCleanup: (() => void) | null = null;
   private hintObjects: GameObjects.GameObject[] = [];
+  private actionTabs: ActionTabInstance[] = [];
+  private _tabsVisible: boolean = false;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -398,6 +412,134 @@ export class ItemCard extends GameObjects.Container {
     }
   }
 
+  // ─── Action Tabs (Sell / Use) ───
+
+  get tabsVisible(): boolean { return this._tabsVisible; }
+  get cardWidth(): number { return this._cardW; }
+  get cardHeight(): number { return this._cardH; }
+
+  /** Show action tabs on the right side of the card. Call hideActionTabs() first to replace. */
+  showActionTabs(tabs: CardActionTabConfig[]): void {
+    this.hideActionTabs();
+    this._tabsVisible = true;
+
+    const scale = this._options.cardScale ?? 1;
+    const tabW = Math.round(50 * scale);
+    const tabH = Math.round(45 * scale);
+    const tabGap = Math.round(4 * scale);
+    const tabRadius = Math.round(6 * scale);
+    const fontSize = Math.round(16 * scale);
+    const hw = this._cardW / 2;
+    const hh = this._cardH / 2;
+
+    // Stack tabs from the bottom of the card upward
+    for (let i = 0; i < tabs.length; i++) {
+      const cfg = tabs[i];
+      // Tab starts behind the card edge and slides out
+      const tabContainer = this.scene.add.container(hw, 0);
+      tabContainer.setDepth(-1); // render behind card content
+
+      // Position: bottom-aligned, stacking upward
+      const tabY = (hh - tabH - (tabH + tabGap) * i) - 20;
+
+      const bg = this.scene.add.graphics();
+      bg.fillStyle(cfg.color, 0.95);
+      bg.fillRoundedRect(0, tabY, tabW, tabH, {
+        tl: 0, tr: tabRadius, bl: 0, br: tabRadius,
+      });
+      bg.lineStyle(1, 0xffffff, 0.2);
+      bg.strokeRoundedRect(0, tabY, tabW, tabH, {
+        tl: 0, tr: tabRadius, bl: 0, br: tabRadius,
+      });
+      tabContainer.add(bg);
+
+      const label = this.scene.add.text(tabW / 2, tabY + tabH / 2, cfg.label, {
+        fontFamily: 'sans-serif',
+        fontSize: `${fontSize}px`,
+        color: cfg.textColor ?? '#ffffff',
+        align: 'center',
+        lineSpacing: -2,
+      }).setOrigin(0.5);
+      tabContainer.add(label);
+
+      // Make tab interactive
+      tabContainer.setSize(tabW, tabH);
+      tabContainer.setInteractive(
+        new Phaser.Geom.Rectangle(tabW / 2, tabY + tabH / 2, tabW, tabH),
+        Phaser.Geom.Rectangle.Contains,
+      );
+
+      tabContainer.on('pointerover', () => {
+        bg.clear();
+        bg.fillStyle(Phaser.Display.Color.ValueToColor(cfg.color).lighten(20).color, 0.95);
+        bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+        bg.lineStyle(1, 0xffffff, 0.4);
+        bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+      });
+
+      tabContainer.on('pointerout', () => {
+        bg.clear();
+        bg.fillStyle(cfg.color, 0.95);
+        bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+        bg.lineStyle(1, 0xffffff, 0.2);
+        bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+      });
+
+      tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        pointer.event?.stopPropagation();
+        cfg.callback();
+      });
+
+      // Slide-out from behind the card: start at x offset 0 (hidden), tween to hw (visible)
+      const finalX = hw;
+      tabContainer.x = hw - tabW; // start hidden behind card edge
+      this.add(tabContainer);
+      this.sendToBack(tabContainer); // ensure it's behind card visuals
+
+      this.scene.tweens.add({
+        targets: tabContainer,
+        x: finalX,
+        duration: 200,
+        ease: 'Back.easeOut',
+        delay: i * 50,
+      });
+
+      this.actionTabs.push({ container: tabContainer, config: cfg });
+    }
+
+    // Play whoosh on open
+    this.scene.sound.play('sfx_whoosh', { volume: 0.3 });
+  }
+
+  /** Hide action tabs with optional slide-back animation */
+  hideActionTabs(animate: boolean = false): void {
+    if (!this._tabsVisible) return;
+    this._tabsVisible = false;
+
+    if (animate && this.actionTabs.length > 0 && this.scene) {
+      // Play whoosh on close
+      this.scene.sound.play('sfx_whoosh2', { volume: 0.3 });
+      const hw = this._cardW / 2;
+      const scale = this._options.cardScale ?? 1;
+      const tabW = Math.round(50 * scale);
+      for (const tab of this.actionTabs) {
+        const container = tab.container;
+        this.scene.tweens.add({
+          targets: container,
+          x: hw - tabW,
+          duration: 150,
+          ease: 'Power2',
+          onComplete: () => container.destroy(),
+        });
+      }
+    } else {
+      for (const tab of this.actionTabs) {
+        tab.container.destroy();
+      }
+    }
+    this.actionTabs = [];
+  }
+
   // ─── Tooltip ───
 
   private showTooltip(): void {
@@ -525,6 +667,7 @@ export class ItemCard extends GameObjects.Container {
 
   destroy(fromScene?: boolean): void {
     this.hideTooltip();
+    this.hideActionTabs();
     for (const tw of this.auraTweens) tw.destroy();
     this.auraTweens = [];
     for (const em of this.auraEmitters) em.destroy();

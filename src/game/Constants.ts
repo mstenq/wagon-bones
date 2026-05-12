@@ -20,12 +20,13 @@ export const GAMEPLAY = {
   STARTING_DICE: 50,
   STARTING_MONEY: 10,
   MAX_EQUIPMENT_SLOTS: 5,
+  MAX_CONSUMABLE_SLOTS: 2,
   SHOP_SLOTS: 2,
   SHOP_REROLL_COST: 5,
   LEGS: 8,
   ROUNDS_PER_LEG: 3,
   // Target miles per leg (index 0 = leg 1). Base value — multiplied by round multiplier.
-  TARGET_MILES_BY_LEG: [600, 800, 1000, 1300, 1600, 2000, 4000, 5000],
+  TARGET_MILES_BY_LEG: [500, 800, 2000, 5000, 11_000, 20_000, 35_000, 50_000],
   // Round difficulty multiplier within a leg (round 1 = 1x, round 2 = 1.5x, round 3/boss = 2x)
   ROUND_MULTIPLIERS: [1, 1.5, 2],
   // Money earned for completing each round (index 0 = round 1)
@@ -135,8 +136,8 @@ export const UI = {
   EQUIP_CARD_SPACING: 160,
 
   // Consumable bar (top of main area, right 20%)
-  CONSUMABLE_CARD_SCALE: 0.2,
-  CONSUMABLE_MAX_SLOTS: 2,
+  CONSUMABLE_CARD_SCALE: 0.75,
+  CONSUMABLE_CARD_SPACING: 130,
 
   // Dice pouch (bottom-right indicator)
   POUCH_SIZE: 56,

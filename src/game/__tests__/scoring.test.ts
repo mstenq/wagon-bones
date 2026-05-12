@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { die, diceFromValues, diceWithValue, item, itemWithAura, calculateTestScore, resetDieIds } from './testHelpers';
+import { die, diceFromValues, diceWithValue, item, itemWithAura, calculateTestScore, setupGame, resetDieIds } from './testHelpers';
 import { HandType } from '../types';
 
 beforeEach(() => {
@@ -290,6 +290,72 @@ describe('item auras', () => {
     // PAIR: baseMult=1
     // horseshoe: +4 → 5, then holy x1.5 → 7.5
     expect(result.mult).toBe(7.5);
+  });
+
+  test('icy aura on equipment adds +50 miles', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [itemWithAura('horseshoe', 'icy')],
+    });
+    // PAIR: baseMiles=10, baseMult=1
+    // horseshoe: +4 mult → mult=5
+    // icy aura: +50 miles → totalValue = 4+4+50 = 58 ... wait
+    // icy aura on ITEMS adds +50 to bonusMiles in applyEquipmentEffects
+    // miles = (baseMiles + totalValue + bonusMiles) * mult
+    // = (10 + 8 + 50) * 5 = 340
+    expect(result.miles).toBe(340);
+  });
+
+  test('ghost aura on equipment does not take an inventory slot', () => {
+    const { player } = setupGame({ maxEquipmentSlots: 2 });
+    // Fill both slots with normal items
+    player.equipment = [item('horseshoe'), item('trail_markers')];
+    expect(player.equipmentSlotsFree).toBe(0);
+    expect(player.usedEquipmentSlots).toBe(2);
+
+    // Can't buy a normal item when full
+    const normalDef = item('horseshoe').def;
+    player.economy.setBalance(100);
+    expect(player.canBuy(normalDef)).toBe(false);
+
+    // Replace one with a ghost-aura item — frees a slot
+    player.equipment = [item('horseshoe'), itemWithAura('trail_markers', 'ghost')];
+    expect(player.usedEquipmentSlots).toBe(1);
+    expect(player.equipmentSlotsFree).toBe(1);
+    expect(player.canBuy(normalDef)).toBe(true);
+  });
+
+  test('ghost aura item can be added even when slots are full', () => {
+    const { player } = setupGame({ maxEquipmentSlots: 2 });
+    player.equipment = [item('horseshoe'), item('trail_markers')];
+    player.economy.setBalance(100);
+
+    // Can't buy normal item
+    expect(player.canBuy(item('horseshoe').def)).toBe(false);
+
+    // CAN buy ghost-aura item
+    const ghostDef = itemWithAura('horseshoe', 'ghost').def;
+    expect(player.canBuy(ghostDef)).toBe(true);
+
+    // After buying, we have 3 items but only 2 used slots
+    player.buyEquipment(ghostDef);
+    expect(player.equipment.length).toBe(3);
+    expect(player.usedEquipmentSlots).toBe(2);
+    expect(player.equipmentSlotsFree).toBe(0);
+  });
+
+  test('ghost aura does not affect scoring', () => {
+    const { result: withGhost } = calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [itemWithAura('horseshoe', 'ghost')],
+    });
+    const { result: withoutAura } = calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [item('horseshoe')],
+    });
+    // Ghost aura should not change mult or miles vs no aura
+    expect(withGhost.mult).toBe(withoutAura.mult);
+    expect(withGhost.miles).toBe(withoutAura.miles);
   });
 });
 

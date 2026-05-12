@@ -78,9 +78,12 @@ export function applyEquipmentEffects(
         bonusMult += (p.value as number) * context.equipmentCount;
         break;
 
-      case 'MILES_PER_DOLLAR':
-        bonusMiles += (p.value as number) * context.playerBalance;
+      case 'MILES_PER_DOLLAR': {
+        const milesGain = (p.value as number) * context.playerBalance;
+        bonusMiles += milesGain;
+        console.log(`  [equip] ${equip.def.name}: +${milesGain} miles ($${context.playerBalance} × ${p.value}) (bonusMiles: ${bonusMiles})`);
         break;
+      }
 
       case 'SELL_VALUE_AS_MULT': {
         // Add sell value of ALL OTHER equipment as mult
@@ -89,32 +92,38 @@ export function applyEquipmentEffects(
           if (other !== equip) totalSellValue += other.sellValue;
         }
         bonusMult += totalSellValue;
+        console.log(`  [equip] ${equip.def.name}: +${totalSellValue} mult (sell values) (bonusMult: ${bonusMult})`);
         break;
       }
 
       case 'STATEFUL_ADD_MULT':
         // Uses accumulated state.mult value
         bonusMult += equip.state.mult ?? 0;
+        console.log(`  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (stateful) (bonusMult: ${bonusMult})`);
         break;
 
       case 'DECAYING_MULT':
         // Uses state.mult which decreases over time
         bonusMult += equip.state.mult ?? 0;
+        console.log(`  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (decaying) (bonusMult: ${bonusMult})`);
         break;
 
       case 'HAND_MULT_GAIN':
         // Card Counter: uses accumulated state.mult
         bonusMult += equip.state.mult ?? 0;
+        console.log(`  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (accumulated) (bonusMult: ${bonusMult})`);
         break;
 
       case 'SHOP_REROLL_MULT_GAIN':
         // Bargain Bin: uses accumulated state.mult
         bonusMult += equip.state.mult ?? 0;
+        console.log(`  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (reroll gains) (bonusMult: ${bonusMult})`);
         break;
 
       case 'ENHANCED_SPENT_MILES_GAIN':
         // Bone Collector: uses accumulated state.miles
         bonusMiles += equip.state.miles ?? 0;
+        console.log(`  [equip] ${equip.def.name}: +${equip.state.miles ?? 0} miles (accumulated) (bonusMiles: ${bonusMiles})`);
         break;
 
       case 'LUCKY_TRIGGER_XMULT':
@@ -168,18 +177,27 @@ export function applyEquipmentEffects(
         for (let i = 0; i < uncommonCount; i++) {
           finalMult *= 1.5;
         }
-        break;
-      }
-      case 'FINAL_DAY_XMULT':
-        // x3 mult on final day of round
-        if (context.currentDay >= context.maxDays) {
-          finalMult *= (equip.def.effectParams as Record<string, unknown>).value as number;
+        if (uncommonCount > 0) {
+          console.log(`  [equip] ${equip.def.name}: x1.5 × ${uncommonCount} uncommon items (finalMult: ${finalMult})`);
         }
         break;
+      }
+      case 'FINAL_DAY_XMULT': {
+        // x3 mult on final day of round
+        const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
+        if (context.currentDay >= context.maxDays) {
+          finalMult *= xVal;
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (final day ${context.currentDay}/${context.maxDays}) (finalMult: ${finalMult})`);
+        } else {
+          console.log(`  [equip] ${equip.def.name}: inactive (day ${context.currentDay}/${context.maxDays})`);
+        }
+        break;
+      }
       case 'STATEFUL_XMULT':
         // Uses accumulated state.xMult
         if ((equip.state.xMult ?? 1) !== 1) {
           finalMult *= equip.state.xMult;
+          console.log(`  [equip] ${equip.def.name}: x${equip.state.xMult} (finalMult: ${finalMult})`);
         }
         break;
       case 'LUCKY_TRIGGER_XMULT':
@@ -187,12 +205,16 @@ export function applyEquipmentEffects(
         // Rabbit's Foot / Snake Oil Ledger: accumulated xMult
         if ((equip.state.xMult ?? 1) !== 1) {
           finalMult *= equip.state.xMult;
+          console.log(`  [equip] ${equip.def.name}: x${equip.state.xMult} (finalMult: ${finalMult})`);
+        } else {
+          console.log(`  [equip] ${equip.def.name}: x1 (no bonus yet)`);
         }
         break;
       case 'DECAYING_XMULT':
         // Uses state.xMult which decreases over time
         if ((equip.state.xMult ?? 1) > 0) {
           finalMult *= equip.state.xMult;
+          console.log(`  [equip] ${equip.def.name}: x${equip.state.xMult} (finalMult: ${finalMult})`);
         }
         break;
     }

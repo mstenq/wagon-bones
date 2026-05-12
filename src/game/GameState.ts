@@ -246,8 +246,11 @@ export class GameState {
       maxDays: this.config.maxDays,
     });
 
-    // Attach held animation steps for the rendering layer
-    (finalResult as any)._heldSteps = heldResult.animSteps;
+    // Attach animation context for the rendering layer
+    finalResult.heldSteps = heldResult.animSteps;
+    finalResult.playerBalance = player.economy.balance;
+    finalResult.currentDay = this.state.day;
+    finalResult.maxDays = this.config.maxDays;
 
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
 

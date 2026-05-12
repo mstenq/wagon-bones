@@ -130,8 +130,8 @@ export interface ScoreAnimationConfig {
 }
 
 /** Determine which equipment indices trigger for a specific die, with their contribution type */
-function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _handType: string): { index: number; type: 'mult' | 'miles'; value: number }[] {
-  const triggered: { index: number; type: 'mult' | 'miles'; value: number }[] = [];
+function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _handType: string): { index: number; type: 'mult' | 'miles' | 'xmult' | 'money'; value: number }[] {
+  const triggered: { index: number; type: 'mult' | 'miles' | 'xmult' | 'money'; value: number }[] = [];
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
     const { effectType, effectParams } = equip.def;
@@ -155,13 +155,19 @@ function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _hand
         if (matches) triggered.push({ index: i, type: 'miles', value: p.value as number });
         break;
       }
+      case 'GOLD_DICE_MONEY':
+        if (die.enhancement === 'gold') triggered.push({ index: i, type: 'money', value: p.value as number });
+        break;
+      case 'LUCKY_NUMBER_PIP_XMULT':
+        if (die.value === (equip.state.pip ?? 0)) triggered.push({ index: i, type: 'xmult', value: p.value as number });
+        break;
     }
   }
   return triggered;
 }
 
 /** Determine which equipment triggers independently (not per-die), with contribution details */
-function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: string, context: { rerollsRemaining: number; scoringDice: Die[]; equipmentCount: number }): { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] {
+function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: string, context: { rerollsRemaining: number; scoringDice: Die[]; equipmentCount: number; playerBalance: number; currentDay: number; maxDays: number }): { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] {
   const triggered: { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] = [];
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
@@ -196,6 +202,60 @@ function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: 
       case 'MULT_PER_EQUIPMENT':
         triggered.push({ index: i, type: 'mult', value: (p.value as number) * context.equipmentCount });
         break;
+
+      // ─── Phase 2 additive effects ───
+      case 'MILES_PER_DOLLAR': {
+        const milesGain = (p.value as number) * context.playerBalance;
+        if (milesGain > 0) triggered.push({ index: i, type: 'miles', value: milesGain });
+        break;
+      }
+      case 'SELL_VALUE_AS_MULT': {
+        let totalSellValue = 0;
+        for (const other of equipment) {
+          if (other !== equip) totalSellValue += other.sellValue;
+        }
+        if (totalSellValue > 0) triggered.push({ index: i, type: 'mult', value: totalSellValue });
+        break;
+      }
+      case 'STATEFUL_ADD_MULT':
+      case 'DECAYING_MULT':
+      case 'HAND_MULT_GAIN':
+      case 'SHOP_REROLL_MULT_GAIN': {
+        const multVal = equip.state.mult ?? 0;
+        if (multVal > 0) triggered.push({ index: i, type: 'mult', value: multVal });
+        break;
+      }
+      case 'ENHANCED_SPENT_MILES_GAIN': {
+        const milesVal = equip.state.miles ?? 0;
+        if (milesVal > 0) triggered.push({ index: i, type: 'miles', value: milesVal });
+        break;
+      }
+
+      // ─── Phase 2 xMult effects ───
+      case 'UNCOMMON_EQUIP_XMULT': {
+        const uncommonCount = equipment.filter(e => e.def.rarity === 'uncommon').length;
+        if (uncommonCount > 0) {
+          triggered.push({ index: i, type: 'xmult', value: Math.pow(1.5, uncommonCount) });
+        }
+        break;
+      }
+      case 'FINAL_DAY_XMULT':
+        if (context.currentDay >= context.maxDays) {
+          triggered.push({ index: i, type: 'xmult', value: p.value as number });
+        }
+        break;
+      case 'LUCKY_TRIGGER_XMULT':
+      case 'SELL_XMULT_GAIN':
+      case 'STATEFUL_XMULT': {
+        const xm = equip.state.xMult ?? 1;
+        if (xm !== 1) triggered.push({ index: i, type: 'xmult', value: xm });
+        break;
+      }
+      case 'DECAYING_XMULT': {
+        const xm = equip.state.xMult ?? 1;
+        if (xm > 0 && xm !== 1) triggered.push({ index: i, type: 'xmult', value: xm });
+        break;
+      }
     }
 
     // Aura effects
@@ -450,6 +510,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
               currentMult += entry.value;
               sidebar.setMultAnimated(currentMult);
               scene.sound.play('sfx_multhit1', { volume: 0.3 });
+            } else if (entry.type === 'xmult') {
+              currentMult = currentMult * entry.value;
+              sidebar.setMultAnimated(currentMult);
+              scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
+            } else if (entry.type === 'money') {
+              scene.sound.play('sfx_coin', { volume: 0.4 });
             } else {
               currentMiles += entry.value;
               sidebar.setMilesAnimated(currentMiles);
@@ -485,7 +551,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   // ─── Held-in-Hand Animation Phase (Step 4) ───
 
   function startHeldInHandPhase() {
-    const heldSteps: HeldAnimStep[] = (result as any)._heldSteps ?? [];
+    const heldSteps: HeldAnimStep[] = result.heldSteps ?? [];
     if (heldSteps.length === 0) {
       startIndependentEquipPhase();
       return;
@@ -582,9 +648,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
   function startIndependentEquipPhase() {
     const independentEquip = getIndependentTriggeredEquip(equipment, result.handResult.type, {
-      rerollsRemaining: (result as any)._rerollsRemaining ?? 0,
+      rerollsRemaining: result.rerollsRemaining ?? 0,
       scoringDice: result.handResult.scoringDice,
       equipmentCount: equipment.length,
+      playerBalance: result.playerBalance ?? 0,
+      currentDay: result.currentDay ?? 1,
+      maxDays: result.maxDays ?? 4,
     });
 
     if (independentEquip.length > 0) {
@@ -627,7 +696,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       sidebar.updateData({ milesBase: 0, mult: 0 });
 
       // Bump round score
-      sidebar.setRoundScoreAnimated((result as any)._roundScoreBefore + result.miles);
+      sidebar.setRoundScoreAnimated((result.roundScoreBefore ?? 0) + result.miles);
       scene.sound.play('sfx_timpani', { volume: 0.5 });
 
       scene.time.delayedCall(ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);

@@ -9,6 +9,13 @@ import { PackDefinition, PackItem, InstantEffect, generatePackContents } from '.
 import { getPlayerState } from '../../game/PlayerState';
 import { createDie } from '../../game/DiceSystem';
 import { generateRandomEquipment } from '../../game/ItemsSystem';
+import {
+  createSupplyConsumableDef,
+  createTrailGuideConsumableDef,
+  createFrontierConsumableDef,
+  ConsumableInstance,
+  executeConsumableEffect,
+} from '../../game/ConsumablesSystem';
 import { DiceEnhancement, HandType } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
@@ -16,11 +23,14 @@ import { DiceSprite } from '../ui/DiceSprite';
 import { ItemCard } from '../ui/ItemCard';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
+import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
 import stickerData from '../../data/pip_enhancements.json';
 import trailGuidesData from '../../data/trail_guides.json';
+import supplyCardsData from '../../data/supply_cards.json';
+import frontierEncountersData from '../../data/frontier_encounters.json';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
 const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
@@ -59,6 +69,7 @@ export class BoosterPackScene extends Scene {
   // Shared UI
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
+  private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
 
   // Layout helpers
@@ -90,8 +101,27 @@ export class BoosterPackScene extends Scene {
     const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'BOOSTER PACK' });
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
+    this.consumableBar = layout.consumableBar;
     this.dicePouch = layout.dicePouch;
     this.contentCX = layout.contentCX;
+
+    // Refresh displays when equipment is sold from the bar
+    this.equipBar.on('equipment-changed', () => {
+      this.sidebar.refreshMoney();
+      this.dicePouch.refresh();
+      this.updateEquipHints();
+    });
+
+    // Refresh displays when consumables change
+    this.consumableBar.on('consumable-changed', () => {
+      this.sidebar.refreshMoney();
+      this.dicePouch.refresh();
+    });
+
+    // Execute consumable effect when used
+    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
+      this.handleConsumableUsed(consumed);
+    });
 
     // Show equipment hints
     this.updateEquipHints();
@@ -283,6 +313,14 @@ export class BoosterPackScene extends Scene {
         if (player.equipmentSlotsFree <= selectedEquipCount) return;
       }
 
+      // Block selection if card needs a consumable slot and none are free
+      if (this.cardNeedsConsumableSlot(sprite.item)) {
+        const player = getPlayerState();
+        const selectedConsumableCount = this.cardSprites
+          .filter(s => s.selected && this.cardNeedsConsumableSlot(s.item)).length;
+        if (player.consumableSlotsFree <= selectedConsumableCount) return;
+      }
+
       sprite.selected = true;
       this.picksRemaining--;
       this.drawSelectionBorder(sprite, true);
@@ -299,6 +337,11 @@ export class BoosterPackScene extends Scene {
     if (item.category === 'equipment' && item.equipmentDef) return true;
     if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
     return false;
+  }
+
+  /** Check if a pack item would consume a consumable slot */
+  private cardNeedsConsumableSlot(item: PackItem): boolean {
+    return item.category === 'supply' || item.category === 'trail_guide' || item.category === 'frontier';
   }
 
   private drawSelectionBorder(sprite: CardSprite, selected: boolean): void {
@@ -343,30 +386,46 @@ export class BoosterPackScene extends Scene {
 
       if (item.category === 'equipment' && item.equipmentDef) {
         // Add equipment directly (free — already paid for the pack)
-        if (player.equipment.length < player.maxEquipmentSlots) {
+        if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
           player.equipment.push({
             def: item.equipmentDef,
             sellValue: Math.max(1, Math.floor(item.equipmentDef.cost / 2)),
+            state: item.equipmentDef.initialState ? { ...item.equipmentDef.initialState } : {},
           });
         }
       } else if (item.category === 'dice' && item.die) {
         player.addDie(item.die);
+      } else if (item.category === 'supply' && item.supplyCardId) {
+        // Add supply card to consumable slots
+        const cardData = supplyCardsData.find(c => c.id === item.supplyCardId);
+        if (cardData) {
+          const def = createSupplyConsumableDef(cardData);
+          player.addConsumable(def);
+        }
       } else if (item.category === 'trail_guide' && item.trailGuideId) {
-        // Look up trail guide data and upgrade the corresponding hand level
+        // Add trail guide to consumable slots
         const tg = trailGuidesData.find(t => t.id === item.trailGuideId);
         if (tg) {
-          player.upgradeHandLevel(tg.handType as HandType);
+          const def = createTrailGuideConsumableDef(tg);
+          player.addConsumable(def);
+        }
+      } else if (item.category === 'frontier' && item.frontierEncounterId) {
+        // Add frontier encounter to consumable slots
+        const fe = frontierEncountersData.find(f => f.id === item.frontierEncounterId);
+        if (fe) {
+          const def = createFrontierConsumableDef(fe);
+          player.addConsumable(def);
         }
       } else if (item.instantEffect) {
         this.applyInstantEffect(item.instantEffect, player);
       } else if (item.diceSelection) {
         diceSelections.push({ config: item.diceSelection });
       }
-      // Other categories are stubs for now
     }
 
     // Refresh shared UI to reflect changes
     this.equipBar.refresh();
+    this.consumableBar.refresh();
     this.updateEquipHints();
     this.dicePouch.refresh();
     this.sidebar.refreshMoney();
@@ -422,6 +481,7 @@ export class BoosterPackScene extends Scene {
           player.equipment.push({
             def,
             sellValue: Math.max(1, Math.floor(def.cost / 2)),
+            state: def.initialState ? { ...def.initialState } : {},
           });
         }
         if (effect.setMoneyZero) {
@@ -444,5 +504,30 @@ export class BoosterPackScene extends Scene {
 
   private updateEquipHints(): void {
     this.equipBar.updateHints(null, getPlayerState());
+  }
+
+  private handleConsumableUsed(consumed: ConsumableInstance): void {
+    const player = getPlayerState();
+    const result = executeConsumableEffect(consumed, player);
+
+    this.sidebar.refreshMoney();
+    this.equipBar.refresh();
+    this.consumableBar.refresh();
+    this.dicePouch.refresh();
+
+    if (!result.success && result.failReason) {
+      const text = this.add.text(this.contentCX, this.consumableBar.y, result.failReason, {
+        fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(1000);
+      this.sound.play('sfx_cancel', { volume: 0.5 });
+      this.tweens.add({ targets: text, y: text.y - 15, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => text.destroy() });
+    }
+
+    if (result.diceSelection) {
+      this.scene.start('DiceSelection', {
+        config: result.diceSelection,
+        returnScene: 'Shop',
+      });
+    }
   }
 }

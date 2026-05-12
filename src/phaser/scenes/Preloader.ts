@@ -63,6 +63,7 @@ export class Preloader extends Scene {
     this.load.audio('sfx_multhit1', 'assets/sounds/multhit1.ogg');
     this.load.audio('sfx_multhit2', 'assets/sounds/multhit2.ogg');
     this.load.audio('sfx_whoosh', 'assets/sounds/whoosh.ogg');
+    this.load.audio('sfx_whoosh2', 'assets/sounds/whoosh2.ogg');
     this.load.audio('sfx_tarot1', 'assets/sounds/tarot1.ogg');
     this.load.audio('sfx_tarot2', 'assets/sounds/tarot2.ogg');
     this.load.audio('sfx_cancel', 'assets/sounds/cancel.ogg');

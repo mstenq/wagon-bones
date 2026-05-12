@@ -1,20 +1,17 @@
-// ─── EquipmentBar ───
-// Top bar in the main content area showing owned equipment cards.
-// Balatro-style: always visible across shop and game scenes.
-// Cards are drag-to-reorder since scoring depends on equipment order (L→R).
-// Cards idle-wobble, tilt on hover, and swing with momentum when dragged.
+// ─── ConsumableBar ───
+// Right-side bar showing consumable cards (supply cards, trail guides, frontier encounters).
+// Modeled on EquipmentBar: drag-to-reorder, idle wobble, hover tilt, click for action tabs (USE + SELL).
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI, ANIM } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
-import type { GameState } from '../../game/GameState';
-import type { PlayerState } from '../../game/PlayerState';
+import type { ConsumableInstance } from '../../game/ConsumablesSystem';
 
-const CARD_VERTICAL_OFFSET = 20
+const CARD_VERTICAL_OFFSET = 20;
 
-export class EquipmentBar extends GameObjects.Container {
+export class ConsumableBar extends GameObjects.Container {
   private bg: GameObjects.Graphics;
   private cards: ItemCard[] = [];
   private slotCountText: GameObjects.Text;
@@ -30,19 +27,18 @@ export class EquipmentBar extends GameObjects.Container {
   private dragPrevX: number = 0;
   private dragVelocityX: number = 0;
 
-  // Per-card wobble tweens (cleaned up on refresh)
+  // Per-card wobble tweens
   private wobbleTweens: Phaser.Tweens.Tween[] = [];
 
   // Hover tilt tracking
   private hoveredCard: ItemCard | null = null;
   private moveHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
-  // Smoothed tilt state (lerped toward target each pointermove)
   private tiltRotation: number = 0;
   private tiltScaleX: number = 1;
   private tiltScaleY: number = 1;
-  private tiltBaseY: number = 0;  // card's resting Y before hover lift
+  private tiltBaseY: number = 0;
 
-  // Action tab (sell) state
+  // Action tab state
   private activeTabCard: ItemCard | null = null;
   private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
 
@@ -57,7 +53,7 @@ export class EquipmentBar extends GameObjects.Container {
 
     this.drawBackground();
 
-    // Slot count text (e.g. "3/5")
+    // Slot count text (e.g. "1/2")
     this.slotCountText = scene.add.text(width - 8, height - 4, '', {
       fontFamily: FONTS.PRIMARY,
       fontSize: '11px',
@@ -93,23 +89,24 @@ export class EquipmentBar extends GameObjects.Container {
     this.cards = [];
 
     const player = getPlayerState();
-    const equipment = player.equipment;
-    const maxSlots = player.maxEquipmentSlots;
+    const consumables = player.consumables;
 
-    this.slotCountText.setText(`${player.usedEquipmentSlots}/${maxSlots}`);
+    this.slotCountText.setText(`${player.usedConsumableSlots}/${player.maxConsumableSlots}`);
 
-    if (equipment.length === 0) return;
+    if (consumables.length === 0) return;
 
-    const spacing = this.getCardSpacing(equipment.length);
-    const totalW = (equipment.length - 1) * spacing;
+    const spacing = this.getCardSpacing(consumables.length);
+    const totalW = (consumables.length - 1) * spacing;
     const startX = this.barWidth / 2 - totalW / 2;
     const cy = (this.barHeight / 2) - CARD_VERTICAL_OFFSET;
 
-    for (let i = 0; i < equipment.length; i++) {
-      const equip = equipment[i];
-      const card = new ItemCard(this.scene, startX + i * spacing, cy, equip.def, {
+    for (let i = 0; i < consumables.length; i++) {
+      const consumable = consumables[i];
+      const texturePrefix = this.getTexturePrefix(consumable);
+      const card = new ItemCard(this.scene, startX + i * spacing, cy, consumable.def, {
         mode: 'compact',
-        cardScale: UI.EQUIP_CARD_SCALE,
+        cardScale: UI.CONSUMABLE_CARD_SCALE,
+        texturePrefix,
       });
       this.scene.input.setDraggable(card);
       this.add(card);
@@ -121,8 +118,8 @@ export class EquipmentBar extends GameObjects.Container {
       // ─── Hover tilt ───
       this.setupHoverTilt(card);
 
-      // ─── Click to toggle sell tab ───
-      this.setupClickToSell(card, i);
+      // ─── Click to show action tabs ───
+      this.setupClickActions(card, i);
     }
 
     this.applyCardDepths();
@@ -133,17 +130,18 @@ export class EquipmentBar extends GameObjects.Container {
     return this.cards;
   }
 
-  /** Update all card hints with current game context */
-  updateHints(game: GameState | null, player: PlayerState): void {
-    for (const card of this.cards) {
-      card.updateHints(game, player);
+  private getTexturePrefix(consumable: ConsumableInstance): string {
+    switch (consumable.def.category) {
+      case 'supply': return 'supply_';
+      case 'trail_guide': return 'tg_';
+      case 'frontier': return 'fe_';
+      default: return 'supply_';
     }
   }
 
   // ─── Idle Wobble ───
 
   private startWobble(card: ItemCard, index: number): void {
-    // Stagger start and randomize duration so cards don't wobble in sync
     const duration = ANIM.CARD_WOBBLE_DURATION_MIN + Math.random() * (ANIM.CARD_WOBBLE_DURATION_MAX - ANIM.CARD_WOBBLE_DURATION_MIN);
     const delay = index * 120 + Math.random() * 200;
     const startAngle = (Math.random() - 0.5) * ANIM.CARD_WOBBLE_ANGLE;
@@ -162,9 +160,6 @@ export class EquipmentBar extends GameObjects.Container {
   }
 
   private stopWobble(card: ItemCard): void {
-    const idx = this.cards.indexOf(card);
-    if (idx === -1) return;
-    // Find and pause the wobble tween for this card
     for (const t of this.wobbleTweens) {
       if ((t as any).targets && (t as any).targets.includes(card)) {
         t.pause();
@@ -180,12 +175,11 @@ export class EquipmentBar extends GameObjects.Container {
     }
   }
 
-  // ─── Hover Tilt (faux 3D perspective) ───
+  // ─── Hover Tilt ───
 
   private setupHoverTilt(card: ItemCard): void {
     card.on('pointerover', () => {
       if (this.draggingCard === card) return;
-      // Don't start tilt if this card has active tabs (it's already raised)
       if (this.activeTabCard === card) return;
       this.hoveredCard = card;
       this.tiltRotation = card.rotation;
@@ -194,7 +188,6 @@ export class EquipmentBar extends GameObjects.Container {
       this.tiltBaseY = card.y;
       this.stopWobble(card);
 
-      // Scale up — card "lifts" toward the viewer
       this.scene.tweens.add({
         targets: card,
         scaleX: ANIM.CARD_TILT_LIFT,
@@ -204,7 +197,6 @@ export class EquipmentBar extends GameObjects.Container {
         ease: 'Back.easeOut',
       });
 
-      // Install scene-level pointermove if not already
       if (!this.moveHandler) {
         this.moveHandler = (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer);
         this.scene.input.on('pointermove', this.moveHandler);
@@ -214,7 +206,6 @@ export class EquipmentBar extends GameObjects.Container {
     card.on('pointerout', () => {
       if (this.hoveredCard !== card) return;
       this.hoveredCard = null;
-      // Don't reset tilt if this card has active tabs (keep it raised)
       if (this.activeTabCard === card) return;
       this.resetTilt(card);
       this.resumeWobble(card);
@@ -224,27 +215,20 @@ export class EquipmentBar extends GameObjects.Container {
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
     const card = this.hoveredCard;
     if (!card || this.draggingCard === card) return;
-    // Suppress tilt tracking while sell tab is active
     if (this.activeTabCard === card) return;
 
-    // Convert pointer world position to card-local coordinates
     const cardWorldX = this.x + card.x;
     const cardWorldY = this.y + card.y;
     const cw = card.width;
     const ch = card.height;
 
-    // Normalized offset from card center: -1 to 1
     const nx = Phaser.Math.Clamp((pointer.worldX - cardWorldX) / (cw / 2), -1, 1);
     const ny = Phaser.Math.Clamp((pointer.worldY - cardWorldY) / (ch / 2), -1, 1);
 
-    // Target values
     const targetRotation = -nx * ANIM.CARD_TILT_MAX;
-    // Foreshorten scaleX based on horizontal offset (perspective simulation)
     const targetScaleX = ANIM.CARD_TILT_LIFT - Math.abs(nx) * ANIM.CARD_TILT_SCALE_AMOUNT;
-    // Slight vertical foreshortening
     const targetScaleY = ANIM.CARD_TILT_LIFT - Math.abs(ny) * ANIM.CARD_TILT_SCALE_AMOUNT * 0.4;
 
-    // Lerp toward targets for smooth, weighted feel
     const lerp = ANIM.CARD_TILT_LERP;
     this.tiltRotation += (targetRotation - this.tiltRotation) * lerp;
     this.tiltScaleX += (targetScaleX - this.tiltScaleX) * lerp;
@@ -267,10 +251,9 @@ export class EquipmentBar extends GameObjects.Container {
     });
   }
 
-  // ─── Click-to-Sell (action tab) ───
+  // ─── Click Actions (USE + SELL) ───
 
-  private setupClickToSell(card: ItemCard, equipIndex: number): void {
-    // Track whether this interaction was a drag (suppress click on dragend)
+  private setupClickActions(card: ItemCard, consumableIndex: number): void {
     let wasDragged = false;
 
     card.on('dragstart', () => { wasDragged = true; });
@@ -281,20 +264,18 @@ export class EquipmentBar extends GameObjects.Container {
         return;
       }
 
-      // Toggle: if this card already has tabs, dismiss
       if (this.activeTabCard === card) {
         this.dismissActiveTab();
         return;
       }
 
-      // Dismiss any other card's tabs first
       this.dismissActiveTab();
 
       const player = getPlayerState();
-      const equip = player.equipment[equipIndex];
-      if (!equip) return;
+      const consumable = player.consumables[consumableIndex];
+      if (!consumable) return;
 
-      // Lock card in raised state: stop wobble, straighten rotation, lift
+      // Lock card in raised state
       this.stopWobble(card);
       this.hoveredCard = null;
       const cy = (this.barHeight / 2) - CARD_VERTICAL_OFFSET;
@@ -309,19 +290,23 @@ export class EquipmentBar extends GameObjects.Container {
         ease: 'Back.easeOut',
       });
 
-      // Disable drag while tab is open
       this.scene.input.setDraggable(card, false);
-
-      // Raise card above siblings so the tab isn't obscured
       card.setDepth(200);
       this.bringToTop(card);
 
       const tabs: CardActionTabConfig[] = [
         {
-          label: `SELL\n$${equip.sellValue}`,
+          label: 'USE',
+          color: 0x2255aa,
+          callback: () => {
+            this.onUseConsumable(card, consumableIndex);
+          },
+        },
+        {
+          label: `SELL\n$${consumable.sellValue}`,
           color: 0x338833,
           callback: () => {
-            this.animateSellCard(card, equipIndex);
+            this.animateSellCard(card, consumableIndex);
           },
         },
       ];
@@ -329,16 +314,14 @@ export class EquipmentBar extends GameObjects.Container {
       card.showActionTabs(tabs);
       this.activeTabCard = card;
 
-      // Install click-away dismiss (delayed so the current click doesn't trigger it)
+      // Click-away dismiss
       this.scene.time.delayedCall(50, () => {
         if (this.dismissHandler) {
           this.scene.input.off('pointerdown', this.dismissHandler);
         }
         this.dismissHandler = (pointer: Phaser.Input.Pointer) => {
-          // Check if the click was on the active card or its tabs — if so, let those handlers deal with it
           const hitObjects = this.scene.input.hitTestPointer(pointer);
           if (this.activeTabCard && hitObjects.includes(this.activeTabCard)) return;
-          // Check if hit any tab container
           for (const go of hitObjects) {
             if (go.parentContainer && this.activeTabCard && go.parentContainer === this.activeTabCard) return;
           }
@@ -349,11 +332,12 @@ export class EquipmentBar extends GameObjects.Container {
     });
   }
 
-  /** Animate the card being sold — crumple/fling off screen, then process the sell */
-  private animateSellCard(card: ItemCard, equipIndex: number): void {
+  private onUseConsumable(card: ItemCard, consumableIndex: number): void {
     const player = getPlayerState();
+    const consumed = player.useConsumable(consumableIndex);
+    if (!consumed) return;
 
-    // Hide tabs immediately (slide back behind card)
+    // Hide tabs
     card.hideActionTabs(true);
     this.activeTabCard = null;
     if (this.dismissHandler) {
@@ -361,16 +345,42 @@ export class EquipmentBar extends GameObjects.Container {
       this.dismissHandler = null;
     }
 
-    // Disable interaction on the card
+    // Animate card disappearing (poof upward)
+    card.disableInteractive();
+    this.scene.sound.play('sfx_card_fan', { volume: 0.5 });
+
+    this.scene.tweens.add({
+      targets: card,
+      y: card.y - 80,
+      scaleX: 0.2,
+      scaleY: 0.2,
+      alpha: 0,
+      duration: 350,
+      ease: 'Power2',
+      onComplete: () => {
+        this.refresh();
+        this.emit('consumable-used', consumed);
+      },
+    });
+  }
+
+  private animateSellCard(card: ItemCard, consumableIndex: number): void {
+    const player = getPlayerState();
+
+    card.hideActionTabs(true);
+    this.activeTabCard = null;
+    if (this.dismissHandler) {
+      this.scene.input.off('pointerdown', this.dismissHandler);
+      this.dismissHandler = null;
+    }
+
     card.disableInteractive();
 
-    // Play sound effects
     this.scene.sound.play('sfx_crumple1', { volume: 0.5 });
     this.scene.time.delayedCall(100, () => {
       this.scene.sound.play('sfx_coin', { volume: 0.5 });
     });
 
-    // Fling card off screen with spin + shrink (like crumpling and tossing)
     const flingDirection = Math.random() > 0.5 ? 1 : -1;
     this.scene.tweens.add({
       targets: card,
@@ -383,10 +393,9 @@ export class EquipmentBar extends GameObjects.Container {
       duration: 400,
       ease: 'Power3',
       onComplete: () => {
-        // Process the actual sell
-        player.sellEquipment(equipIndex);
+        player.sellConsumable(consumableIndex);
         this.refresh();
-        this.emit('equipment-changed');
+        this.emit('consumable-changed');
       },
     });
   }
@@ -396,13 +405,9 @@ export class EquipmentBar extends GameObjects.Container {
       const card = this.activeTabCard;
       card.hideActionTabs(true);
 
-      // Re-enable drag
       this.scene.input.setDraggable(card, true);
-
-      // Restore depth based on position
       this.applyCardDepths();
 
-      // Settle card back to resting state
       const cy = (this.barHeight / 2) - CARD_VERTICAL_OFFSET;
       this.scene.tweens.add({
         targets: card,
@@ -427,28 +432,24 @@ export class EquipmentBar extends GameObjects.Container {
 
   // ─── Drag-to-Reorder ───
 
-  /** Apply left-to-right stacking order: leftmost card lowest, rightmost highest */
   private applyCardDepths(): void {
     for (let i = 0; i < this.cards.length; i++) {
       this.cards[i].setDepth(i);
     }
-    // Container renders children in list order — sort by depth to apply
     this.sort('depth');
   }
 
-  /** Calculate spacing that fits all cards within the bar, capping at the preferred spacing */
   private getCardSpacing(count: number): number {
     if (count <= 1) return 0;
-    const cardW = UI.CARD_W * UI.EQUIP_CARD_SCALE;
-    const padding = 20; // margin on each side of the bar
-    const availableW = this.barWidth - padding * 2 - cardW; // space for gaps (cards centered on positions)
-    const preferredSpacing = UI.EQUIP_CARD_SPACING;
+    const cardW = UI.CARD_W * UI.CONSUMABLE_CARD_SCALE;
+    const padding = 16;
+    const availableW = this.barWidth - padding * 2 - cardW;
+    const preferredSpacing = UI.CONSUMABLE_CARD_SPACING;
     const neededW = (count - 1) * preferredSpacing;
     if (neededW <= availableW) return preferredSpacing;
     return availableW / (count - 1);
   }
 
-  /** Target X positions for the current card count */
   private getCardXPositions(count: number): number[] {
     if (count === 0) return [];
     const spacing = this.getCardSpacing(count);
@@ -470,7 +471,6 @@ export class EquipmentBar extends GameObjects.Container {
       const card = gameObject as ItemCard;
       const idx = this.cards.indexOf(card);
       if (idx === -1) return;
-      // Block drag if a sell tab is active
       if (this.activeTabCard) return;
 
       this.draggingCard = card;
@@ -480,10 +480,7 @@ export class EquipmentBar extends GameObjects.Container {
       this.dragPrevX = pointer.worldX;
       this.dragVelocityX = 0;
 
-      // Dismiss any active sell tab
       this.dismissActiveTab();
-
-      // Stop wobble and clear hover tilt
       this.stopWobble(card);
       this.hoveredCard = null;
       card.setDepth(200);
@@ -495,26 +492,19 @@ export class EquipmentBar extends GameObjects.Container {
     this.scene.input.on('drag', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
       if (!this.draggingCard || gameObject !== this.draggingCard) return;
 
-      // Track velocity for momentum swing (exponential moving average)
       const dx = pointer.worldX - this.dragPrevX;
       this.dragVelocityX = this.dragVelocityX * ANIM.CARD_DRAG_SWING_DAMPING + dx * (1 - ANIM.CARD_DRAG_SWING_DAMPING);
       this.dragPrevX = pointer.worldX;
 
-      // Apply swing rotation — card trails behind cursor like a pendulum
       const swing = Phaser.Math.Clamp(
         this.dragVelocityX * ANIM.CARD_DRAG_SWING_FACTOR,
         -ANIM.CARD_DRAG_SWING_MAX,
         ANIM.CARD_DRAG_SWING_MAX,
       );
       this.draggingCard.rotation = swing;
-
-      // Free vertical movement — follow pointer Y
       this.draggingCard.y = pointer.worldY - this.y - this.dragOffsetY;
-
-      // Convert pointer world position to container-local, accounting for initial grab offset
       this.draggingCard.x = pointer.worldX - this.x - this.dragOffsetX;
 
-      // Determine which slot it's closest to
       const positions = this.getCardXPositions(this.cards.length);
       let newIndex = 0;
       let minDist = Infinity;
@@ -531,7 +521,6 @@ export class EquipmentBar extends GameObjects.Container {
         this.cards.splice(currentIndex, 1);
         this.cards.splice(newIndex, 0, this.draggingCard);
 
-        // Animate non-dragged cards to their new slots
         for (let i = 0; i < this.cards.length; i++) {
           if (this.cards[i] === this.draggingCard) continue;
           this.scene.tweens.add({
@@ -555,7 +544,6 @@ export class EquipmentBar extends GameObjects.Container {
 
       card.setDepth(0);
 
-      // Snap to final position with a decaying spring settle
       const positions = this.getCardXPositions(this.cards.length);
       const cy = (this.barHeight / 2) - CARD_VERTICAL_OFFSET;
       const overshoot = Phaser.Math.Clamp(
@@ -565,10 +553,8 @@ export class EquipmentBar extends GameObjects.Container {
       );
       const dur = ANIM.CARD_DRAG_SETTLE_DURATION;
 
-      // Restore stacking order after reorder
       this.applyCardDepths();
 
-      // Spring settle: overshoot → counter → small counter → rest
       this.scene.tweens.chain({
         targets: card,
         tweens: [
@@ -605,7 +591,7 @@ export class EquipmentBar extends GameObjects.Container {
       // Persist to PlayerState if order changed
       if (finalIndex !== this.dragStartIndex) {
         const player = getPlayerState();
-        player.reorderEquipment(this.dragStartIndex, finalIndex);
+        player.reorderConsumable(this.dragStartIndex, finalIndex);
       }
 
       this.dragStartIndex = -1;

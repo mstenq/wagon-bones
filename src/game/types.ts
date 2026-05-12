@@ -66,6 +66,13 @@ export interface ScoreResult {
   totalValue: number;    // sum of scoring dice values (base miles from dice)
   miles: number;         // (handBaseMiles + totalValue) * mult
   mult: number;
+  // Animation context (populated by GameState/GameScene for the rendering layer)
+  heldSteps?: import('./EquipmentEffects').HeldAnimStep[];
+  playerBalance?: number;
+  currentDay?: number;
+  maxDays?: number;
+  rerollsRemaining?: number;
+  roundScoreBefore?: number;
 }
 
 export interface GameConfig {

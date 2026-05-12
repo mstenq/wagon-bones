@@ -5,10 +5,11 @@
 // to the shared UI elements plus layout dimensions.
 
 import { Scene } from 'phaser';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
+import { COLORS, UI, GAMEPLAY } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { Sidebar } from './Sidebar';
 import { EquipmentBar } from './EquipmentBar';
+import { ConsumableBar } from './ConsumableBar';
 import { DicePouch } from './DicePouch';
 import { DicePouchModal } from './DicePouchModal';
 import { JourneyInfoModal } from './JourneyInfoModal';
@@ -17,6 +18,7 @@ import { OptionsModal } from './OptionsModal';
 export interface LayoutResult {
   sidebar: Sidebar;
   equipBar: EquipmentBar;
+  consumableBar: ConsumableBar;
   dicePouch: DicePouch;
   /** Left edge of content area */
   contentX: number;
@@ -104,16 +106,7 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   const equipBar = new EquipmentBar(scene, contentX, 8, equipW, equipBarH);
 
   const consumableX = contentX + equipW + barGap;
-  const consumableBg = scene.add.graphics();
-  consumableBg.fillStyle(COLORS.BG_PRIMARY, 0.6);
-  consumableBg.fillRoundedRect(consumableX, 8, consumableW, equipBarH, 8);
-  consumableBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.5);
-  consumableBg.strokeRoundedRect(consumableX, 8, consumableW, equipBarH, 8);
-  scene.add.text(consumableX + consumableW - 8, 8 + equipBarH - 4, `0/${UI.CONSUMABLE_MAX_SLOTS}`, {
-    fontFamily: FONTS.PRIMARY,
-    fontSize: '11px',
-    color: TEXT_COLORS.MUTED,
-  }).setOrigin(1, 1);
+  const consumableBar = new ConsumableBar(scene, consumableX, 8, consumableW, equipBarH);
 
 
   // ─── Dice Pouch (bottom-right) ───
@@ -122,5 +115,5 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     new DicePouchModal(scene, sidebarW, width - sidebarW, height);
   });
 
-  return { sidebar, equipBar, dicePouch, contentX, contentW, contentCX, sidebarW };
+  return { sidebar, equipBar, consumableBar, dicePouch, contentX, contentW, contentCX, sidebarW };
 }

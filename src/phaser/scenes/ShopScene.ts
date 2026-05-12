@@ -8,18 +8,25 @@ import { getPlayerState } from '../../game/PlayerState';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { generateShopStock, EquipmentDef } from '../../game/ItemsSystem';
 import { generateShopPacks, PackInstance } from '../../game/BoosterPackSystem';
+import { ConsumableDef, ConsumableInstance, generateShopConsumables, executeConsumableEffect } from '../../game/ConsumablesSystem';
 import { ItemCard } from '../ui/ItemCard';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
+import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 
 const CARD_SPACING = 185;
 
+/** A shop stock item — either equipment or consumable */
+type ShopItem = 
+  | { type: 'equipment'; def: EquipmentDef }
+  | { type: 'consumable'; def: ConsumableDef };
+
 export class ShopScene extends Scene {
-  private stock: EquipmentDef[];
+  private stockItems: ShopItem[];
   private packs: PackInstance[];
   private cards: ItemCard[] = [];
   private packCards: BoosterPackCard[] = [];
@@ -28,6 +35,7 @@ export class ShopScene extends Scene {
   // Shared UI
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
+  private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
 
   constructor() {
@@ -36,8 +44,8 @@ export class ShopScene extends Scene {
 
   create() {
     const player = getPlayerState();
-    if (!this.stock) {
-      this.stock = generateShopStock(player.shopSlots);
+    if (!this.stockItems) {
+      this.stockItems = this.generateMixedStock(player);
       player.resetShopRerolls();
     }
     if (!this.packs) {
@@ -59,9 +67,26 @@ export class ShopScene extends Scene {
     const layout = createLayout(this, { bgKey: 'bg_shop', sidebarTitle: 'SHOP' });
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
+    this.consumableBar = layout.consumableBar;
     this.dicePouch = layout.dicePouch;
     const contentL = layout.contentX;
     const contentW = layout.contentW;
+
+    // Refresh displays when equipment is sold from the bar
+    this.equipBar.on('equipment-changed', () => {
+      this.updateDisplays();
+      this.updateEquipHints();
+    });
+
+    // Refresh displays when consumables change
+    this.consumableBar.on('consumable-changed', () => {
+      this.updateDisplays();
+    });
+
+    // Execute consumable effect when used
+    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
+      this.handleConsumableUsed(consumed);
+    });
 
     // Show equipment hints with default (shop) context
     this.updateEquipHints();
@@ -102,7 +127,7 @@ export class ShopScene extends Scene {
 
     new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
       .onClick(() => {
-        this.stock = null!;
+        this.stockItems = null!;
         this.packs = null!;
         this.scene.start('Game');
       });
@@ -115,20 +140,40 @@ export class ShopScene extends Scene {
     this.cards = [];
     const cardAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
     const cardAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
-    const equipTotalW = this.stock.length > 1 ? (this.stock.length - 1) * CARD_SPACING : 0;
+    const equipTotalW = this.stockItems.length > 1 ? (this.stockItems.length - 1) * CARD_SPACING : 0;
     const cardStartX = cardAreaLeft + cardAreaW / 2 - equipTotalW / 2;
 
-    for (let i = 0; i < this.stock.length; i++) {
-      const def = this.stock[i];
-      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, def, { mode: 'shop', showCost: true });
+    for (let i = 0; i < this.stockItems.length; i++) {
+      const shopItem = this.stockItems[i];
+      const texturePrefix = shopItem.type === 'consumable'
+        ? (shopItem.def.category === 'trail_guide' ? 'tg_' : shopItem.def.category === 'frontier' ? 'fe_' : 'supply_')
+        : undefined;
+      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, shopItem.def, {
+        mode: 'shop',
+        showCost: true,
+        ...(texturePrefix ? { texturePrefix } : {}),
+      });
       card.setDepth(10);
 
-      const alreadyOwned = player.equipment.some(e => e.def.id === def.id);
-      if (alreadyOwned) {
-        card.markSold();
+      if (shopItem.type === 'equipment') {
+        const alreadyOwned = player.equipment.some(e => e.def.id === shopItem.def.id);
+        if (alreadyOwned) {
+          card.markSold();
+        } else {
+          card.setAffordable(player.canBuy(shopItem.def));
+          card.on('pointerdown', () => this.onBuyEquipment(card, shopItem.def));
+          card.on('pointerover', () => {
+            if (!card.sold) this.tweens.add({ targets: card, scaleX: 1.05, scaleY: 1.05, duration: 100 });
+          });
+          card.on('pointerout', () => {
+            if (!card.sold) this.tweens.add({ targets: card, scaleX: 1, scaleY: 1, duration: 100 });
+          });
+        }
       } else {
-        card.setAffordable(player.canBuy(def));
-        card.on('pointerdown', () => this.onBuyItem(card));
+        // Consumable card
+        const canAfford = player.economy.balance >= shopItem.def.cost;
+        card.setAffordable(canAfford);
+        card.on('pointerdown', () => this.onBuyConsumable(card, shopItem.def));
         card.on('pointerover', () => {
           if (!card.sold) this.tweens.add({ targets: card, scaleX: 1.05, scaleY: 1.05, duration: 100 });
         });
@@ -204,7 +249,10 @@ export class ShopScene extends Scene {
   private onBuyPack(card: BoosterPackCard, pack: PackInstance): void {
     if (card.sold) return;
     const player = getPlayerState();
-    if (player.economy.balance < pack.def.cost) return;
+    if (player.economy.balance < pack.def.cost) {
+      this.showCardPopup(card, "Can't afford!");
+      return;
+    }
 
     player.economy.spend(pack.def.cost);
     card.markSold();
@@ -215,24 +263,102 @@ export class ShopScene extends Scene {
     this.scene.start('BoosterPack', { packDef: pack.def });
   }
 
-  private onBuyItem(card: ItemCard): void {
+  private onBuyEquipment(card: ItemCard, def: EquipmentDef): void {
     if (card.sold) return;
     const player = getPlayerState();
-    const success = player.buyEquipment(card.def as EquipmentDef);
+    const success = player.buyEquipment(def);
     if (success) {
       card.markSold();
       this.sound.play('sfx_coin', { volume: 0.5 });
       this.updateDisplays();
       this.equipBar.refresh();
       this.updateEquipHints();
+    } else if (player.economy.balance < def.cost) {
+      this.showCardPopup(card, "Can't afford!");
+    } else {
+      this.showCardPopup(card, 'No space!');
     }
+  }
+
+  private onBuyConsumable(card: ItemCard, def: ConsumableDef): void {
+    if (card.sold) return;
+    const player = getPlayerState();
+    if (player.economy.balance < def.cost) {
+      this.showCardPopup(card, "Can't afford!");
+      return;
+    }
+    if (!player.canAddConsumable(def)) {
+      this.showCardPopup(card, 'No space!');
+      return;
+    }
+    player.economy.spend(def.cost);
+    player.addConsumable(def);
+    card.markSold();
+    this.sound.play('sfx_coin', { volume: 0.5 });
+    this.updateDisplays();
+    this.consumableBar.refresh();
+  }
+
+  private handleConsumableUsed(consumed: ConsumableInstance): void {
+    const player = getPlayerState();
+    const result = executeConsumableEffect(consumed, player);
+
+    // Refresh all UI
+    this.updateDisplays();
+    this.equipBar.refresh();
+    this.consumableBar.refresh();
+    this.dicePouch.refresh();
+
+    if (!result.success && result.failReason) {
+      // Show popup at center of consumable bar area
+      const text = this.add.text(this.consumableBar.x + this.consumableBar.width / 2, this.consumableBar.y, result.failReason, {
+        fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(1000);
+      this.sound.play('sfx_cancel', { volume: 0.5 });
+      this.tweens.add({ targets: text, y: text.y - 15, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => text.destroy() });
+    }
+
+    // If the consumable triggers a dice selection, launch it
+    if (result.diceSelection) {
+      this.scene.start('DiceSelection', {
+        config: result.diceSelection,
+        returnScene: 'Shop',
+      });
+    }
+  }
+
+  /** Show a brief floating text popup above a card with a cancel sound */
+  private showCardPopup(card: ItemCard | BoosterPackCard, message: string): void {
+    this.sound.play('sfx_cancel', { volume: 0.5 });
+
+    const matrix = card.getWorldTransformMatrix();
+    const worldX = matrix.tx;
+    const worldY = matrix.ty;
+
+    const text = this.add.text(worldX, worldY - 40, message, {
+      fontFamily: 'sans-serif',
+      fontSize: '24px',
+      color: '#fff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(1000);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 15,
+      fontSize: '32px',
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    });
   }
 
   private onRerollShop(): void {
     const player = getPlayerState();
     if (!player.payShopReroll()) return;
 
-    this.stock = generateShopStock(player.shopSlots);
+    this.stockItems = this.generateMixedStock(player);
 
     this.children.removeAll(true);
     this.cards = [];
@@ -244,9 +370,14 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     this.sidebar.refreshMoney();
 
-    for (const card of this.cards) {
-      if (!card.sold) {
-        card.setAffordable(player.canBuy(card.def as EquipmentDef));
+    for (let i = 0; i < this.cards.length; i++) {
+      const card = this.cards[i];
+      if (card.sold) continue;
+      const shopItem = this.stockItems[i];
+      if (shopItem.type === 'equipment') {
+        card.setAffordable(player.canBuy(shopItem.def));
+      } else {
+        card.setAffordable(player.economy.balance >= shopItem.def.cost);
       }
     }
 
@@ -269,5 +400,26 @@ export class ShopScene extends Scene {
 
   private updateEquipHints(): void {
     this.equipBar.updateHints(null, getPlayerState());
+  }
+
+  /** Generate a mix of equipment and consumable cards for the shop stock */
+  private generateMixedStock(player: ReturnType<typeof getPlayerState>): ShopItem[] {
+    const items: ShopItem[] = [];
+
+    // Equipment cards
+    const equipCount = Math.max(1, player.shopSlots);
+    const equipDefs = generateShopStock(equipCount);
+    for (const def of equipDefs) {
+      items.push({ type: 'equipment', def });
+    }
+
+    // Consumable card (1 by default)
+    const includeFrontier = !!player.profession?.modifiers?.frontierInShop;
+    const consumableDefs = generateShopConsumables(1, { includeFrontier });
+    for (const def of consumableDefs) {
+      items.push({ type: 'consumable', def });
+    }
+
+    return items;
   }
 }

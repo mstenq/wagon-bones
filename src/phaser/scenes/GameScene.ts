@@ -14,6 +14,8 @@ import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
+import { ConsumableBar } from '../ui/ConsumableBar';
+import { ConsumableInstance, executeConsumableEffect } from '../../game/ConsumablesSystem';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playRollAnimation } from '../animations/RollAnimation';
@@ -35,6 +37,7 @@ export class GameScene extends Scene {
   private gameState: GameState;
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
+  private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
 
   // Layout helpers
@@ -116,9 +119,27 @@ export class GameScene extends Scene {
     const layout = createLayout(this, { bgKey: 'bg_1' });
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
+    this.consumableBar = layout.consumableBar;
     this.dicePouch = layout.dicePouch;
     this.sidebarW = layout.sidebarW;
     this.contentCX = layout.contentCX;
+
+    // Refresh displays when equipment is sold from the bar
+    this.equipBar.on('equipment-changed', () => {
+      this.sidebar.refreshMoney();
+      this.dicePouch.refresh();
+    });
+
+    // Refresh displays when consumables change
+    this.consumableBar.on('consumable-changed', () => {
+      this.sidebar.refreshMoney();
+      this.dicePouch.refresh();
+    });
+
+    // Execute consumable effect when used
+    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
+      this.handleConsumableUsed(consumed);
+    });
 
     // Instruction text
     this.instructionText = this.add.text(this.contentCX, height - 60, '', {
@@ -392,8 +413,8 @@ export class GameScene extends Scene {
 
     // Store round score before this hand for the animation
     const roundScoreBefore = this.gameState.state.totalMiles - result.miles;
-    (result as any)._roundScoreBefore = roundScoreBefore;
-    (result as any)._rerollsRemaining = this.gameState.state.rerollsRemaining;
+    result.roundScoreBefore = roundScoreBefore;
+    result.rerollsRemaining = this.gameState.state.rerollsRemaining;
 
     // Play sequential scoring animation
     this.animating = true;
@@ -1365,6 +1386,31 @@ export class GameScene extends Scene {
       if (this.wasDragging) return;
       this.onPlayAreaDiceClick(sprite);
     });
+  }
+
+  private handleConsumableUsed(consumed: ConsumableInstance): void {
+    const player = getPlayerState();
+    const result = executeConsumableEffect(consumed, player);
+
+    this.sidebar.refreshMoney();
+    this.equipBar.refresh();
+    this.consumableBar.refresh();
+    this.dicePouch.refresh();
+
+    if (!result.success && result.failReason) {
+      const text = this.add.text(this.contentCX, this.consumableBar.y, result.failReason, {
+        fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(1000);
+      this.sound.play('sfx_cancel', { volume: 0.5 });
+      this.tweens.add({ targets: text, y: text.y - 15, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => text.destroy() });
+    }
+
+    if (result.diceSelection) {
+      this.scene.start('DiceSelection', {
+        config: result.diceSelection,
+        returnScene: 'Game',
+      });
+    }
   }
 
 }

@@ -5,6 +5,7 @@ import { Die, HandType, HandStats, BossDef } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import trailGuidesData from '../data/trail_guides.json';
@@ -29,6 +30,7 @@ export interface PayoutBreakdown {
 
 const DEFAULT_STARTING_MONEY = GAMEPLAY.STARTING_MONEY;
 const DEFAULT_MAX_EQUIPMENT_SLOTS = GAMEPLAY.MAX_EQUIPMENT_SLOTS;
+const DEFAULT_MAX_CONSUMABLE_SLOTS = GAMEPLAY.MAX_CONSUMABLE_SLOTS;
 const DEFAULT_SHOP_SLOTS = GAMEPLAY.SHOP_SLOTS;
 const DEFAULT_STARTING_DICE = GAMEPLAY.STARTING_DICE;
 const SHOP_REROLL_COST = GAMEPLAY.SHOP_REROLL_COST;
@@ -39,6 +41,9 @@ export class PlayerState {
   spentDiceIds: Set<string> = new Set(); // dice used this cycle (persists across days & rounds)
   equipment: EquipmentInstance[];
   maxEquipmentSlots: number;
+  consumables: ConsumableInstance[];
+  maxConsumableSlots: number;
+  lastUsedConsumable: ConsumableDef | null = null; // for "Second Helpings"
   shopSlots: number; // how many items appear in the shop (upgradeable via vouchers)
   leg: number; // current leg of the journey (1-8)
   round: number; // current round within the leg (1-3)
@@ -54,6 +59,8 @@ export class PlayerState {
     this.dice = createPouch(DEFAULT_STARTING_DICE);
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
+    this.consumables = [];
+    this.maxConsumableSlots = DEFAULT_MAX_CONSUMABLE_SLOTS;
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
     this.round = 1;
@@ -82,6 +89,19 @@ export class PlayerState {
     // Hand size modifier
     if (typeof m.handSize === 'number') {
       this.handSize += m.handSize;
+    }
+
+    // Consumable slot modifiers
+    if (typeof m.supplySlots === 'number') {
+      this.maxConsumableSlots += m.supplySlots;
+    }
+
+    // Starting supply cards → consumables
+    if (Array.isArray(m.startingSupplyCards)) {
+      for (const cardId of m.startingSupplyCards as string[]) {
+        const def = getSupplyDefById(cardId);
+        if (def) this.addConsumable(def);
+      }
     }
   }
 
@@ -189,13 +209,19 @@ export class PlayerState {
     this.shopRerollCount = 0;
   }
 
+  /** Number of equipment slots currently occupied (ghost-aura items don't count) */
+  get usedEquipmentSlots(): number {
+    return this.equipment.filter(e => e.def.aura?.id !== 'ghost').length;
+  }
+
   get equipmentSlotsFree(): number {
-    return this.maxEquipmentSlots - this.equipment.length;
+    return this.maxEquipmentSlots - this.usedEquipmentSlots;
   }
 
   canBuy(item: EquipmentDef): boolean {
     if (this.economy.balance < item.cost) return false;
-    if (this.equipment.length >= this.maxEquipmentSlots) return false;
+    // Ghost-aura items don't consume a slot
+    if (item.aura?.id !== 'ghost' && this.usedEquipmentSlots >= this.maxEquipmentSlots) return false;
     return true;
   }
 
@@ -225,6 +251,51 @@ export class PlayerState {
     if (toIndex < 0 || toIndex >= this.equipment.length) return;
     const [item] = this.equipment.splice(fromIndex, 1);
     this.equipment.splice(toIndex, 0, item);
+  }
+
+  // ─── Consumable Management ───
+
+  /** Number of consumable slots currently occupied (ghost-aura items don't count) */
+  get usedConsumableSlots(): number {
+    return this.consumables.filter(c => c.def.aura?.id !== 'ghost').length;
+  }
+
+  get consumableSlotsFree(): number {
+    return this.maxConsumableSlots - this.usedConsumableSlots;
+  }
+
+  canAddConsumable(def: ConsumableDef): boolean {
+    if (def.aura?.id === 'ghost') return true;
+    return this.usedConsumableSlots < this.maxConsumableSlots;
+  }
+
+  addConsumable(def: ConsumableDef): boolean {
+    if (!this.canAddConsumable(def)) return false;
+    this.consumables.push(createConsumableInstance(def));
+    return true;
+  }
+
+  sellConsumable(index: number): boolean {
+    if (index < 0 || index >= this.consumables.length) return false;
+    const item = this.consumables[index];
+    this.economy.earn(item.sellValue);
+    this.consumables.splice(index, 1);
+    return true;
+  }
+
+  /** Remove and return a consumable (for using it). Does NOT earn money. */
+  useConsumable(index: number): ConsumableInstance | null {
+    if (index < 0 || index >= this.consumables.length) return null;
+    const [item] = this.consumables.splice(index, 1);
+    this.lastUsedConsumable = item.def;
+    return item;
+  }
+
+  reorderConsumable(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || fromIndex >= this.consumables.length) return;
+    if (toIndex < 0 || toIndex >= this.consumables.length) return;
+    const [item] = this.consumables.splice(fromIndex, 1);
+    this.consumables.splice(toIndex, 0, item);
   }
 
   /** Randomly assign one boss from the pool to each leg */

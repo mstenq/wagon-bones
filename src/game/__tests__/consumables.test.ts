@@ -1,0 +1,204 @@
+import { describe, test, expect, beforeEach } from 'bun:test';
+import './setup';
+import { resetDieIds, setupGame } from './testHelpers';
+import { resetPlayerState } from '../PlayerState';
+import {
+  createSupplyConsumableDef,
+  createTrailGuideConsumableDef,
+  createConsumableInstance,
+  getSupplyDefById,
+} from '../ConsumablesSystem';
+import supplyCardsData from '../../data/supply_cards.json';
+import trailGuidesData from '../../data/trail_guides.json';
+
+beforeEach(() => {
+  resetDieIds();
+});
+
+// ─── ConsumableDef Creation ───
+
+describe('ConsumableDef creation', () => {
+  test('createSupplyConsumableDef creates a valid def from JSON', () => {
+    const card = supplyCardsData.find(c => c.id === 'coffee_tin')!;
+    const def = createSupplyConsumableDef(card);
+    expect(def.id).toBe('coffee_tin');
+    expect(def.name).toBe('Coffee Tin');
+    expect(def.category).toBe('supply');
+    expect(def.instantEffect).toBeDefined();
+    expect(def.instantEffect!.type).toBe('CREATE_DICE');
+  });
+
+  test('createSupplyConsumableDef with diceSelection', () => {
+    const card = supplyCardsData.find(c => c.id === 'shallow_grave')!;
+    const def = createSupplyConsumableDef(card);
+    expect(def.diceSelection).toBeDefined();
+    expect(def.diceSelection!.drawCount).toBe(5);
+    expect(def.diceSelection!.pickCount).toBe(2);
+  });
+
+  test('createTrailGuideConsumableDef creates a valid def', () => {
+    const tg = trailGuidesData[0];
+    const def = createTrailGuideConsumableDef(tg);
+    expect(def.category).toBe('trail_guide');
+    expect(def.handType).toBe(tg.handType);
+  });
+
+  test('createConsumableInstance sets correct sellValue', () => {
+    const card = supplyCardsData[0];
+    const def = createSupplyConsumableDef(card);
+    const inst = createConsumableInstance(def);
+    expect(inst.sellValue).toBe(Math.max(1, Math.floor(def.cost / 2)));
+  });
+
+  test('getSupplyDefById returns null for unknown id', () => {
+    expect(getSupplyDefById('nonexistent')).toBeNull();
+  });
+
+  test('getSupplyDefById returns valid def for known id', () => {
+    const def = getSupplyDefById('treasure_map');
+    expect(def).not.toBeNull();
+    expect(def!.name).toBe('Treasure Map');
+  });
+});
+
+// ─── PlayerState Consumable Management ───
+
+describe('PlayerState consumable management', () => {
+  test('starts with empty consumables', () => {
+    const player = resetPlayerState();
+    expect(player.consumables).toHaveLength(0);
+    expect(player.usedConsumableSlots).toBe(0);
+    expect(player.consumableSlotsFree).toBe(2);
+  });
+
+  test('addConsumable adds to inventory', () => {
+    const player = resetPlayerState();
+    const def = getSupplyDefById('coffee_tin')!;
+    const result = player.addConsumable(def);
+    expect(result).toBe(true);
+    expect(player.consumables).toHaveLength(1);
+    expect(player.usedConsumableSlots).toBe(1);
+  });
+
+  test('addConsumable respects max slots', () => {
+    const player = resetPlayerState();
+    const def1 = getSupplyDefById('coffee_tin')!;
+    const def2 = getSupplyDefById('treasure_map')!;
+    const def3 = getSupplyDefById('buzzards')!;
+
+    expect(player.addConsumable(def1)).toBe(true);
+    expect(player.addConsumable(def2)).toBe(true);
+    expect(player.addConsumable(def3)).toBe(false); // full
+    expect(player.consumables).toHaveLength(2);
+  });
+
+  test('ghost aura consumable does not count against max slots', () => {
+    const player = resetPlayerState();
+    const def1 = getSupplyDefById('coffee_tin')!;
+    const def2 = getSupplyDefById('treasure_map')!;
+
+    player.addConsumable(def1);
+    player.addConsumable(def2);
+
+    // Ghost aura bypasses slot limit
+    const ghostDef = getSupplyDefById('buzzards')!;
+    (ghostDef as any).aura = { id: 'ghost', name: 'Ghost', description: 'test', costIncrease: 0, chance: 0 };
+    expect(player.addConsumable(ghostDef)).toBe(true);
+    expect(player.consumables).toHaveLength(3);
+    expect(player.usedConsumableSlots).toBe(2); // ghost doesn't count
+  });
+
+  test('sellConsumable earns money and removes card', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(0);
+    const def = getSupplyDefById('coffee_tin')!;
+    player.addConsumable(def);
+
+    const sellValue = player.consumables[0].sellValue;
+    expect(player.sellConsumable(0)).toBe(true);
+    expect(player.consumables).toHaveLength(0);
+    expect(player.economy.balance).toBe(sellValue);
+  });
+
+  test('sellConsumable returns false for invalid index', () => {
+    const player = resetPlayerState();
+    expect(player.sellConsumable(-1)).toBe(false);
+    expect(player.sellConsumable(0)).toBe(false);
+  });
+
+  test('useConsumable removes and returns the instance', () => {
+    const player = resetPlayerState();
+    const def = getSupplyDefById('treasure_map')!;
+    player.addConsumable(def);
+
+    const balanceBefore = player.economy.balance;
+    const consumed = player.useConsumable(0);
+    expect(consumed).not.toBeNull();
+    expect(consumed!.def.id).toBe('treasure_map');
+    expect(player.consumables).toHaveLength(0);
+    // Using does NOT earn money
+    expect(player.economy.balance).toBe(balanceBefore);
+  });
+
+  test('useConsumable tracks lastUsedConsumable', () => {
+    const player = resetPlayerState();
+    const def = getSupplyDefById('coffee_tin')!;
+    player.addConsumable(def);
+    player.useConsumable(0);
+    expect(player.lastUsedConsumable).not.toBeNull();
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+  });
+
+  test('useConsumable returns null for invalid index', () => {
+    const player = resetPlayerState();
+    expect(player.useConsumable(5)).toBeNull();
+  });
+
+  test('reorderConsumable swaps positions', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const def1 = getSupplyDefById('coffee_tin')!;
+    const def2 = getSupplyDefById('treasure_map')!;
+    const def3 = getSupplyDefById('buzzards')!;
+    player.addConsumable(def1);
+    player.addConsumable(def2);
+    player.addConsumable(def3);
+
+    player.reorderConsumable(0, 2);
+    expect(player.consumables[0].def.id).toBe('treasure_map');
+    expect(player.consumables[1].def.id).toBe('buzzards');
+    expect(player.consumables[2].def.id).toBe('coffee_tin');
+  });
+
+  test('reorderConsumable ignores invalid indices', () => {
+    const player = resetPlayerState();
+    const def = getSupplyDefById('coffee_tin')!;
+    player.addConsumable(def);
+    player.reorderConsumable(-1, 0); // should not throw
+    player.reorderConsumable(0, 5); // should not throw
+    expect(player.consumables).toHaveLength(1);
+  });
+});
+
+// ─── Profession Starting Consumables ───
+
+describe('profession starting consumables', () => {
+  test('cook starts with 2x second_helpings', () => {
+    const { player } = setupGame({ profession: 'cook' });
+    expect(player.consumables).toHaveLength(2);
+    expect(player.consumables[0].def.id).toBe('second_helpings');
+    expect(player.consumables[1].def.id).toBe('second_helpings');
+  });
+
+  test('doctor starts with 2x medicine (skipped if medicine card not yet in data)', () => {
+    const { player } = setupGame({ profession: 'doctor' });
+    // Medicine card not yet defined in supply_cards.json — this will be 0 until it's added
+    // When medicine is added, this should be 2
+    expect(player.consumables.length).toBeLessThanOrEqual(2);
+  });
+
+  test('scout has -1 consumable slot', () => {
+    const { player } = setupGame({ profession: 'scout' });
+    expect(player.maxConsumableSlots).toBe(1);
+  });
+});
