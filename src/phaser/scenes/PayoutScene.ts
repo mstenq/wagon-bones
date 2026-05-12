@@ -162,7 +162,7 @@ export class PayoutScene extends Scene {
     // Days remaining
     if (payout.dayBonus > 0) {
       rows.push({
-        label: `${payout.dayBonus} Remaining Day${payout.dayBonus !== 1 ? 's' : ''} ($1 each)`,
+        label: `Remaining Day${payout.dayBonus !== 1 ? 's' : ''} ($1 each)`,
         amount: `$${payout.dayBonus}`,
       });
     }
@@ -170,7 +170,7 @@ export class PayoutScene extends Scene {
     // Interest
     if (payout.interest > 0) {
       rows.push({
-        label: `${payout.interest} Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${player.interestCap} max)`,
+        label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${player.interestCap/5} max)`,
         amount: `$${payout.interest}`,
       });
     } else {

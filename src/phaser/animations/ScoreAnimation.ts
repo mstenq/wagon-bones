@@ -124,6 +124,8 @@ export interface ScoreAnimationConfig {
   sidebar: Sidebar;
   equipBar: EquipmentBar;
   equipment: EquipmentInstance[];
+  lockedDiceIds: Set<string>;
+  contentCX: number;
   onComplete: () => void;
 }
 
@@ -240,9 +242,61 @@ function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, index: number): v
 }
 
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
-  const { scene, diceSprites, result, sidebar, equipBar, equipment, onComplete } = config;
+  const { scene, diceSprites, result, sidebar, equipBar, equipment, lockedDiceIds, contentCX, onComplete } = config;
   const scoringIds = new Set(result.handResult.scoringDice.map(d => d.id));
   const scoringSprites = diceSprites.filter(s => scoringIds.has(s.dieData.id));
+  const playedNonScoringSprites = diceSprites.filter(s => lockedDiceIds.has(s.dieData.id) && !scoringIds.has(s.dieData.id));
+  const heldSprites = diceSprites.filter(s => !lockedDiceIds.has(s.dieData.id));
+
+  // ─── Step 0: Separate played vs held dice ───
+  // Held (unlocked) dice slide down; played dice stay in place.
+  // Non-scoring played dice get dimmed to 50% alpha.
+  const HELD_DROP_Y = 80;
+  const SEPARATION_DURATION = 350;
+  const SPACING = 70;
+
+  // Move held dice down into their own row
+  if (heldSprites.length > 0) {
+    const totalW = (heldSprites.length - 1) * SPACING;
+    const startX = contentCX - totalW / 2;
+    const rollY = scene.scale.height * 0.50;
+
+    for (let i = 0; i < heldSprites.length; i++) {
+      const s = heldSprites[i];
+      const count = heldSprites.length;
+      let arcY = 0;
+      let arcRot = 0;
+      if (count > 1) {
+        const t = i / (count - 1) - 0.5;
+        arcY = -12 * (1 - 4 * t * t);
+        arcRot = t * 0.08;
+      }
+      scene.tweens.add({
+        targets: s,
+        x: startX + i * SPACING,
+        y: rollY + HELD_DROP_Y + arcY,
+        rotation: arcRot,
+        alpha: 0.5,
+        duration: SEPARATION_DURATION,
+        ease: 'Back.easeOut',
+      });
+    }
+  }
+
+  // Dim played-but-not-scoring dice in place
+  for (const s of playedNonScoringSprites) {
+    scene.tweens.add({
+      targets: s,
+      alpha: 0.5,
+      duration: SEPARATION_DURATION,
+      ease: 'Sine.easeOut',
+    });
+  }
+
+  // Start scoring after separation settles
+  scene.time.delayedCall(SEPARATION_DURATION + 150, beginScoring);
+
+  function beginScoring(): void {
 
   const handBaseMiles = result.handResult.baseMiles;
   const handBaseMult = result.handResult.baseMult;
@@ -344,13 +398,6 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             popupForDie(scene, sprite, 'miles', 10);
           },
         });
-      } else if (die.enhancement === 'gold') {
-        subSteps.push({
-          action: () => {
-            scene.sound.play('sfx_chips1', { volume: 0.25, detune: 300 });
-            popupForDie(scene, sprite, 'money', 1);
-          },
-        });
       } else if (die.enhancement === 'diamond') {
         subSteps.push({
           action: () => {
@@ -362,13 +409,43 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         });
       }
 
+      // Sub-step: Dice aura bonus (if any)
+      if (die.aura === 'fire') {
+        subSteps.push({
+          action: () => {
+            currentMult += 10;
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit1', { volume: 0.35 });
+            popupForDie(scene, sprite, 'mult', 10);
+          },
+        });
+      } else if (die.aura === 'icy') {
+        subSteps.push({
+          action: () => {
+            currentMiles += 50;
+            sidebar.setMilesAnimated(currentMiles);
+            scene.sound.play('sfx_chips2', { volume: 0.35, detune: 100 });
+            popupForDie(scene, sprite, 'miles', 50);
+          },
+        });
+      } else if (die.aura === 'holy') {
+        subSteps.push({
+          action: () => {
+            currentMult = currentMult * 1.5;
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
+            popupForDie(scene, sprite, 'xmult', 1.5);
+          },
+        });
+      }
+
       // Sub-steps 3+: Per-die equipment triggers
       const triggered = getTriggeredEquipForDie(die, equipment, result.handResult.type);
       for (const entry of triggered) {
         subSteps.push({
           action: () => {
             wiggleEquipCard(scene, equipBar, entry.index);
-            popupForEquip(scene, equipBar, entry.index, entry.type, entry.value);
+            popupForDie(scene, sprite, entry.type, entry.value);
             if (entry.type === 'mult') {
               currentMult += entry.value;
               sidebar.setMultAnimated(currentMult);
@@ -559,4 +636,6 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
   // Start the scoring sequence after a short delay
   scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, scoreNextDie);
+
+  } // end beginScoring
 }

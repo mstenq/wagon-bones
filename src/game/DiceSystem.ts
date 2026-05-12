@@ -223,10 +223,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         totalValue += 10;
         console.log(`  [scoreHand]   Die ${die.id} WOODEN: +10 miles (totalValue: ${totalValue})`);
         break;
-      case 'gold':
-        player.economy.earn(1);
-        console.log(`  [scoreHand]   Die ${die.id} GOLD: earned $1`);
-        break;
+      // gold: no scoring bonus — earns money only when held in hand at end of round
       case 'diamond':
         xMult *= 2;
         console.log(`  [scoreHand]   Die ${die.id} DIAMOND: x2 mult (xMult: ${xMult})`);

@@ -267,8 +267,9 @@ export class GameScene extends Scene {
 
     const remaining = hand.length;
     const spent = this.gameState.state.spent.length;
+    const required = Math.min(MAX_SELECT_FOR_ROLL, remaining);
     this.instructionText.setText(
-      `Select up to ${MAX_SELECT_FOR_ROLL} dice to roll (${spent} dice spent, ${remaining} available)`
+      `Select ${required} dice to roll (${spent} dice spent, ${remaining} available)`
     );
 
     this.updateHUD();
@@ -377,6 +378,7 @@ export class GameScene extends Scene {
 
   private enterScorePhase(result: ScoreResult): void {
     this.hideAllButtons();
+    this.clearLockIcons();
 
     // Show hand name and level in sidebar
     const player = getPlayerState();
@@ -402,6 +404,8 @@ export class GameScene extends Scene {
       sidebar: this.sidebar,
       equipBar: this.equipBar,
       equipment: player.equipment,
+      lockedDiceIds: new Set(this.lockedDiceIds),
+      contentCX: this.contentCX,
       onComplete: () => {
         this.animating = false;
         this.instructionText.setText('');
@@ -419,15 +423,11 @@ export class GameScene extends Scene {
 
   private onReadyToRoll(): void {
     if (this.animating) return;
-    let ids = [...this.selectedHandIds];
+    const ids = [...this.selectedHandIds];
+    const required = Math.min(MAX_SELECT_FOR_ROLL, this.gameState.state.hand.length);
 
-    // If no dice selected, auto-select first 5
-    if (ids.length === 0) {
-      ids = this.gameState.state.hand.slice(0, MAX_SELECT_FOR_ROLL).map(d => d.id);
-    }
-
-    if (ids.length > MAX_SELECT_FOR_ROLL) {
-      this.instructionText.setText(`Select at most ${MAX_SELECT_FOR_ROLL} dice to roll`);
+    if (ids.length !== required) {
+      this.instructionText.setText(`Select exactly ${required} dice to roll`);
       return;
     }
 
@@ -578,16 +578,17 @@ export class GameScene extends Scene {
 
   private updateDrawButtons(): void {
     const selCount = this.selectedHandIds.size;
+    const required = Math.min(MAX_SELECT_FOR_ROLL, this.gameState.state.hand.length);
 
-    // Ready is always available — can auto-select
-    this.readyBtn.setEnabled(true);
-    if (selCount > 0 && selCount <= MAX_SELECT_FOR_ROLL) {
+    if (selCount === required) {
       this.readyBtn.setText(`Roll ${selCount} Dice`);
-    } else if (selCount > MAX_SELECT_FOR_ROLL) {
-      this.readyBtn.setText(`Too Many (max ${MAX_SELECT_FOR_ROLL})`);
+      this.readyBtn.setEnabled(true);
+    } else if (selCount > required) {
+      this.readyBtn.setText(`Too Many (max ${required})`);
       this.readyBtn.setEnabled(false);
     } else {
-      this.readyBtn.setText(`Roll ${MAX_SELECT_FOR_ROLL} Dice`);
+      this.readyBtn.setText(`${selCount}/${required} Dice Selected`);
+      this.readyBtn.setEnabled(false);
     }
 
     // Refresh add buttons on all stacks

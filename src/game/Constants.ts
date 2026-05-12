@@ -196,8 +196,8 @@ export const ANIM = {
   ROLL_INTERVAL: 60,
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
-  SCORE_STEP_DELAY: 250,           // ms between each scoring step (dice, equip, held)
-  SCORE_SUBSTEP_DELAY: 500,        // ms between sub-events on the same die (miles → mult → etc)
+  SCORE_STEP_DELAY: 200,           // ms between each scoring step (dice, equip, held)
+  SCORE_SUBSTEP_DELAY: 300,        // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,
   SCORE_COMPLETE_DELAY: 400,
   HOVER_DURATION: 100,
