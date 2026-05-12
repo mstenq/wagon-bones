@@ -71,8 +71,10 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
       rerolls: GAMEPLAY.MAX_REROLLS,
       maxRerolls: GAMEPLAY.MAX_REROLLS,
       leg: player.leg,
-      totalLegs: 8,
-      targetMiles: GAMEPLAY.TARGET_MILES,
+      totalLegs: GAMEPLAY.LEGS,
+      round: player.round,
+      totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
+      targetMiles: player.targetMiles,
     });
   }
   sidebar.setJourneyInfoCallback(() => {

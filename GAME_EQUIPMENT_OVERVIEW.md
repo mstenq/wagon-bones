@@ -80,7 +80,7 @@ New Blood - $7 - gains x0.25 mult for every new dice added to collection
 Emergency Supplies - $8 - create a random supply card if hand is played with less than $4 or less
 Railroad Bonds - $6 - earn $1 at end of round, increased by $2 for every boss defeated
 Trailblazer - $8 - earns x0.2 mult per consecutive hand played without playing your most played poker hand
-Gilded Spur - $7 - all scored dice showing 4 pips will turn into a gold dice
+Golden Spike - $7 - all scored dice have a 1 in 4 chance to turn into a gold dice
 Sheriff’s Badge - $5 - sell this item to disable the current boss effect
 Double Barrel - $5 - first played 2 pip dice gives x2 mult when scored
 Company Store - $6 - at the end of each leg add $1 of sell value to each piece of equipment

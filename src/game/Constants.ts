@@ -20,8 +20,19 @@ export const GAMEPLAY = {
   STARTING_DICE: 50,
   STARTING_MONEY: 10,
   MAX_EQUIPMENT_SLOTS: 5,
-  SHOP_SLOTS: 4,
+  SHOP_SLOTS: 2,
   SHOP_REROLL_COST: 5,
+  LEGS: 8,
+  ROUNDS_PER_LEG: 3,
+  // Target miles per leg (index 0 = leg 1). Base value — multiplied by round multiplier.
+  TARGET_MILES_BY_LEG: [600, 800, 1000, 1300, 1600, 2000, 4000, 5000],
+  // Round difficulty multiplier within a leg (round 1 = 1x, round 2 = 1.5x, round 3/boss = 2x)
+  ROUND_MULTIPLIERS: [1, 1.5, 2],
+  // Money earned for completing each round (index 0 = round 1)
+  ROUND_REWARDS: [3, 4, 5],
+  // Interest: $1 per INTEREST_PER dollars held, capped at INTEREST_CAP
+  INTEREST_PER: 5,
+  INTEREST_CAP: 25,  // default cap; vouchers can raise this
 };
 
 // ─── RNG / Chance Tuning ───
@@ -186,6 +197,7 @@ export const ANIM = {
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
   SCORE_STEP_DELAY: 250,           // ms between each scoring step (dice, equip, held)
+  SCORE_SUBSTEP_DELAY: 500,        // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,
   SCORE_COMPLETE_DELAY: 400,
   HOVER_DURATION: 100,

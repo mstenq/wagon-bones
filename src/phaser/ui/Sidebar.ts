@@ -29,6 +29,10 @@ export interface SidebarData {
   leg: number;
   /** Total legs */
   totalLegs: number;
+  /** Current round within leg */
+  round?: number;
+  /** Total rounds per leg */
+  totalRounds?: number;
   /** Target miles for this leg */
   targetMiles: number;
   /** Hand name to display (e.g. "Full House") */
@@ -181,7 +185,7 @@ export class Sidebar extends GameObjects.Container {
       const bottomLabelY = y + profH - 40;
       const bottomValueY = y + profH - 24;
 
-      const legLabel = scene.add.text(rightX, bottomLabelY, 'Leg', {
+      const legLabel = scene.add.text(rightX, bottomLabelY, 'Leg / Round', {
         fontFamily: FONTS.PRIMARY,
         fontSize: '10px',
         color: TEXT_COLORS.MUTED,
@@ -457,7 +461,10 @@ export class Sidebar extends GameObjects.Container {
       this.rerollsText.setText(`${data.rerolls}`);
     }
     if (data.leg !== undefined && data.totalLegs !== undefined) {
-      this.legText.setText(`${data.leg} / ${data.totalLegs}`);
+      const roundLabel = data.round !== undefined && data.totalRounds !== undefined
+        ? `Leg ${data.leg} - ${data.round}/${data.totalRounds}`
+        : `${data.leg} / ${data.totalLegs}`;
+      this.legText.setText(roundLabel);
     }
     if (data.targetMiles !== undefined) {
       this.targetText.setText(`${data.targetMiles} mi`);

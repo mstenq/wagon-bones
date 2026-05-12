@@ -238,21 +238,19 @@ export class GameState {
   endDay(): 'next-day' | 'won' | 'lost' {
     if (this.state.phase !== 'DAY_END') return 'lost';
 
-    // Process end-of-round equipment effects (money, destruction)
+    // Process end-of-round equipment effects (destruction only)
+    // END_ROUND_MONEY is handled by the payout system, not here.
     const player = getPlayerState();
     const endEffects = processEndOfRound(player.equipment);
-    if (endEffects.moneyEarned > 0) {
-      player.economy.earn(endEffects.moneyEarned);
-    }
     // Destroy risky equipment (iterate in reverse to keep indices valid)
     for (const idx of endEffects.destroyedIndices.sort((a, b) => b - a)) {
       player.equipment.splice(idx, 1);
     }
 
-    // Mark rolled dice as spent (persists across rounds).
+    // Mark only scored dice as spent (unscored dice stay available for next day).
     // Returns true if all dice were spent and an auto-refresh occurred.
-    const rolledIds = this.state.selectedForRoll.map(d => d.id);
-    player.markDiceSpent(rolledIds);
+    const scoredIds = this.state.selectedForScore.map(d => d.id);
+    player.markDiceSpent(scoredIds);
 
     if (this.state.totalMiles >= this.config.targetMiles) {
       this.state.phase = 'ROUND_END';

@@ -1,13 +1,14 @@
 // ─── PlayerState (No Phaser imports) ───
 // Persistent state that carries across scenes (shop, rounds, etc).
 
-import { Die, HandType, HandStats } from './types';
+import { Die, HandType, HandStats, BossDef } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { GAMEPLAY } from './Constants';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
+import bossesData from '../data/bosses.json';
 
 export interface ProfessionDef {
   id: string;
@@ -15,6 +16,14 @@ export interface ProfessionDef {
   name: string;
   description: string;
   modifiers: Record<string, unknown>;
+}
+
+export interface PayoutBreakdown {
+  roundReward: number;      // base reward for completing the round ($3/$4/$5)
+  dayBonus: number;         // $1 per remaining day
+  interest: number;         // $1 per $5 held, capped at interestCap
+  equipmentMoney: number;   // END_ROUND_MONEY items like Payday (not in interest)
+  total: number;
 }
 
 const DEFAULT_STARTING_MONEY = GAMEPLAY.STARTING_MONEY;
@@ -31,9 +40,12 @@ export class PlayerState {
   maxEquipmentSlots: number;
   shopSlots: number; // how many items appear in the shop (upgradeable via vouchers)
   leg: number; // current leg of the journey (1-8)
+  round: number; // current round within the leg (1-3)
+  interestCap: number; // max money counted for interest (default $25, vouchers can raise to $50)
   handStats: Map<HandType, HandStats>; // level & play count per hand type
   profession: ProfessionDef | null = null; // selected profession
   handSize: number = GAMEPLAY.ROLL_SIZE; // dice selected for rolling
+  private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
 
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
@@ -42,7 +54,10 @@ export class PlayerState {
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
+    this.round = 1;
+    this.interestCap = GAMEPLAY.INTEREST_CAP;
     this.handStats = PlayerState.createDefaultHandStats();
+    this.assignBosses();
   }
 
   /** Apply profession modifiers after selection */
@@ -201,6 +216,88 @@ export class PlayerState {
     this.equipment.splice(toIndex, 0, item);
   }
 
+  /** Randomly assign one boss from the pool to each leg */
+  private assignBosses(): void {
+    const pool = [...(bossesData as BossDef[])];
+    // Shuffle and pick LEGS bosses
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    this.bossAssignments = pool.slice(0, GAMEPLAY.LEGS);
+  }
+
+  /** Get the boss for the current leg (only active on round 3) */
+  get currentBoss(): BossDef | null {
+    if (this.round !== GAMEPLAY.ROUNDS_PER_LEG) return null;
+    return this.bossAssignments[this.leg - 1] ?? null;
+  }
+
+  /** Get the boss assigned to a specific leg */
+  getBossForLeg(leg: number): BossDef | null {
+    return this.bossAssignments[leg - 1] ?? null;
+  }
+
+  /** Whether the current round is a boss round */
+  get isBossRound(): boolean {
+    return this.round === GAMEPLAY.ROUNDS_PER_LEG;
+  }
+
+  /** The overall round number (1–24) */
+  get totalRound(): number {
+    return (this.leg - 1) * GAMEPLAY.ROUNDS_PER_LEG + this.round;
+  }
+
+  /** Target miles for the current round (base × round multiplier) */
+  get targetMiles(): number {
+    const base = GAMEPLAY.TARGET_MILES_BY_LEG[this.leg - 1] ?? GAMEPLAY.TARGET_MILES;
+    const multiplier = GAMEPLAY.ROUND_MULTIPLIERS[this.round - 1] ?? 1;
+    return Math.ceil(base * multiplier);
+  }
+
+  /** Calculate the payout breakdown for winning the current round */
+  calculatePayout(daysRemaining: number): PayoutBreakdown {
+    const roundReward = GAMEPLAY.ROUND_REWARDS[this.round - 1] ?? 3;
+    const dayBonus = daysRemaining;
+
+    // Interest: based on current balance (gold dice money already earned before payout)
+    const cappedMoney = Math.min(this.economy.balance, this.interestCap);
+    const interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
+
+    // Equipment end-of-round money (e.g. Payday) — NOT included in interest
+    let equipmentMoney = 0;
+    for (const equip of this.equipment) {
+      if (equip.def.effectType === 'END_ROUND_MONEY') {
+        equipmentMoney += (equip.def.effectParams.value as number) ?? 0;
+      }
+    }
+
+    return {
+      roundReward,
+      dayBonus,
+      interest,
+      equipmentMoney,
+      total: roundReward + dayBonus + interest + equipmentMoney,
+    };
+  }
+
+  /** Whether the entire journey is complete */
+  get journeyComplete(): boolean {
+    return this.leg > GAMEPLAY.LEGS;
+  }
+
+  /** Advance to next round after a win. Returns true if the journey is complete. */
+  advanceRound(): boolean {
+    this.round++;
+    if (this.round > GAMEPLAY.ROUNDS_PER_LEG) {
+      this.round = 1;
+      this.leg++;
+    }
+    // Refresh spent dice between rounds
+    this.spentDiceIds.clear();
+    return this.journeyComplete;
+  }
+
   /** Reset for a new run */
   reset(): void {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
@@ -210,9 +307,12 @@ export class PlayerState {
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.shopSlots = DEFAULT_SHOP_SLOTS;
     this.leg = 1;
+    this.round = 1;
+    this.interestCap = GAMEPLAY.INTEREST_CAP;
     this.handStats = PlayerState.createDefaultHandStats();
     this.profession = null;
     this.handSize = GAMEPLAY.ROLL_SIZE;
+    this.assignBosses();
   }
 }
 

@@ -110,3 +110,11 @@ export type GameEventType =
   | 'spent-refreshed';
 
 export type GameEventCallback = (data?: unknown) => void;
+
+export interface BossDef {
+  id: string;
+  name: string;
+  description: string;
+  effectType: string;
+  effectParams: Record<string, unknown>;
+}

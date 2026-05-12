@@ -71,9 +71,9 @@ type HandsWithContainment = Extract<HandType, HandType.FIVE_OF_A_KIND | HandType
 function handContains(played: HandType | null, required: HandType): boolean {
   if (!played) return false;
   const CONTAINMENT: Record<HandsWithContainment, HandType[]> = {
-    FIVE_OF_A_KIND: [HandType.FIVE_OF_A_KIND, HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.FULL_HOUSE, HandType.TWO_PAIR],
-    FOUR_OF_A_KIND: [HandType.THREE_OF_A_KIND, HandType.PAIR],
-    FULL_HOUSE: [HandType.THREE_OF_A_KIND, HandType.PAIR],
+    FIVE_OF_A_KIND: [HandType.FIVE_OF_A_KIND, HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.FOUR_OF_A_KIND],
+    FOUR_OF_A_KIND: [HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.TWO_PAIR],
+    FULL_HOUSE: [HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.TWO_PAIR],
     THREE_OF_A_KIND: [HandType.PAIR],
     TWO_PAIR: [HandType.PAIR],
     FIVE_STRAIGHT: [HandType.FOUR_STRAIGHT, HandType.THREE_STRAIGHT],

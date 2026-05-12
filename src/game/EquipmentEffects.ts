@@ -290,21 +290,21 @@ export function processHeldInHand(
 function handTypeMatches(played: HandType, required: string): boolean {
   if (played === required) return true;
 
-  // A full house contains both a pair and three of a kind
+  // A full house contains pair, three of a kind, and two pair
   if (played === HandType.FULL_HOUSE) {
-    if (required === HandType.PAIR || required === HandType.THREE_OF_A_KIND) return true;
+    if (required === HandType.PAIR || required === HandType.THREE_OF_A_KIND || required === HandType.TWO_PAIR) return true;
   }
   // Two pair contains pair
   if (played === HandType.TWO_PAIR && required === HandType.PAIR) return true;
   // Three of a kind contains pair
   if (played === HandType.THREE_OF_A_KIND && required === HandType.PAIR) return true;
-  // Four of a kind contains three of a kind and pair
+  // Four of a kind contains three of a kind, pair, and two pair
   if (played === HandType.FOUR_OF_A_KIND) {
     if (required === HandType.THREE_OF_A_KIND || required === HandType.PAIR) return true;
   }
-  // Five of a kind contains four, three, pair
+  // Five of a kind contains four, three, pair, two pair, full house
   if (played === HandType.FIVE_OF_A_KIND) {
-    if (required === HandType.FOUR_OF_A_KIND || required === HandType.THREE_OF_A_KIND || required === HandType.PAIR) return true;
+    if (required === HandType.FOUR_OF_A_KIND || required === HandType.THREE_OF_A_KIND || required === HandType.PAIR || required === HandType.TWO_PAIR || required === HandType.FULL_HOUSE) return true;
   }
   // Five straight contains four straight and three straight
   if (played === HandType.FIVE_STRAIGHT) {

@@ -95,7 +95,8 @@ export class GameScene extends Scene {
   create() {
     // Initialize game state only on first create (not on relayout)
     if (!this.gameState) {
-      this.gameState = new GameState();
+      const player = getPlayerState();
+      this.gameState = new GameState({ targetMiles: player.targetMiles });
       this.gameState.startRound();
     }
 
@@ -182,7 +183,7 @@ export class GameScene extends Scene {
   private enterDrawPhase(): void {
     this.clearSprites();
     this.selectedHandIds.clear();
-    this.forcedDiceIds.clear();
+    // Note: forcedDiceIds is set by callers (onContinue, refresh prompt) — don't clear here
     this.hideAllButtons();
     this.sidebar.clearHandDisplay();
     this.sidebar.updateData({ milesBase: 0, mult: 0 });
@@ -488,24 +489,46 @@ export class GameScene extends Scene {
 
   private onContinue(): void {
     if (this.animating) return;
+
+    // Compute unscored dice IDs before endDay clears state
+    const scoredIds = new Set(this.gameState.state.selectedForScore.map(d => d.id));
+    const unscoredIds = this.gameState.state.selectedForRoll
+      .filter(d => !scoredIds.has(d.id))
+      .map(d => d.id);
+
+    // Gold dice held in hand earn $3 each (before payout so interest sees updated balance)
+    const goldHeldCount = this.gameState.state.selectedForRoll
+      .filter(d => !scoredIds.has(d.id) && d.enhancement === 'gold').length;
+
     const outcome = this.gameState.endDay();
 
     if (outcome === 'won') {
       this.sound.play('sfx_win', { volume: 0.6 });
-      this.scene.start('GameOver', {
-        won: true,
+      const player = getPlayerState();
+      if (goldHeldCount > 0) player.economy.earn(goldHeldCount * 3);
+      const daysRemaining = this.gameState.config.maxDays - this.gameState.state.day;
+      this.scene.start('Payout', {
         totalMiles: this.gameState.state.totalMiles,
         targetMiles: this.gameState.config.targetMiles,
+        daysRemaining,
+        leg: player.leg,
+        round: player.round,
+        isVictory: player.isBossRound && player.leg === GAMEPLAY.LEGS,
       });
     } else if (outcome === 'lost') {
       this.sound.play('sfx_negative', { volume: 0.5 });
+      const player = getPlayerState();
       this.scene.start('GameOver', {
         won: false,
+        victory: false,
         totalMiles: this.gameState.state.totalMiles,
         targetMiles: this.gameState.config.targetMiles,
+        leg: player.leg,
+        round: player.round,
       });
     } else {
-      // Next day
+      // Next day — force unscored dice to be selected
+      this.forcedDiceIds = new Set(unscoredIds);
       this.enterDrawPhase();
     }
   }
@@ -649,8 +672,9 @@ export class GameScene extends Scene {
   private updateHUD(): void {
     const s = this.gameState.state;
     const player = getPlayerState();
+    const boss = player.currentBoss;
     this.sidebar.updateData({
-      title: s.phase === 'SELECT' ? 'SELECT DICE' : s.phase === 'ROLL' ? 'ROLL PHASE' : s.phase === 'SCORE' ? 'SCORING' : s.phase === 'DAY_END' ? 'DAY COMPLETE' : 'GAME',
+      title: boss ? boss.name : s.phase === 'SELECT' ? 'SELECT DICE' : s.phase === 'ROLL' ? 'ROLL PHASE' : s.phase === 'SCORE' ? 'SCORING' : s.phase === 'DAY_END' ? 'DAY COMPLETE' : 'GAME',
       roundScore: s.totalMiles,
       milesBase: 0,
       mult: 0,
@@ -659,7 +683,9 @@ export class GameScene extends Scene {
       rerolls: s.rerollsRemaining,
       maxRerolls: this.gameState.config.maxRerolls,
       leg: player.leg,
-      totalLegs: 8,
+      totalLegs: GAMEPLAY.LEGS,
+      round: player.round,
+      totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
       targetMiles: this.gameState.config.targetMiles,
     });
     if (this.dicePouch) this.dicePouch.refresh();
@@ -721,7 +747,8 @@ export class GameScene extends Scene {
           const player = getPlayerState();
           const remainingIds = player.availableDice.map(d => d.id);
           this.gameState.useRemainingAndRefresh();
-          this.forcedDiceIds = new Set(remainingIds);
+          // Keep any existing forced dice and add remaining pre-refresh dice
+          for (const id of remainingIds) this.forcedDiceIds.add(id);
           this.destroyRefreshOverlay();
           this.enterDrawPhaseLayout();
         });

@@ -13,6 +13,7 @@ import { ShopScene } from '../phaser/scenes/ShopScene';
 import { BoosterPackScene } from '../phaser/scenes/BoosterPackScene';
 import { DiceSelectionScene } from '../phaser/scenes/DiceSelectionScene';
 import { GameScene } from '../phaser/scenes/GameScene';
+import { PayoutScene } from '../phaser/scenes/PayoutScene';
 import { GameOver } from '../phaser/scenes/GameOver';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -34,6 +35,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     BoosterPackScene,
     DiceSelectionScene,
     GameScene,
+    PayoutScene,
     GameOver,
   ],
 };

@@ -2,7 +2,7 @@
   {
     "id": "the_inspector",
     "name": "The Inspector",
-    "description": "Spend 2 random dice from hand after each scoring round",
+    "description": "Spend 2 random dice from hand or active pile after each day",
     "effectType": "SPEND_RANDOM_AFTER_SCORE",
     "effectParams": { "count": 2 }
   },
@@ -12,13 +12,6 @@
     "description": "Playing your most played hand sets money to zero",
     "effectType": "ZERO_MONEY_ON_MOST_PLAYED",
     "effectParams": {}
-  },
-  {
-    "id": "the_swamp",
-    "name": "The Swamp",
-    "description": "First 10 dice are covered in grime (unknown)",
-    "effectType": "GRIME_INITIAL",
-    "effectParams": { "count": 10 }
   },
   {
     "id": "the_marathon",
@@ -37,14 +30,14 @@
   {
     "id": "the_ghost_town",
     "name": "The Ghost Town",
-    "description": "All played even values are disabled",
+    "description": "All played even dice values are disabled (no additional miles or enhancements will trigger)",
     "effectType": "DISABLE_VALUES",
     "effectParams": { "parity": "even" }
   },
   {
     "id": "the_undertaker",
     "name": "The Undertaker",
-    "description": "All played odd values are disabled",
+    "description": "All played odd dice values are disabled (no additional miles or enhancements will trigger)",
     "effectType": "DISABLE_VALUES",
     "effectParams": { "parity": "odd" }
   },
@@ -77,21 +70,12 @@
     "effectParams": {}
   },
   {
-    "id": "the_dust_storm",
-    "name": "The Dust Storm",
-    "description": "Dice drawn after playing are covered in grime (unknown)",
-    "effectType": "GRIME_ON_DRAW",
-    "effectParams": {}
-  },
-
-  {
     "id": "the_chain_gang",
     "name": "The Chain Gang",
     "description": "Start with -1 re-roll per day",
     "effectType": "MODIFY_REROLLS",
     "effectParams": { "value": -1 }
   },
-
   {
     "id": "the_standoff",
     "name": "The Standoff",
