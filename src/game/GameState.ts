@@ -8,10 +8,10 @@ import {
   HandResult, ScoreResult, GameEventType, GameEventCallback, HandType,
 } from './types';
 import {
-  rollDice, detectBestHand, scoreHand,
+  rollDice, detectBestHand, scoreHand, createDie,
 } from './DiceSystem';
 import { getPlayerState } from './PlayerState';
-import { applyEquipmentEffects, getConfigModifiers, processEndOfRound, processHeldInHand } from './EquipmentEffects';
+import { applyEquipmentEffects, getConfigModifiers, processEndOfRound, processHeldInHand, processEquipmentOnHandPlayed, processEquipmentOnReroll, processEquipmentOnDiceSpent, processEquipmentOnRoundStart, processEquipmentOnDayEnd, findDeathPrevention, getDayModifiers } from './EquipmentEffects';
 
 export class GameState {
   config: GameConfig;
@@ -87,6 +87,27 @@ export class GameState {
       rollSize: player.handSize,
     };
 
+    // Apply day penalties (e.g. Stagecoach: -1 day)
+    const dayMods = getDayModifiers(player.equipment);
+    if (dayMods.daysPenalty > 0) {
+      this.config.maxDays = Math.max(1, this.config.maxDays - dayMods.daysPenalty);
+    }
+
+    // Process round-start equipment effects (Fading Memory decay, Lucky Number randomize)
+    const roundStartEffects = processEquipmentOnRoundStart(player.equipment);
+    for (const idx of roundStartEffects.destroyedIndices.sort((a, b) => b - a)) {
+      player.equipment.splice(idx, 1);
+    }
+
+    // Mystery Crate: add a die with random sticker at round start
+    for (const equip of player.equipment) {
+      if (equip.def.effectType === 'ROUND_START_ADD_DICE') {
+        const stickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
+        const sticker = stickers[Math.floor(Math.random() * stickers.length)];
+        player.addDie(createDie({ sticker }));
+      }
+    }
+
     this.state = this.createInitialState();
     this.emit('phase-change', this.state.phase);
     this.emit('hand-updated', this.state.hand);
@@ -132,6 +153,11 @@ export class GameState {
     });
 
     this.state.rerollsRemaining--;
+
+    // Update stateful equipment on reroll (e.g. Worn Deck)
+    const player = getPlayerState();
+    processEquipmentOnReroll(player.equipment, diceIds.length);
+
     this.state.currentHandType = detectBestHand(this.state.rolledDice).type;
     this.emit('reroll-updated', this.state.rerollsRemaining);
     this.emit('dice-rolled', this.state.rolledDice);
@@ -215,6 +241,9 @@ export class GameState {
       heldDice,
       rerollsRemaining: this.state.rerollsRemaining,
       equipmentCount: player.equipment.length,
+      playerBalance: player.economy.balance,
+      currentDay: this.state.day,
+      maxDays: this.config.maxDays,
     });
 
     // Attach held animation steps for the rendering layer
@@ -224,6 +253,9 @@ export class GameState {
 
     // Record hand played
     player.recordHandPlayed(handType);
+
+    // Update stateful equipment on hand played (e.g. Card Counter)
+    processEquipmentOnHandPlayed(player.equipment, handType);
 
     this.state.totalMiles += Math.floor(finalResult.miles);
     this.state.phase = 'DAY_END';
@@ -250,7 +282,14 @@ export class GameState {
     // Mark only scored dice as spent (unscored dice stay available for next day).
     // Returns true if all dice were spent and an auto-refresh occurred.
     const scoredIds = this.state.selectedForScore.map(d => d.id);
+    const scoredDice = this.state.selectedForScore;
     player.markDiceSpent(scoredIds);
+
+    // Track enhanced dice spent (Bone Collector)
+    processEquipmentOnDiceSpent(player.equipment, scoredDice);
+
+    // Process day-end equipment effects (War Drums counter)
+    processEquipmentOnDayEnd(player.equipment);
 
     if (this.state.totalMiles >= this.config.targetMiles) {
       this.state.phase = 'ROUND_END';
@@ -260,10 +299,19 @@ export class GameState {
     }
 
     if (this.state.day >= this.config.maxDays) {
-      this.state.phase = 'ROUND_END';
-      this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
-      this.emit('phase-change', this.state.phase);
-      return 'lost';
+      // Check for death prevention (Guardian Totem)
+      const preventIdx = findDeathPrevention(player.equipment, this.state.totalMiles, this.config.targetMiles);
+      if (preventIdx >= 0) {
+        // Destroy the totem and continue
+        player.equipment.splice(preventIdx, 1);
+        this.emit('death-prevented', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
+        // Don't end — give them one more day
+      } else {
+        this.state.phase = 'ROUND_END';
+        this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
+        this.emit('phase-change', this.state.phase);
+        return 'lost';
+      }
     }
 
     // Next day — draw fresh dice

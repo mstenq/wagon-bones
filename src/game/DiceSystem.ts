@@ -5,6 +5,7 @@ import { Die, HandType, HandResult, HandDefinition, ScoreResult } from './types'
 import handsData from '../data/hands.json';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
+import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger } from './EquipmentEffects';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -233,10 +234,12 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         if (Math.random() < 1 / 5) {
           bonusMult += 20;
           console.log(`  [scoreHand]   Die ${die.id} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
+          processEquipmentOnLuckyTrigger(equipment);
         }
         if (Math.random() < 1 / 15) {
           player.economy.earn(20);
           console.log(`  [scoreHand]   Die ${die.id} LUCKY: hit $20!`);
+          processEquipmentOnLuckyTrigger(equipment);
         }
         break;
       }
@@ -289,6 +292,83 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
             console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`);
           }
           break;
+        case 'GOLD_DICE_MONEY':
+          // Gold Tooth: gold enhancement dice earn money when scored
+          if (die.enhancement === 'gold') {
+            player.economy.earn(p.value as number);
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: +$${p.value}`);
+          }
+          break;
+        case 'LUCKY_NUMBER_PIP_XMULT':
+          // Lucky Number: matching pip gives xMult
+          if (die.value === (equip.state.pip ?? 0)) {
+            xMult *= p.value as number;
+            console.log(`  [scoreHand]   Die ${die.id} → ${equip.def.name}: x${p.value} (lucky number ${equip.state.pip})`);
+          }
+          break;
+      }
+    }
+  }
+
+  // War Drums retrigger: if active, process all scored dice again
+  const retriggerCount = getScoredRetriggerCount(equipment);
+  if (retriggerCount > 0) {
+    console.log(`  [scoreHand] War Drums retrigger (${retriggerCount}x)`);
+    for (let r = 0; r < retriggerCount; r++) {
+      for (const die of handResult.scoringDice) {
+        if (die.enhancement === 'stone') {
+          totalValue += 50;
+        } else {
+          totalValue += die.value;
+        }
+        // Re-apply dice enhancement effects
+        switch (die.enhancement) {
+          case 'bone': bonusMult += 4; break;
+          case 'wooden': totalValue += 10; break;
+          case 'diamond': xMult *= 2; break;
+          case 'lucky': {
+            if (Math.random() < 1 / 5) {
+              bonusMult += 20;
+              processEquipmentOnLuckyTrigger(equipment);
+            }
+            if (Math.random() < 1 / 15) {
+              player.economy.earn(20);
+              processEquipmentOnLuckyTrigger(equipment);
+            }
+            break;
+          }
+        }
+        // Re-apply dice aura effects
+        switch (die.aura) {
+          case 'fire': bonusMult += 10; break;
+          case 'icy': totalValue += 50; break;
+          case 'holy': xMult *= 1.5; break;
+        }
+        // Re-apply per-die equipment effects
+        for (const equip of equipment) {
+          const { effectType, effectParams } = equip.def;
+          const p = effectParams as Record<string, unknown>;
+          switch (effectType) {
+            case 'PIP_MULT':
+              if (die.value === (p.pip as number)) bonusMult += p.value as number;
+              break;
+            case 'PIP_MILES':
+              if (die.value === (p.pip as number)) totalValue += p.value as number;
+              break;
+            case 'PARITY_MULT':
+              if (matchesParity(die.value, p.parity as string)) bonusMult += p.value as number;
+              break;
+            case 'PARITY_MILES':
+              if (matchesParity(die.value, p.parity as string)) totalValue += p.value as number;
+              break;
+            case 'GOLD_DICE_MONEY':
+              if (die.enhancement === 'gold') player.economy.earn(p.value as number);
+              break;
+            case 'LUCKY_NUMBER_PIP_XMULT':
+              if (die.value === (equip.state.pip ?? 0)) xMult *= p.value as number;
+              break;
+          }
+        }
       }
     }
   }

@@ -5,6 +5,7 @@ import { Die, HandType, HandStats, BossDef } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { processEquipmentOnSell } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
@@ -197,6 +198,7 @@ export class PlayerState {
     this.equipment.push({
       def,
       sellValue: Math.max(1, Math.floor(def.cost / 2)),
+      state: def.initialState ? { ...def.initialState } : {},
     });
     return true;
   }
@@ -206,6 +208,8 @@ export class PlayerState {
     const item = this.equipment[index];
     this.economy.earn(item.sellValue);
     this.equipment.splice(index, 1);
+    // Update stateful equipment on sell (Snake Oil Ledger)
+    processEquipmentOnSell(this.equipment);
     return true;
   }
 

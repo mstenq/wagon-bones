@@ -38,6 +38,7 @@ export interface ItemDef {
   description: string;
   effectType: string;
   effectParams: Record<string, unknown>;
+  initialState?: Record<string, number>;
   hintDisplay: (game: GameState | null, player: PlayerState) => HintSegment[][];
 }
 
@@ -434,6 +435,242 @@ const items: ItemDef[] = [
       if (count > 0) return [[mult(`+${count * 11}`), condition(`${count}x 11s held`)]];
       return [[mult('+11'), condition('per 11 held')], [inactive('Inactive')]];
     },
+  },
+
+  // ─── Phase 2 Items ───
+  {
+    id: 'rabbits_foot',
+    name: "Rabbit's Foot",
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Item gains x0.25 for every lucky dice trigger',
+    effectType: 'LUCKY_TRIGGER_XMULT',
+    effectParams: { value: 0.25 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'rabbits_foot');
+      const xm = equip?.state.xMult ?? 1;
+      return [[mult(`x${xm.toFixed(2)}`)]];
+    },
+  },
+  {
+    id: 'collectors_case',
+    name: "Collector's Case",
+    cost: 8,
+    rarity: 'rare',
+    description: 'Uncommon equipment each give x1.5 mult',
+    effectType: 'UNCOMMON_EQUIP_XMULT',
+    effectParams: {},
+    hintDisplay: (_game, player) => {
+      const count = player.equipment.filter(e => e.def.rarity === 'uncommon').length;
+      if (count > 0) return [[mult(`x${(1.5 ** count).toFixed(2)}`), condition(`${count} uncommon`)]];
+      return [[mult('x1.5'), condition('per uncommon')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'money_wagon',
+    name: 'Money Wagon',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+2 miles for every $1 you have',
+    effectType: 'MILES_PER_DOLLAR',
+    effectParams: { value: 2 },
+    hintDisplay: (_game, player) => {
+      const total = player.economy.balance * 2;
+      return [[miles(`+${total}`), text('mi')]];
+    },
+  },
+  {
+    id: 'bargain_bin',
+    name: 'Bargain Bin',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Item gains +2 mult per reroll in the shop',
+    effectType: 'SHOP_REROLL_MULT_GAIN',
+    effectParams: { value: 2 },
+    initialState: { mult: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'bargain_bin');
+      const m = equip?.state.mult ?? 0;
+      return [[mult(`+${m}`)]];
+    },
+  },
+  {
+    id: 'fading_memory',
+    name: 'Fading Memory',
+    cost: 5,
+    rarity: 'uncommon',
+    description: '+20 mult, -4 mult per round played, removed after 5 rounds',
+    effectType: 'DECAYING_MULT',
+    effectParams: { decayPerRound: 4, maxRounds: 5 },
+    initialState: { mult: 20, roundsPlayed: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'fading_memory');
+      const m = equip?.state.mult ?? 20;
+      const rounds = equip?.state.roundsPlayed ?? 0;
+      return [[mult(`+${m}`), condition(`${5 - rounds} rounds left`)]];
+    },
+  },
+  {
+    id: 'card_counter',
+    name: 'Card Counter',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Item gains +2 mult if played hand contains 2 pair',
+    effectType: 'HAND_MULT_GAIN',
+    effectParams: { handType: HandType.TWO_PAIR, value: 2 },
+    initialState: { mult: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'card_counter');
+      const m = equip?.state.mult ?? 0;
+      return [[mult(`+${m}`), condition(HAND_NAMES.TWO_PAIR)]];
+    },
+  },
+  {
+    id: 'lucky_number',
+    name: 'Lucky Number',
+    cost: 8,
+    rarity: 'rare',
+    description: 'Each played [number changes each round] gives x1.5 mult when scored',
+    effectType: 'LUCKY_NUMBER_PIP_XMULT',
+    effectParams: { value: 1.5 },
+    initialState: { pip: 7 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'lucky_number');
+      const pip = equip?.state.pip ?? '?';
+      return [[mult('x1.5'), condition(`per ${pip}`)]];
+    },
+  },
+  {
+    id: 'worn_deck',
+    name: 'Worn Deck',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'x2 Mult. Loses x0.01 mult per dice re-rolled',
+    effectType: 'DECAYING_XMULT',
+    effectParams: { decayPerDie: 0.01 },
+    initialState: { xMult: 2 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'worn_deck');
+      const xm = equip?.state.xMult ?? 2;
+      return [[mult(`x${xm.toFixed(2)}`)]];
+    },
+  },
+  {
+    id: 'war_drums',
+    name: 'War Drums',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Retrigger all dice played for the next 10 days of travel',
+    effectType: 'SCORED_RETRIGGER_TIMED',
+    effectParams: {},
+    initialState: { daysRemaining: 10 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'war_drums');
+      const days = equip?.state.daysRemaining ?? 0;
+      if (days > 0) return [[active(`${days} days left`)]];
+      return [[inactive('Expired')]];
+    },
+  },
+  {
+    id: 'bone_collector',
+    name: 'Bone Collector',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Gains +3 miles per each enhanced dice that is spent',
+    effectType: 'ENHANCED_SPENT_MILES_GAIN',
+    effectParams: { value: 3 },
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'bone_collector');
+      const m = equip?.state.miles ?? 0;
+      return [[miles(`+${m}`)]];
+    },
+  },
+  {
+    id: 'snake_oil_ledger',
+    name: 'Snake Oil Ledger',
+    cost: 9,
+    rarity: 'rare',
+    description: 'Item gains x0.25 mult for each card sold. Resets when boss is defeated.',
+    effectType: 'SELL_XMULT_GAIN',
+    effectParams: { value: 0.25 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'snake_oil_ledger');
+      const xm = equip?.state.xMult ?? 1;
+      return [[mult(`x${xm.toFixed(2)}`)]];
+    },
+  },
+  {
+    id: 'gold_tooth',
+    name: 'Gold Tooth',
+    cost: 4,
+    rarity: 'common',
+    description: 'Played gold dice earn $4',
+    effectType: 'GOLD_DICE_MONEY',
+    effectParams: { value: 4 },
+    hintDisplay: () => [[money('+$4'), condition('per gold')]],
+  },
+  {
+    id: 'guardian_totem',
+    name: 'Guardian Totem',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Prevents death if miles travelled is at least 25% of required distance. Card is destroyed if used.',
+    effectType: 'PREVENT_DEATH',
+    effectParams: { threshold: 0.25 },
+    hintDisplay: () => [[active('Protected')]],
+  },
+  {
+    id: 'high_noon',
+    name: 'High Noon',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'x3 mult on final day of round',
+    effectType: 'FINAL_DAY_XMULT',
+    effectParams: { value: 3 },
+    hintDisplay: (game) => {
+      if (game && game.state.day >= game.config.maxDays) return [[mult('x3')], [active('Active!')]];
+      return [[mult('x3'), condition('final day')], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'desperado',
+    name: 'Desperado',
+    cost: 4,
+    rarity: 'common',
+    description: 'Add the sell value of all other owned equipment as mult',
+    effectType: 'SELL_VALUE_AS_MULT',
+    effectParams: {},
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find(e => e.def.id === 'desperado');
+      let total = 0;
+      for (const e of player.equipment) {
+        if (e !== equip) total += e.sellValue;
+      }
+      return [[mult(`+${total}`)]];
+    },
+  },
+  {
+    id: 'stagecoach',
+    name: 'Stagecoach',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Dice are automatically refreshed when supply reaches 50% or below. -1 day per round.',
+    effectType: 'AUTO_REFRESH_REDUCE_DAYS',
+    effectParams: { daysPenalty: 1 },
+    hintDisplay: () => [[active('Auto-refresh'), condition('-1 day')]],
+  },
+  {
+    id: 'mystery_crate',
+    name: 'Mystery Crate',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Add a dice at the start of each round with a random sticker',
+    effectType: 'ROUND_START_ADD_DICE',
+    effectParams: {},
+    hintDisplay: () => [[active('+1 die'), condition('round start')]],
   },
 ];
 

@@ -10,6 +10,9 @@ export interface ScoringContext {
   heldDice: Die[];           // dice rolled but not scored (held in hand)
   rerollsRemaining: number;
   equipmentCount: number;
+  playerBalance: number;     // current money
+  currentDay: number;        // current day in the round (1-based)
+  maxDays: number;           // max days this round
 }
 
 /**
@@ -75,6 +78,50 @@ export function applyEquipmentEffects(
         bonusMult += (p.value as number) * context.equipmentCount;
         break;
 
+      case 'MILES_PER_DOLLAR':
+        bonusMiles += (p.value as number) * context.playerBalance;
+        break;
+
+      case 'SELL_VALUE_AS_MULT': {
+        // Add sell value of ALL OTHER equipment as mult
+        let totalSellValue = 0;
+        for (const other of equipment) {
+          if (other !== equip) totalSellValue += other.sellValue;
+        }
+        bonusMult += totalSellValue;
+        break;
+      }
+
+      case 'STATEFUL_ADD_MULT':
+        // Uses accumulated state.mult value
+        bonusMult += equip.state.mult ?? 0;
+        break;
+
+      case 'DECAYING_MULT':
+        // Uses state.mult which decreases over time
+        bonusMult += equip.state.mult ?? 0;
+        break;
+
+      case 'HAND_MULT_GAIN':
+        // Card Counter: uses accumulated state.mult
+        bonusMult += equip.state.mult ?? 0;
+        break;
+
+      case 'SHOP_REROLL_MULT_GAIN':
+        // Bargain Bin: uses accumulated state.mult
+        bonusMult += equip.state.mult ?? 0;
+        break;
+
+      case 'ENHANCED_SPENT_MILES_GAIN':
+        // Bone Collector: uses accumulated state.miles
+        bonusMiles += equip.state.miles ?? 0;
+        break;
+
+      case 'LUCKY_TRIGGER_XMULT':
+      case 'SELL_XMULT_GAIN':
+        // These are xMult effects, handled in the xMult pass below
+        break;
+
       // Config-modifying effects (MODIFY_HAND_SIZE, MODIFY_REROLLS) and
       // end-of-round effects (END_ROUND_MONEY) are not applied during scoring.
     }
@@ -107,6 +154,47 @@ export function applyEquipmentEffects(
     if (equip.def.aura?.id === 'holy') {
       finalMult = finalMult * 1.5;
       console.log(`  [equip] ${equip.def.name} HOLY aura: x1.5 mult (finalMult: ${finalMult})`);
+    }
+  }
+
+  // Apply equipment xMult effects (multiplicative, after additives + auras)
+  for (const equip of equipment) {
+    const { effectType } = equip.def;
+
+    switch (effectType) {
+      case 'UNCOMMON_EQUIP_XMULT': {
+        // x1.5 per uncommon equipment
+        const uncommonCount = equipment.filter(e => e.def.rarity === 'uncommon').length;
+        for (let i = 0; i < uncommonCount; i++) {
+          finalMult *= 1.5;
+        }
+        break;
+      }
+      case 'FINAL_DAY_XMULT':
+        // x3 mult on final day of round
+        if (context.currentDay >= context.maxDays) {
+          finalMult *= (equip.def.effectParams as Record<string, unknown>).value as number;
+        }
+        break;
+      case 'STATEFUL_XMULT':
+        // Uses accumulated state.xMult
+        if ((equip.state.xMult ?? 1) !== 1) {
+          finalMult *= equip.state.xMult;
+        }
+        break;
+      case 'LUCKY_TRIGGER_XMULT':
+      case 'SELL_XMULT_GAIN':
+        // Rabbit's Foot / Snake Oil Ledger: accumulated xMult
+        if ((equip.state.xMult ?? 1) !== 1) {
+          finalMult *= equip.state.xMult;
+        }
+        break;
+      case 'DECAYING_XMULT':
+        // Uses state.xMult which decreases over time
+        if ((equip.state.xMult ?? 1) > 0) {
+          finalMult *= equip.state.xMult;
+        }
+        break;
     }
   }
 
@@ -314,4 +402,172 @@ function handTypeMatches(played: HandType, required: string): boolean {
   if (played === HandType.FOUR_STRAIGHT && required === HandType.THREE_STRAIGHT) return true;
 
   return false;
+}
+
+// ─── Equipment State Update Functions ───
+
+/** Called after a hand is scored. Updates stateful equipment based on the hand type played. */
+export function processEquipmentOnHandPlayed(equipment: EquipmentInstance[], handType: HandType): void {
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'HAND_MULT_GAIN':
+        // Card Counter: gains +mult if hand contains required type
+        if (handTypeMatches(handType, equip.def.effectParams.handType as string)) {
+          equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.value as number);
+        }
+        break;
+    }
+  }
+}
+
+/** Called when the player rerolls dice. Updates stateful equipment. */
+export function processEquipmentOnReroll(equipment: EquipmentInstance[], diceCount: number): void {
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'DECAYING_XMULT':
+        // Worn Deck: loses xMult per die rerolled
+        equip.state.xMult = Math.max(0, (equip.state.xMult ?? 1) - (equip.def.effectParams.decayPerDie as number) * diceCount);
+        break;
+    }
+  }
+}
+
+/** Called when the player rerolls the shop. */
+export function processEquipmentOnShopReroll(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'SHOP_REROLL_MULT_GAIN':
+        // Bargain Bin: gains +mult per shop reroll
+        equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.value as number);
+        break;
+    }
+  }
+}
+
+/** Called when the player sells equipment. */
+export function processEquipmentOnSell(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'SELL_XMULT_GAIN':
+        // Snake Oil Ledger: gains xMult per card sold
+        equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
+        break;
+    }
+  }
+}
+
+/** Called when a boss is defeated. Resets specific equipment state. */
+export function processEquipmentOnBossDefeat(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'SELL_XMULT_GAIN':
+        // Snake Oil Ledger: resets on boss defeat
+        equip.state.xMult = 1;
+        break;
+    }
+  }
+}
+
+/** Called when enhanced dice are spent. Updates Bone Collector. */
+export function processEquipmentOnDiceSpent(equipment: EquipmentInstance[], spentDice: Die[]): void {
+  const enhancedCount = spentDice.filter(d => d.enhancement !== null).length;
+  if (enhancedCount === 0) return;
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'ENHANCED_SPENT_MILES_GAIN':
+        // Bone Collector: gains miles per enhanced dice spent
+        equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number) * enhancedCount;
+        break;
+    }
+  }
+}
+
+/** Called when a lucky die triggers (mult or money). Updates Rabbit's Foot. */
+export function processEquipmentOnLuckyTrigger(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'LUCKY_TRIGGER_XMULT':
+        // Rabbit's Foot: gains xMult per lucky trigger
+        equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
+        break;
+    }
+  }
+}
+
+/** Called at the start of each round. Updates/removes decaying equipment.
+ *  Returns indices of equipment to remove. */
+export function processEquipmentOnRoundStart(equipment: EquipmentInstance[]): { destroyedIndices: number[] } {
+  const destroyedIndices: number[] = [];
+  for (let i = 0; i < equipment.length; i++) {
+    const equip = equipment[i];
+    switch (equip.def.effectType) {
+      case 'DECAYING_MULT': {
+        // Fading Memory: -4 mult per round, removed after 5 rounds
+        const decay = equip.def.effectParams.decayPerRound as number;
+        equip.state.mult = (equip.state.mult ?? 0) - decay;
+        equip.state.roundsPlayed = (equip.state.roundsPlayed ?? 0) + 1;
+        if (equip.state.roundsPlayed >= (equip.def.effectParams.maxRounds as number)) {
+          destroyedIndices.push(i);
+        }
+        break;
+      }
+      case 'LUCKY_NUMBER_PIP_XMULT':
+        // Lucky Number: randomize pip each round
+        equip.state.pip = Math.ceil(Math.random() * 12);
+        break;
+      case 'SCORED_RETRIGGER_TIMED':
+        // War Drums: decrement days remaining
+        if (equip.state.daysRemaining !== undefined && equip.state.daysRemaining > 0) {
+          // don't decrement here, decrement per day in processEquipmentOnDayEnd
+        }
+        break;
+    }
+  }
+  return { destroyedIndices };
+}
+
+/** Called at the end of each day. Updates War Drums counter. */
+export function processEquipmentOnDayEnd(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'SCORED_RETRIGGER_TIMED') {
+      if ((equip.state.daysRemaining ?? 0) > 0) {
+        equip.state.daysRemaining--;
+      }
+    }
+  }
+}
+
+/** Check if any equipment has active scored-dice retrigger effect. */
+export function getScoredRetriggerCount(equipment: EquipmentInstance[]): number {
+  let count = 0;
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'SCORED_RETRIGGER_TIMED' && (equip.state.daysRemaining ?? 0) > 0) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/** Check if any equipment prevents death. Returns the index of the first one found, or -1. */
+export function findDeathPrevention(equipment: EquipmentInstance[], totalMiles: number, targetMiles: number): number {
+  for (let i = 0; i < equipment.length; i++) {
+    if (equipment[i].def.effectType === 'PREVENT_DEATH') {
+      const threshold = (equipment[i].def.effectParams.threshold as number) ?? 0.25;
+      if (totalMiles >= targetMiles * threshold) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+/** Get config modifiers that affect days (e.g. Stagecoach -1 day). */
+export function getDayModifiers(equipment: EquipmentInstance[]): { daysPenalty: number } {
+  let daysPenalty = 0;
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'AUTO_REFRESH_REDUCE_DAYS') {
+      daysPenalty += (equip.def.effectParams.daysPenalty as number) ?? 1;
+    }
+  }
+  return { daysPenalty };
 }

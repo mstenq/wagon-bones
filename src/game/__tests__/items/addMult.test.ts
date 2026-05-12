@@ -1,0 +1,216 @@
+import { describe, test, expect, beforeEach } from 'bun:test';
+import '../setup';
+import { die, diceWithValue, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
+import { processEndOfRound, processEquipmentOnShopReroll, processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import { HandType } from '../../types';
+
+beforeEach(() => resetDieIds());
+
+describe('ADD_MULT: Horseshoe', () => {
+  test('+4 mult on any hand', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('horseshoe')],
+    });
+    // PAIR: baseMult=1, +4 from horseshoe = 5
+    expect(result.mult).toBe(5);
+  });
+
+  test('stacks with multiple horseshoes', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('horseshoe'), item('horseshoe')],
+    });
+    // baseMult=1, +4+4 = 9
+    expect(result.mult).toBe(9);
+  });
+
+  test('adds to existing hand mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 3),
+      equipment: [item('horseshoe')],
+    });
+    // THREE_OF_A_KIND: baseMult=3, +4 = 7
+    expect(result.mult).toBe(7);
+  });
+});
+
+describe('ADD_MULT_RISKY: Dynamite', () => {
+  test('+15 mult during scoring', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('dynamite')],
+    });
+    // PAIR: baseMult=1, +15 = 16
+    expect(result.mult).toBe(16);
+  });
+
+  test('stacks with other mult equipment', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('horseshoe'), item('dynamite')],
+    });
+    // baseMult=1, +4+15 = 20
+    expect(result.mult).toBe(20);
+  });
+
+  test('destroyed at end of round when random hits (1 in 6)', () => {
+    const original = Math.random;
+    Math.random = () => 0.1; // 0.1 < 1/6 → explodes
+    try {
+      const equip = [item('horseshoe'), item('dynamite')];
+      const result = processEndOfRound(equip);
+      expect(result.destroyedIndices).toContain(1); // dynamite is at index 1
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('survives when random misses', () => {
+    const original = Math.random;
+    Math.random = () => 0.5; // 0.5 > 1/6 → survives
+    try {
+      const equip = [item('horseshoe'), item('dynamite')];
+      const result = processEndOfRound(equip);
+      expect(result.destroyedIndices).toEqual([]);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('destroyed equipment is removed from player after endDay', () => {
+    const original = Math.random;
+    Math.random = () => 0.1; // force destruction
+    try {
+      const { game, player } = setupGame({
+        equipment: [item('horseshoe'), item('dynamite')],
+        dice: diceWithValue(5, 50),
+      });
+      game.startRound();
+      // Play through a day: SELECT → ROLL → SCORE → DAY_END
+      const diceIds = game.state.hand.slice(0, 5).map(d => d.id);
+      game.selectForRoll(diceIds);
+      const scoredIds = game.state.rolledDice.slice(0, 2).map(d => d.id);
+      game.selectForScore(scoredIds);
+      game.calculateScore();
+      game.endDay();
+      // Dynamite should be gone, horseshoe remains
+      expect(player.equipment.length).toBe(1);
+      expect(player.equipment[0].def.id).toBe('horseshoe');
+    } finally {
+      Math.random = original;
+    }
+  });
+});
+
+// ─── SHOP_REROLL_MULT_GAIN: Bargain Bin ───
+
+describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
+  test('starts at +0 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('bargain_bin')],
+    });
+    expect(result.mult).toBe(1);
+  });
+
+  test('gains +2 mult per shop reroll', () => {
+    const inst = item('bargain_bin');
+    processEquipmentOnShopReroll([inst]);
+    expect(inst.state.mult).toBe(2);
+
+    processEquipmentOnShopReroll([inst]);
+    expect(inst.state.mult).toBe(4);
+  });
+
+  test('accumulated mult applied during scoring', () => {
+    const inst = item('bargain_bin');
+    processEquipmentOnShopReroll([inst]);
+    processEquipmentOnShopReroll([inst]);
+    processEquipmentOnShopReroll([inst]);
+    // 3 rerolls × +2 = +6
+
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR: baseMult=1 + 6 = 7
+    expect(result.mult).toBe(7);
+  });
+});
+
+// ─── DECAYING_MULT: Fading Memory ───
+
+describe('DECAYING_MULT: Fading Memory', () => {
+  test('after first round start has +16 mult (decayed from 20)', () => {
+    // startRound() calls processEquipmentOnRoundStart which decays -4 on first round
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('fading_memory')],
+    });
+    // PAIR: baseMult=1 + 16 = 17
+    expect(result.mult).toBe(17);
+  });
+
+  test('loses -4 mult per round start', () => {
+    const inst = item('fading_memory');
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.mult).toBe(16);
+    expect(inst.state.roundsPlayed).toBe(1);
+
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.mult).toBe(12);
+    expect(inst.state.roundsPlayed).toBe(2);
+  });
+
+  test('marked for destruction after 5 rounds', () => {
+    const inst = item('fading_memory');
+    for (let i = 0; i < 4; i++) {
+      const result = processEquipmentOnRoundStart([inst]);
+      expect(result.destroyedIndices).toEqual([]);
+    }
+    // 5th round
+    const result = processEquipmentOnRoundStart([inst]);
+    expect(result.destroyedIndices).toContain(0);
+  });
+
+  test('mult value after 4 round starts (3 manual + 1 from calculateTestScore)', () => {
+    const inst = item('fading_memory');
+    for (let i = 0; i < 3; i++) processEquipmentOnRoundStart([inst]);
+    // 20 - 3*4 = 8, then calculateTestScore's startRound decays another -4 → 4
+
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect(result.mult).toBe(5); // baseMult=1 + 4
+  });
+});
+
+// ─── SELL_VALUE_AS_MULT: Desperado ───
+
+describe('SELL_VALUE_AS_MULT: Desperado', () => {
+  test('adds sell value of other equipment as mult', () => {
+    const horseshoe = item('horseshoe'); // cost 2, sell = 1
+    const dynamite = item('dynamite');   // cost 5, sell = 2
+    const desp = item('desperado');
+
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [desp, horseshoe, dynamite],
+    });
+    // PAIR: baseMult=1
+    // horseshoe: +4, dynamite: +15 → +19
+    // desperado: +sell values of horseshoe(1) + dynamite(2) = +3
+    // total mult = 1 + 19 + 3 = 23
+    expect(result.mult).toBe(23);
+  });
+
+  test('no bonus when alone', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('desperado')],
+    });
+    expect(result.mult).toBe(1);
+  });
+});

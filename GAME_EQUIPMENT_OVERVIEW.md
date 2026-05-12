@@ -94,13 +94,13 @@ Spare Holster - $4 - +1 re-roll per day
 Snake Oil - $6 - +1 re-roll per hand played
 Quarry Mine - $6 - +25 miles for each stone dice in collection
 Payday - $6 - Earn $4 at end of round
+
+## Phase 2
 Rabbit’s Foot - $6 - Item gains x0.25 for every lucky dice trigger
 Collector’s Case - $8 - Uncommon equipment each give x1.5mult
 Money Wagon - $6 - +2 miles for every $1 you have
-Bounty Contract - $6 - sell this item to gain a free double tag 
-Mercy Shot - $6 - if first re-roll of the day is only 1 dice, destroy it and earn $3
 Bargain Bin - $6 - item gains +2 mult per reroll in the shop
-Fading Memory - $5 - +20 mult, -4 mult per round played
+Fading Memory - $5 - +20 mult, -4 mult per round played, is removed after 5 rounds
 Card Counter - $6 - Item gains +2 mult if played hand contains 2 pair
 Lucky Number - $8 - Each played [number changes each round] gives x1.5mult when scored
 Worn Deck - $6 - x2 Mult. Loses x0.01 mult per dice re-rolled
@@ -108,12 +108,16 @@ War Drums - $6 - retrigger all dice played for the next 10 days of travel
 Bone Collector - $6 - gains +3 miles per each enhanced dice that is spent
 Snake Oil Ledger - $9 - item gains x0.25mult for each card sold. Resets when boss is defeated.
 Gold Tooth - $4 - Played gold dice earn $4
-Guardian Totem - $5 - prevents death if miles travelled is at least 25% of required distance
+Guardian Totem - $5 - prevents death if miles travelled is at least 25% of required distance, card is destroyed if used
 High Noon - $6 - x3 mult on final day of round
-Moonshine - $6 - retrigger all enhanced dice - enhanced dice have 1 in 6 chance of being destroyed, diamond dice a 1 in 3 chance
-Estate Sale - $4 - add the sell value of all other owned equipment as mult
+Desperado - $4 - add the sell value of all other owned equipment as mult
 Stagecoach - $6 - dice are automatically refreshed when supply reaches %50 or below, -1 day per round
-Mystery Crate - $6 - add a dice at the start of each round with a random pip affect
+Mystery Crate - $6 - add a dice at the start of each round with a random sticker
+
+## Phase 3
+Moonshine - $6 - retrigger all enhanced dice - enhanced dice have 1 in 6 chance of being destroyed, diamond dice a 1 in 3 chance
+Mercy Shot - $6 - if first re-roll of the day is only 1 dice, destroy it and earn $3
+Bounty Contract - $6 - sell this item to gain a free double tag 
 Shortcut Trail - $6 - x0.25 mult for each leg of journey skipped
 Quick Draw - $4 - retrigger first played dice 2 additional times
 Last Laugh - $5 - retrigger last dice 1 additional time

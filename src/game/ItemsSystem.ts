@@ -25,6 +25,7 @@ export interface EquipmentDef {
   description: string;
   effectType: string;
   effectParams: Record<string, unknown>;
+  initialState?: Record<string, number>;
   aura?: ItemAura | null;
   hintDisplay?: (game: GameState | null, player: PlayerState) => import('../data/items').HintSegment[][];
 }
@@ -32,6 +33,7 @@ export interface EquipmentDef {
 export interface EquipmentInstance {
   def: EquipmentDef;
   sellValue: number;
+  state: Record<string, number>;
 }
 
 const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];
@@ -80,6 +82,15 @@ export function getAllEquipment(): EquipmentDef[] {
 /** Generate a random piece of equipment filtered by rarity.
  *  If no items match the filter, falls back to any rarity.
  *  Applies a random aura roll. */
+/** Create an EquipmentInstance from a def, initializing state from initialState. */
+export function createEquipmentInstance(def: EquipmentDef): EquipmentInstance {
+  return {
+    def,
+    sellValue: Math.max(1, Math.floor(def.cost / 2)),
+    state: def.initialState ? { ...def.initialState } : {},
+  };
+}
+
 export function generateRandomEquipment(options?: {
   rarity?: string;
   excludeRarity?: string;
