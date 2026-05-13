@@ -21,10 +21,10 @@ export interface ProfessionDef {
 }
 
 export interface PayoutBreakdown {
-  roundReward: number;      // base reward for completing the round ($3/$4/$5)
-  dayBonus: number;         // $1 per remaining day
-  interest: number;         // $1 per $5 held, capped at interestCap
-  equipmentMoney: number;   // END_ROUND_MONEY items like Payday (not in interest)
+  roundReward: number; // base reward for completing the round ($3/$4/$5)
+  dayBonus: number; // $1 per remaining day
+  interest: number; // $1 per $5 held, capped at interestCap
+  equipmentMoney: number; // END_ROUND_MONEY items like Payday (not in interest)
   total: number;
 }
 
@@ -37,7 +37,7 @@ const SHOP_REROLL_COST = GAMEPLAY.SHOP_REROLL_COST;
 
 export class PlayerState {
   economy: Economy;
-  dice: Die[];             // all dice the player owns
+  dice: Die[]; // all dice the player owns
   spentDiceIds: Set<string> = new Set(); // dice used this cycle (persists across days & rounds)
   equipment: EquipmentInstance[];
   maxEquipmentSlots: number;
@@ -71,7 +71,7 @@ export class PlayerState {
 
   /** Apply profession modifiers after selection */
   applyProfession(professionId: string): void {
-    const prof = professionsData.find(p => p.id === professionId);
+    const prof = professionsData.find((p) => p.id === professionId);
     if (!prof) return;
     this.profession = prof as ProfessionDef;
     const m = prof.modifiers as Record<string, unknown>;
@@ -148,12 +148,12 @@ export class PlayerState {
 
   /** Dice that haven't been spent yet (available for play) */
   get availableDice(): Die[] {
-    return this.dice.filter(d => !this.spentDiceIds.has(d.id));
+    return this.dice.filter((d) => !this.spentDiceIds.has(d.id));
   }
 
   /** Dice that have been used and are in the spent pile */
   get spentDice(): Die[] {
-    return this.dice.filter(d => this.spentDiceIds.has(d.id));
+    return this.dice.filter((d) => this.spentDiceIds.has(d.id));
   }
 
   /** Whether every die in the pool has been spent */
@@ -163,7 +163,7 @@ export class PlayerState {
 
   /** Mark dice as spent. Returns true if all dice are now spent (triggers auto-refresh). */
   markDiceSpent(ids: string[]): boolean {
-    ids.forEach(id => this.spentDiceIds.add(id));
+    ids.forEach((id) => this.spentDiceIds.add(id));
     if (this.allDiceSpent) {
       this.spentDiceIds.clear();
       return true; // auto-refreshed
@@ -211,7 +211,7 @@ export class PlayerState {
 
   /** Number of equipment slots currently occupied (ghost-aura items don't count) */
   get usedEquipmentSlots(): number {
-    return this.equipment.filter(e => e.def.aura?.id !== 'ghost').length;
+    return this.equipment.filter((e) => e.def.aura?.id !== 'ghost').length;
   }
 
   get equipmentSlotsFree(): number {
@@ -257,7 +257,7 @@ export class PlayerState {
 
   /** Number of consumable slots currently occupied (ghost-aura items don't count) */
   get usedConsumableSlots(): number {
-    return this.consumables.filter(c => c.def.aura?.id !== 'ghost').length;
+    return this.consumables.filter((c) => c.def.aura?.id !== 'ghost').length;
   }
 
   get consumableSlotsFree(): number {

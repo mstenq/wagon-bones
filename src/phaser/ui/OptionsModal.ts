@@ -15,10 +15,7 @@ export class OptionsModal extends GameObjects.Container {
     const dim = scene.add.graphics();
     dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
     dim.fillRect(0, 0, scene.scale.width, height);
-    dim.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
     this.add(dim);
 
     // Modal panel
@@ -35,11 +32,13 @@ export class OptionsModal extends GameObjects.Container {
     this.add(panel);
 
     // Title
-    const title = scene.add.text(panelX + panelW / 2, panelY + 28, 'Options', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '24px',
-      color: TEXT_COLORS.GOLD,
-    }).setOrigin(0.5);
+    const title = scene.add
+      .text(panelX + panelW / 2, panelY + 28, 'Options', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: TEXT_COLORS.GOLD,
+      })
+      .setOrigin(0.5);
     this.add(title);
 
     // New Run button

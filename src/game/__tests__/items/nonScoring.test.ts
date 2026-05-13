@@ -1,7 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { die, diceWithValue, item, itemWithState, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
-import { processEndOfRound, getConfigModifiers, getScoredRetriggerCount, findDeathPrevention, getDayModifiers, processEquipmentOnDayEnd, processEquipmentOnDiceSpent } from '../../EquipmentEffects';
+import {
+  processEndOfRound,
+  getConfigModifiers,
+  getScoredRetriggerCount,
+  findDeathPrevention,
+  getDayModifiers,
+  processEquipmentOnDayEnd,
+  processEquipmentOnDiceSpent,
+} from '../../EquipmentEffects';
 
 beforeEach(() => resetDieIds());
 
@@ -159,10 +167,7 @@ describe('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
 
   test('gains +3 miles per enhanced die spent', () => {
     const inst = item('bone_collector');
-    const enhancedDice = [
-      die({ value: 5, enhancement: 'bone' }),
-      die({ value: 3, enhancement: 'wooden' }),
-    ];
+    const enhancedDice = [die({ value: 5, enhancement: 'bone' }), die({ value: 3, enhancement: 'wooden' })];
     processEquipmentOnDiceSpent([inst], enhancedDice);
     expect(inst.state.miles).toBe(6); // 2 enhanced × 3
   });

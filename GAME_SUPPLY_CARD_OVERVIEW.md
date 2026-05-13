@@ -6,7 +6,7 @@ This is like Balatro's tarot cards. But one major difference is that we don't en
 - buzzards - create 2 bone dice
 - rabbits foot - create 2 lucky dice
 - firewood - create 2 wooden dice
-- magnet - create one loaded dice (Select a number 1-6)
+- loaded - create one loaded dice (Select a number 1-6)
 - pick axe - create one diamond dice
 - pan for gold - create 1 golden dice
 - whisky goggles - create one blurry dice 

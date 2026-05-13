@@ -5,6 +5,7 @@ import allSupplyCards from '../../data/supply_cards.json';
 import allFrontierEncounters from '../../data/frontier_encounters.json';
 import packsData from '../../data/packs.json';
 import professionsData from '../../data/professions.json';
+import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 
 export class Preloader extends Scene {
   constructor() {
@@ -26,19 +27,22 @@ export class Preloader extends Scene {
       this.load.image(`item_${item.id}`, `assets/items/${item.id}.png`);
     }
 
-    // Load trail guide images (ids already start with 'tg_')
+    // Load trail guide images (ids already include 'tg_' prefix)
+    const tgPrefix = getConsumableTexturePrefix('trail_guide');
     for (const tg of allTrailGuides) {
-      this.load.image(tg.id, `assets/trail-guides/${tg.id}.png`);
+      this.load.image(`${tgPrefix}${tg.id}`, `assets/trail-guides/${tg.id}.png`);
     }
 
     // Load supply card images
+    const supplyPrefix = getConsumableTexturePrefix('supply');
     for (const sc of allSupplyCards) {
-      this.load.image(`supply_${sc.id}`, `assets/supplies/${sc.id}.png`);
+      this.load.image(`${supplyPrefix}${sc.id}`, `assets/supplies/${sc.id}.png`);
     }
 
     // Load frontier encounter images
+    const fePrefix = getConsumableTexturePrefix('frontier');
     for (const fe of allFrontierEncounters) {
-      this.load.image(`fe_${fe.id}`, `assets/trail-encounters/${fe.id}.png`);
+      this.load.image(`${fePrefix}${fe.id}`, `assets/trail-encounters/${fe.id}.png`);
     }
 
     // Load profession images
@@ -72,6 +76,7 @@ export class Preloader extends Scene {
     this.load.audio('sfx_timpani', 'assets/sounds/timpani.ogg');
     this.load.audio('sfx_generic1', 'assets/sounds/generic1.ogg');
     this.load.audio('sfx_explosion', 'assets/sounds/explosion1.ogg');
+    this.load.audio('sfx_explosion_release', 'assets/sounds/explosion_release1.ogg');
     this.load.audio('sfx_negative', 'assets/sounds/negative.ogg');
     this.load.audio('sfx_glass1', 'assets/sounds/glass1.ogg');
     this.load.audio('sfx_paper1', 'assets/sounds/paper1.ogg');
@@ -88,11 +93,13 @@ export class Preloader extends Scene {
     bg.fillStyle(0x1a1a2e, 1);
     bg.fillRect(0, 0, width, height);
 
-    this.add.text(width / 2, height / 2, 'Loading...', {
-      fontFamily: 'Arial',
-      fontSize: '24px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height / 2, 'Loading...', {
+        fontFamily: 'Arial',
+        fontSize: '24px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
 
     this.time.delayedCall(400, () => {
       this.scene.start('MainMenu');

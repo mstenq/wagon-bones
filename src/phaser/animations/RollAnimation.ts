@@ -10,7 +10,7 @@ export function playRollAnimation(
   scene: Scene,
   diceSprites: DiceSprite[],
   finalDice: Die[],
-  onComplete: () => void
+  onComplete: () => void,
 ): void {
   const duration = ANIM.ROLL_DURATION;
   const interval = ANIM.ROLL_INTERVAL;

@@ -2,7 +2,7 @@
 // Handles the common pattern: draw N dice from player pool, player picks some, apply effect.
 // Used by supply cards (mirage, shallow_grave) and frontier encounters (gold_rush, etc.).
 
-import { Die, DiceAura, DiceSticker } from './types';
+import { Die, DiceAura, DiceEnhancement, DiceSticker } from './types';
 import { getPlayerState } from './PlayerState';
 import { CHANCES } from './Constants';
 import diceAurasData from '../data/dice_auras.json';
@@ -10,32 +10,36 @@ import diceAurasData from '../data/dice_auras.json';
 // ─── Effect Types ───
 
 export type DiceSelectionEffectType =
-  | 'DESTROY'           // shallow_grave: destroy selected dice
-  | 'COPY'              // seeing_double: duplicate selected die
-  | 'ADD_STICKER'       // gold_rush, snake_oil, spirit_guide, deputize
-  | 'CLONE'             // mirage: left die becomes a copy of right die
-  | 'APPLY_AURA';       // spirit_shaman: apply a random aura
+  | 'DESTROY' // shallow_grave: destroy selected dice
+  | 'COPY' // seeing_double: duplicate selected die
+  | 'ADD_STICKER' // gold_rush, snake_oil, spirit_guide, deputize
+  | 'CLONE' // mirage: left die becomes a copy of right die
+  | 'APPLY_AURA' // spirit_shaman: apply a random aura
+  | 'BUMP_VALUE' // medicine: bump die value up or down by 1
+  | 'ENHANCE'; // coffee_tin, buzzards, etc: change die enhancement
 
 export interface DiceSelectionEffectParams {
-  sticker?: DiceSticker;       // for ADD_STICKER
-  copyCount?: number;          // how many copies (for COPY)
-  aura?: DiceAura;             // for APPLY_AURA (if null, picks random)
+  sticker?: DiceSticker; // for ADD_STICKER
+  copyCount?: number; // how many copies (for COPY)
+  aura?: DiceAura; // for APPLY_AURA (if null, picks random)
+  bumpDirection?: 'up' | 'down'; // for BUMP_VALUE (set by UI)
+  enhancement?: DiceEnhancement; // for ENHANCE
 }
 
 export interface DiceSelectionConfig {
-  drawCount: number;           // how many dice to show (typically 5)
-  pickCount: number;           // how many the player selects
+  drawCount: number; // how many dice to show (typically 5)
+  pickCount: number; // how many the player selects
   effectType: DiceSelectionEffectType;
   effectParams: DiceSelectionEffectParams;
-  cardName: string;            // for display
-  description: string;         // for display
-  skippable: boolean;          // can the player skip without picking?
+  cardName: string; // for display
+  description: string; // for display
+  skippable: boolean; // can the player skip without picking?
 }
 
 export interface DiceSelectionState {
   config: DiceSelectionConfig;
-  drawnDice: Die[];            // the dice shown to the player
-  selectedIds: string[];       // currently selected dice IDs
+  drawnDice: Die[]; // the dice shown to the player
+  selectedIds: string[]; // currently selected dice IDs
 }
 
 // ─── Drawing Dice ───
@@ -47,8 +51,12 @@ export interface DiceSelectionState {
  */
 export function drawDiceForSelection(count: number): Die[] {
   const player = getPlayerState();
-  const pool = [...player.dice].sort(() => Math.random() - 0.5);
-  return pool.slice(0, Math.min(count, pool.length)).map(d => ({ ...d }));
+  // drawCount 0 means "show handSize dice from non-spent pool"
+  const effectiveCount = count > 0 ? count : player.handSize;
+  const pool = count > 0
+    ? [...player.dice].sort(() => Math.random() - 0.5)
+    : [...player.dice].filter((d) => !player.spentDiceIds.has(d.id)).sort(() => Math.random() - 0.5);
+  return pool.slice(0, Math.min(effectiveCount, pool.length)).map((d) => ({ ...d }));
 }
 
 // ─── Applying Effects ───
@@ -57,10 +65,7 @@ export function drawDiceForSelection(count: number): Die[] {
  * Apply the selected effect to the player's actual dice.
  * Returns a description of what happened.
  */
-export function applyDiceSelectionEffect(
-  config: DiceSelectionConfig,
-  selectedDice: Die[],
-): string {
+export function applyDiceSelectionEffect(config: DiceSelectionConfig, selectedDice: Die[]): string {
   const player = getPlayerState();
 
   switch (config.effectType) {
@@ -69,34 +74,30 @@ export function applyDiceSelectionEffect(
     case 'COPY':
       return applyCopy(player, selectedDice, config.effectParams.copyCount ?? 2);
     case 'ADD_STICKER':
-      return applyAddSticker(
-        player,
-        selectedDice,
-        config.effectParams.sticker!,
-      );
+      return applyAddSticker(player, selectedDice, config.effectParams.sticker!);
     case 'CLONE':
       return applyClone(player, selectedDice);
     case 'APPLY_AURA':
       return applyAura(player, selectedDice, config.effectParams.aura ?? null);
+    case 'BUMP_VALUE':
+      return applyBumpValue(player, selectedDice, config.effectParams.bumpDirection ?? 'up');
+    case 'ENHANCE':
+      return applyEnhance(player, selectedDice, config.effectParams.enhancement ?? null);
   }
 }
 
 function applyDestroy(player: ReturnType<typeof getPlayerState>, selectedDice: Die[]): string {
-  const ids = new Set(selectedDice.map(d => d.id));
+  const ids = new Set(selectedDice.map((d) => d.id));
   const before = player.dice.length;
-  player.dice = player.dice.filter(d => !ids.has(d.id));
+  player.dice = player.dice.filter((d) => !ids.has(d.id));
   const removed = before - player.dice.length;
   return `Destroyed ${removed} dice`;
 }
 
-function applyCopy(
-  player: ReturnType<typeof getPlayerState>,
-  selectedDice: Die[],
-  copyCount: number,
-): string {
+function applyCopy(player: ReturnType<typeof getPlayerState>, selectedDice: Die[], copyCount: number): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find(d => d.id === die.id);
+  const original = player.dice.find((d) => d.id === die.id);
   if (!original) return 'Die not found';
   for (let i = 0; i < copyCount; i++) {
     player.addDie({ ...original });
@@ -104,27 +105,20 @@ function applyCopy(
   return `Created ${copyCount} copies`;
 }
 
-function applyAddSticker(
-  player: ReturnType<typeof getPlayerState>,
-  selectedDice: Die[],
-  sticker: DiceSticker,
-): string {
+function applyAddSticker(player: ReturnType<typeof getPlayerState>, selectedDice: Die[], sticker: DiceSticker): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find(d => d.id === die.id);
+  const original = player.dice.find((d) => d.id === die.id);
   if (!original) return 'Die not found';
 
   original.sticker = sticker;
   return `Applied ${sticker} sticker`;
 }
 
-function applyClone(
-  player: ReturnType<typeof getPlayerState>,
-  selectedDice: Die[],
-): string {
+function applyClone(player: ReturnType<typeof getPlayerState>, selectedDice: Die[]): string {
   if (selectedDice.length < 2) return 'Select 2 dice';
-  const left = player.dice.find(d => d.id === selectedDice[0].id);
-  const right = player.dice.find(d => d.id === selectedDice[1].id);
+  const left = player.dice.find((d) => d.id === selectedDice[0].id);
+  const right = player.dice.find((d) => d.id === selectedDice[1].id);
   if (!left || !right) return 'Dice not found';
 
   // Left becomes a copy of right (keep left's id)
@@ -147,20 +141,49 @@ export function pickRandomAura(): DiceAura {
   return 'icy';
 }
 
-function applyAura(
-  player: ReturnType<typeof getPlayerState>,
-  selectedDice: Die[],
-  aura: DiceAura,
-): string {
+function applyAura(player: ReturnType<typeof getPlayerState>, selectedDice: Die[], aura: DiceAura): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find(d => d.id === die.id);
+  const original = player.dice.find((d) => d.id === die.id);
   if (!original) return 'Die not found';
 
   const chosenAura = aura ?? pickRandomAura();
   original.aura = chosenAura;
 
-  const info = diceAurasData.find(a => a.id === chosenAura);
+  const info = diceAurasData.find((a) => a.id === chosenAura);
   const auraName = info ? info.name : chosenAura;
   return `Applied ${auraName} aura`;
+}
+
+function applyEnhance(
+  player: ReturnType<typeof getPlayerState>,
+  selectedDice: Die[],
+  enhancement: DiceEnhancement,
+): string {
+  let count = 0;
+  for (const die of selectedDice) {
+    const original = player.dice.find((d) => d.id === die.id);
+    if (!original) continue;
+    original.enhancement = enhancement;
+    count++;
+  }
+  return `Enhanced ${count} dice to ${enhancement ?? 'standard'}`;
+}
+
+function applyBumpValue(
+  player: ReturnType<typeof getPlayerState>,
+  selectedDice: Die[],
+  direction: 'up' | 'down',
+): string {
+  const die = selectedDice[0];
+  if (!die) return 'No die selected';
+  const original = player.dice.find((d) => d.id === die.id);
+  if (!original) return 'Die not found';
+
+  const delta = direction === 'up' ? 1 : -1;
+  const newValue = Math.min(6, Math.max(1, original.value + delta));
+  if (newValue === original.value) return `Already at ${original.value}`;
+  const oldValue = original.value;
+  original.value = newValue;
+  return `Bumped die from ${oldValue} to ${newValue}`;
 }

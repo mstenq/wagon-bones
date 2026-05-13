@@ -6,7 +6,6 @@ export enum HandType {
   HIGH_VALUE = 'HIGH_VALUE',
   PAIR = 'PAIR',
   TWO_PAIR = 'TWO_PAIR',
-  THREE_STRAIGHT = 'THREE_STRAIGHT',
   THREE_OF_A_KIND = 'THREE_OF_A_KIND',
   FOUR_STRAIGHT = 'FOUR_STRAIGHT',
   FULL_HOUSE = 'FULL_HOUSE',
@@ -16,32 +15,35 @@ export enum HandType {
 }
 
 export interface HandStats {
-  level: number;        // starts at 1, increased by trail guide cards
+  level: number; // starts at 1, increased by trail guide cards
   timesPlayed: number;
   milesPerLevel: number; // miles added per level (from trail guide data)
-  multPerLevel: number;  // mult added per level (from trail guide data)
+  multPerLevel: number; // mult added per level (from trail guide data)
 }
 
 export type DiceEnhancement =
-  | 'bone' | 'lucky' | 'wooden' | 'steel'
-  | 'gold' | 'loaded' | 'diamond' | 'stone' | 'blurry'
+  | 'bone'
+  | 'lucky'
+  | 'wooden'
+  | 'steel'
+  | 'gold'
+  | 'loaded'
+  | 'diamond'
+  | 'stone'
+  | 'blurry'
   | null;
 
-export type DiceSticker =
-  | 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon'
-  | null;
+export type DiceSticker = 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon' | null;
 
-export type DiceAura =
-  | 'holy' | 'fire' | 'icy'
-  | null;
+export type DiceAura = 'holy' | 'fire' | 'icy' | null;
 
 export interface Die {
   id: string;
-  value: number;         // 1-12, or 0 for stone dice
+  value: number; // 1-12, or 0 for stone dice
   enhancement: DiceEnhancement;
-  sticker: DiceSticker;  // whole-die effect (like Balatro seals)
+  sticker: DiceSticker; // whole-die effect (like Balatro seals)
   aura: DiceAura;
-  isGrimy: boolean;      // face hidden until selected
+  isGrimy: boolean; // face hidden until selected
 }
 
 export interface HandDefinition {
@@ -58,13 +60,13 @@ export interface HandResult {
   baseMiles: number;
   baseMult: number;
   rank: number;
-  scoringDice: Die[];    // the dice that form the hand
+  scoringDice: Die[]; // the dice that form the hand
 }
 
 export interface ScoreResult {
   handResult: HandResult;
-  totalValue: number;    // sum of scoring dice values (base miles from dice)
-  miles: number;         // (handBaseMiles + totalValue) * mult
+  totalValue: number; // sum of scoring dice values (base miles from dice)
+  miles: number; // (handBaseMiles + totalValue) * mult
   mult: number;
   // Animation context (populated by GameState/GameScene for the rendering layer)
   heldSteps?: import('./EquipmentEffects').HeldAnimStep[];
@@ -77,10 +79,10 @@ export interface ScoreResult {
 
 export interface GameConfig {
   maxDays: number;
-  maxRerolls: number;      // re-rolls per day (resets each day)
-  rollSize: number;       // dice drawn from pouch and rolled (default 8)
-  scoreSize: number;      // max dice player selects to score (default 5)
-  targetMiles: number;    // miles to beat this leg
+  maxRerolls: number; // re-rolls per day (resets each day)
+  rollSize: number; // dice drawn from pouch and rolled (default 8)
+  scoreSize: number; // max dice player selects to score (default 5)
+  targetMiles: number; // miles to beat this leg
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -96,13 +98,13 @@ export interface RoundState {
   day: number;
   rerollsRemaining: number;
   totalMiles: number;
-  spent: Die[];            // dice already used this cycle (persist across days)
-  hand: Die[];             // all available dice shown in SELECT phase
+  spent: Die[]; // dice already used this cycle (persist across days)
+  hand: Die[]; // all available dice shown in SELECT phase
   selectedForRoll: Die[];
-  rolledDice: Die[];       // dice after rolling
+  rolledDice: Die[]; // dice after rolling
   selectedForScore: Die[];
   currentHandType: HandType | null; // hand type from most recent scoring (for hint display)
-  handHistory: HandType[];          // all hand types scored this round (for cards that check history)
+  handHistory: HandType[]; // all hand types scored this round (for cards that check history)
 }
 
 export type GameEventType =

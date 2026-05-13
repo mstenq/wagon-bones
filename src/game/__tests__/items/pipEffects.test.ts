@@ -1,6 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  diceFromValues,
+  item,
+  itemWithState,
+  calculateTestScore,
+  resetDieIds,
+} from '../testHelpers';
 import { processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
@@ -159,10 +167,7 @@ describe('GOLD_DICE_MONEY: Gold Tooth', () => {
 
   test('multiple gold dice each earn money', () => {
     const { result, player } = calculateTestScore({
-      scoredDice: [
-        die({ value: 5, enhancement: 'gold' }),
-        die({ value: 5, enhancement: 'gold' }),
-      ],
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5, enhancement: 'gold' })],
       equipment: [item('gold_tooth')],
       money: 10,
     });

@@ -1,26 +1,28 @@
 // ─── BoosterPackScene ───
-// Opened when player buys a booster pack. Shows N cards, player picks some.
-// Then returns to Shop.
-// Balatro-inspired layout: sidebar left, equipment top, cards center, pouch bottom-right.
+// Opened when player buys a booster pack. Cards are used immediately via
+// slide-out action tabs. Dice-targeting cards select from a visible dice lineup
+// displayed above the pack cards. All effects applied inline — no consumable slots needed.
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { PackDefinition, PackItem, InstantEffect, generatePackContents } from '../../game/BoosterPackSystem';
 import { getPlayerState } from '../../game/PlayerState';
-import { createDie } from '../../game/DiceSystem';
 import { generateRandomEquipment } from '../../game/ItemsSystem';
 import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
   createFrontierConsumableDef,
+  createConsumableInstance,
   ConsumableInstance,
   executeConsumableEffect,
+  getConsumableTexturePrefix,
 } from '../../game/ConsumablesSystem';
-import { DiceEnhancement, HandType } from '../../game/types';
+import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
+import { Die, HandType } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
-import { ItemCard } from '../ui/ItemCard';
+import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -32,26 +34,27 @@ import trailGuidesData from '../../data/trail_guides.json';
 import supplyCardsData from '../../data/supply_cards.json';
 import frontierEncountersData from '../../data/frontier_encounters.json';
 
-const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
-const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
+const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
+const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
 
 const CARD_W = 130;
 const CARD_H = 180;
 const CARD_SPACING = 185;
 const CARD_RADIUS = 8;
+const DICE_SPACING = UI.DICE_SPACING;
 
 const CATEGORY_COLORS: Record<string, number> = {
-  dice: 0x8B4513,
-  supply: 0x2E8B57,
-  trail_guide: 0x4682B4,
-  frontier: 0x8B008B,
-  equipment: 0xB8860B,
+  dice: 0x8b4513,
+  supply: 0x2e8b57,
+  trail_guide: 0x4682b4,
+  frontier: 0x8b008b,
+  equipment: 0xb8860b,
 };
 
 interface CardSprite {
   container: Phaser.GameObjects.Container;
   item: PackItem;
-  selected: boolean;
+  used: boolean;
   index: number;
   diceSprite?: DiceSprite;
   itemCard?: ItemCard;
@@ -62,9 +65,9 @@ export class BoosterPackScene extends Scene {
   private contents: PackItem[];
   private cardSprites: CardSprite[] = [];
   private picksRemaining: number;
-  private confirmBtn: Button;
   private skipBtn: Button;
   private picksText: Phaser.GameObjects.Text;
+  private instructionText: Phaser.GameObjects.Text;
 
   // Shared UI
   private sidebar: Sidebar;
@@ -75,6 +78,17 @@ export class BoosterPackScene extends Scene {
   // Layout helpers
   private contentCX: number = 0;
   private cardY: number = 0;
+
+  // Dice lineup (displayed above cards)
+  private lineupDice: Die[] = [];
+  private lineupSprites: DiceSprite[] = [];
+  private lineupLockIcons: Phaser.GameObjects.Text[] = [];
+  private selectedDiceIds: Set<string> = new Set();
+  private lineupY: number = 0;
+
+  // Active card tab state
+  private activeTabCard: CardSprite | null = null;
+  private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
 
   constructor() {
     super('BoosterPack');
@@ -88,6 +102,8 @@ export class BoosterPackScene extends Scene {
     this.contents = generatePackContents(this.packDef);
     this.picksRemaining = this.packDef.pickCount;
     this.cardSprites = [];
+    this.selectedDiceIds = new Set();
+    this.activeTabCard = null;
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
@@ -129,65 +145,221 @@ export class BoosterPackScene extends Scene {
     // ─── Pack name ───
     const equipBarH = UI.EQUIP_BAR_HEIGHT;
     const titleY = equipBarH + 16;
-    this.add.text(this.contentCX, titleY, this.packDef.name, {
-      fontFamily: FONTS.HEADING,
-      fontSize: '28px',
-      color: TEXT_COLORS.PRIMARY,
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5);
+    this.add
+      .text(this.contentCX, titleY, this.packDef.name, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '28px',
+        color: TEXT_COLORS.PRIMARY,
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
 
-    // Instructions
-    this.picksText = this.add.text(this.contentCX, titleY + 36, '', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '16px',
-      color: TEXT_COLORS.SECONDARY,
-    }).setOrigin(0.5);
+    // Instructions / picks remaining
+    this.picksText = this.add
+      .text(this.contentCX, titleY + 36, '', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '16px',
+        color: TEXT_COLORS.SECONDARY,
+      })
+      .setOrigin(0.5);
     this.updatePicksText();
 
-    // Cards
+    // ─── Dice lineup (above cards) — only for packs with dice-selection cards ───
+    const showLineup = this.contents.some((item) => !!item.diceSelection);
+    if (showLineup) {
+      this.lineupY = titleY + 80 + 40;
+      this.buildDiceLineup();
+
+      // Instruction text for dice selection
+      this.instructionText = this.add
+        .text(this.contentCX, this.lineupY + 50, '', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '14px',
+          color: TEXT_COLORS.MUTED,
+        })
+        .setOrigin(0.5)
+        .setDepth(15);
+    } else {
+      this.lineupY = 0;
+      this.instructionText = this.add.text(0, 0, '').setVisible(false);
+    }
+
+    // ─── Cards ───
     const totalCardsWidth = (this.contents.length - 1) * CARD_SPACING;
     const startX = this.contentCX - totalCardsWidth / 2;
-    this.cardY = titleY + 80 + CARD_H / 2;
+    this.cardY = showLineup ? this.lineupY + 70 + CARD_H / 2 : titleY + 70 + CARD_H / 2;
 
     for (let i = 0; i < this.contents.length; i++) {
       const item = this.contents[i];
       const x = startX + i * CARD_SPACING;
       const { container, diceSprite, itemCard } = this.createCardDisplay(x, this.cardY, item);
 
-      const sprite: CardSprite = { container, item, selected: false, index: i, diceSprite: diceSprite ?? undefined, itemCard: itemCard ?? undefined };
+      const sprite: CardSprite = {
+        container,
+        item,
+        used: false,
+        index: i,
+        diceSprite: diceSprite ?? undefined,
+        itemCard: itemCard ?? undefined,
+      };
       this.cardSprites.push(sprite);
 
-      container.on('pointerdown', () => this.onCardClick(sprite));
-      if (diceSprite) {
-        diceSprite.on('pointerdown', () => this.onCardClick(sprite));
-      }
-      if (itemCard) {
-        itemCard.on('pointerdown', () => this.onCardClick(sprite));
-      }
-      container.on('pointerover', () => {
-        if (!sprite.selected) {
-          this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 80 });
-        }
-      });
-      container.on('pointerout', () => {
-        if (!sprite.selected) {
-          this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 80 });
-        }
-      });
+      this.setupCardClick(sprite);
     }
 
-    // Buttons
+    // Skip button
     const btnY = height - 36;
-    this.confirmBtn = new Button(this, this.contentCX - 100, btnY, 'Take Selected', 180, 44);
-    this.confirmBtn.setEnabled(false);
-    this.confirmBtn.onClick(() => this.onConfirm());
-
-    this.skipBtn = new Button(this, this.contentCX + 100, btnY, 'Skip All', 140, 44);
+    this.skipBtn = new Button(this, this.contentCX, btnY, 'Skip', 140, 44);
     this.skipBtn.onClick(() => this.onSkip());
   }
 
-  private createCardDisplay(x: number, y: number, item: PackItem): { container: Phaser.GameObjects.Container, diceSprite: DiceSprite | null, itemCard: ItemCard | null } {
+  // ─── Dice Lineup ───
+
+  private buildDiceLineup(): void {
+    this.clearDiceLineup();
+    const player = getPlayerState();
+
+    // Draw handSize random non-spent dice
+    const nonSpent = player.dice.filter((d) => !player.spentDiceIds.has(d.id));
+    const shuffled = [...nonSpent].sort(() => Math.random() - 0.5);
+    this.lineupDice = shuffled.slice(0, Math.min(player.handSize, shuffled.length));
+
+    if (this.lineupDice.length === 0) return;
+
+    const totalWidth = (this.lineupDice.length - 1) * DICE_SPACING;
+    const startX = this.contentCX - totalWidth / 2;
+
+    for (let i = 0; i < this.lineupDice.length; i++) {
+      const die = this.lineupDice[i];
+      const arc = this.getArcOffset(i, this.lineupDice.length);
+      const x = startX + i * DICE_SPACING;
+      const y = this.lineupY + arc.y;
+
+      const sprite = new DiceSprite(this, x, y, die);
+      sprite.rotation = arc.rotation;
+      sprite.setDepth(10);
+      this.lineupSprites.push(sprite);
+
+      // Lock icon (hidden initially)
+      const lockIcon = this.add
+        .text(x, y + 46, '🔒', { fontSize: '14px' })
+        .setOrigin(0.5)
+        .setDepth(11)
+        .setVisible(false);
+      this.lineupLockIcons.push(lockIcon);
+
+      // Click handler for dice selection
+      sprite.on('pointerdown', () => this.onLineupDieClick(i));
+    }
+
+    // Disable lineup interaction by default (enabled when a dice-selection card is active)
+    this.setLineupInteractive(false);
+  }
+
+  private clearDiceLineup(): void {
+    for (const s of this.lineupSprites) s.destroy();
+    for (const icon of this.lineupLockIcons) icon.destroy();
+    this.lineupSprites = [];
+    this.lineupLockIcons = [];
+    this.lineupDice = [];
+    this.selectedDiceIds.clear();
+  }
+
+  private refreshDiceLineup(): void {
+    // Re-draw dice from current player pool
+    const oldSelected = new Set(this.selectedDiceIds);
+    this.clearDiceLineup();
+
+    const player = getPlayerState();
+    const nonSpent = player.dice.filter((d) => !player.spentDiceIds.has(d.id));
+    const shuffled = [...nonSpent].sort(() => Math.random() - 0.5);
+    this.lineupDice = shuffled.slice(0, Math.min(player.handSize, shuffled.length));
+
+    if (this.lineupDice.length === 0) return;
+
+    const totalWidth = (this.lineupDice.length - 1) * DICE_SPACING;
+    const startX = this.contentCX - totalWidth / 2;
+
+    for (let i = 0; i < this.lineupDice.length; i++) {
+      const die = this.lineupDice[i];
+      const arc = this.getArcOffset(i, this.lineupDice.length);
+      const x = startX + i * DICE_SPACING;
+      const y = this.lineupY + arc.y;
+
+      const sprite = new DiceSprite(this, x, y, die);
+      sprite.rotation = arc.rotation;
+      sprite.setDepth(10);
+      this.lineupSprites.push(sprite);
+
+      const lockIcon = this.add
+        .text(x, y + 46, '🔒', { fontSize: '14px' })
+        .setOrigin(0.5)
+        .setDepth(11)
+        .setVisible(false);
+      this.lineupLockIcons.push(lockIcon);
+
+      sprite.on('pointerdown', () => this.onLineupDieClick(i));
+
+      // Restore selection if die still exists
+      if (oldSelected.has(die.id)) {
+        this.selectedDiceIds.add(die.id);
+        sprite.setSelected(true);
+        lockIcon.setVisible(true);
+      }
+    }
+
+    this.setLineupInteractive(false);
+  }
+
+  private setLineupInteractive(enabled: boolean): void {
+    for (const sprite of this.lineupSprites) {
+      sprite.setDisabled(!enabled);
+    }
+  }
+
+  private onLineupDieClick(index: number): void {
+    if (!this.activeTabCard) return;
+    const die = this.lineupDice[index];
+    if (!die) return;
+
+    const sprite = this.lineupSprites[index];
+    const lockIcon = this.lineupLockIcons[index];
+    const requiredPicks = this.getRequiredDicePicks();
+
+    if (this.selectedDiceIds.has(die.id)) {
+      // Deselect
+      this.selectedDiceIds.delete(die.id);
+      sprite.setSelected(false);
+      if (lockIcon) lockIcon.setVisible(false);
+      this.sound.play('sfx_card_slide2', { volume: 0.25 });
+    } else if (this.selectedDiceIds.size < requiredPicks) {
+      // Select
+      this.selectedDiceIds.add(die.id);
+      sprite.setSelected(true);
+      if (lockIcon) lockIcon.setVisible(true);
+      this.sound.play('sfx_highlight1', { volume: 0.3 });
+    }
+
+    this.updateInstructionText();
+    this.updateActiveTabEnabled();
+  }
+
+  private getArcOffset(i: number, count: number): { y: number; rotation: number } {
+    if (count <= 1) return { y: 0, rotation: 0 };
+    const t = i / (count - 1) - 0.5;
+    const y = -UI.DICE_ARC_HEIGHT * (1 - 4 * t * t);
+    const rotation = t * UI.DICE_ARC_ROTATION * 2;
+    return { y, rotation };
+  }
+
+  // ─── Card Display ───
+
+  private createCardDisplay(
+    x: number,
+    y: number,
+    item: PackItem,
+  ): { container: Phaser.GameObjects.Container; diceSprite: DiceSprite | null; itemCard: ItemCard | null } {
     const container = this.add.container(x, y);
     const color = CATEGORY_COLORS[item.category] ?? 0x444444;
     let diceSprite: DiceSprite | null = null;
@@ -203,7 +375,6 @@ export class BoosterPackScene extends Scene {
 
     if (item.category === 'dice' && item.die) {
       // ─── Dice card layout ───
-      // Cream/white background for dice cards
       const diceBg = this.add.graphics();
       diceBg.fillStyle(0xf0ece3, 1);
       diceBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
@@ -211,250 +382,622 @@ export class BoosterPackScene extends Scene {
       diceBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
       container.add(diceBg);
 
-      // Enhancement name as title (or "Standard")
       const enhInfo = item.die.enhancement ? ENHANCEMENT_INFO.get(item.die.enhancement) : null;
       const enhName = enhInfo ? enhInfo.name : 'Standard';
-      const titleText = this.add.text(0, -CARD_H / 2 + 16, enhName, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '15px',
-        color: '#3a3020',
-        align: 'center',
-      }).setOrigin(0.5, 0);
+      const titleText = this.add
+        .text(0, -CARD_H / 2 + 16, enhName, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '15px',
+          color: '#3a3020',
+          align: 'center',
+        })
+        .setOrigin(0.5, 0);
       container.add(titleText);
 
-      // Dice sprite — centered in card
       diceSprite = new DiceSprite(this, 0, -8, item.die, { showAuraLabel: true });
       container.add(diceSprite);
 
-      // Sticker label if present
       if (item.die.sticker) {
         const sInfo = STICKER_INFO.get(item.die.sticker);
         const stickerLabel = sInfo ? sInfo.name : item.die.sticker.replace(/_/g, ' ');
-        const descText = this.add.text(0, CARD_H / 2 - 12, stickerLabel, {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '11px',
-          color: '#5a4a2a',
-          align: 'center',
-        }).setOrigin(0.5, 1);
+        const descText = this.add
+          .text(0, CARD_H / 2 - 12, stickerLabel, {
+            fontFamily: FONTS.PRIMARY,
+            fontSize: '11px',
+            color: '#5a4a2a',
+            align: 'center',
+          })
+          .setOrigin(0.5, 1);
         container.add(descText);
       }
     } else if (item.category === 'equipment' && item.equipmentDef) {
-      // ─── Equipment card layout — use ItemCard ───
       itemCard = new ItemCard(this, 0, 0, item.equipmentDef, { mode: 'inventory' });
       container.add(itemCard);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
-      // ─── Trail guide card — use ItemCard ───
       const tgData = { ...item, id: item.trailGuideId };
-      itemCard = new ItemCard(this, 0, 0, tgData, { mode: 'inventory', texturePrefix: '' });
+      itemCard = new ItemCard(this, 0, 0, tgData, {
+        mode: 'inventory',
+        texturePrefix: getConsumableTexturePrefix('trail_guide'),
+      });
       container.add(itemCard);
     } else if (item.category === 'supply' && item.supplyCardId) {
-      // ─── Supply card — use ItemCard ───
       const scData = { ...item, id: item.supplyCardId };
-      itemCard = new ItemCard(this, 0, 0, scData, { mode: 'inventory', texturePrefix: 'supply_' });
+      itemCard = new ItemCard(this, 0, 0, scData, {
+        mode: 'inventory',
+        texturePrefix: getConsumableTexturePrefix('supply'),
+      });
       container.add(itemCard);
     } else if (item.category === 'frontier' && item.frontierEncounterId) {
-      // ─── Frontier encounter card — use ItemCard ───
       const feData = { ...item, id: item.frontierEncounterId };
-      itemCard = new ItemCard(this, 0, 0, feData, { mode: 'inventory', texturePrefix: 'fe_' });
+      itemCard = new ItemCard(this, 0, 0, feData, {
+        mode: 'inventory',
+        texturePrefix: getConsumableTexturePrefix('frontier'),
+      });
       container.add(itemCard);
     } else {
-      // ─── Other non-dice, non-equipment cards ───
       const catLabel = item.category.replace('_', ' ').toUpperCase();
-      const catText = this.add.text(0, -CARD_H / 2 + 14, catLabel, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '10px',
-        color: TEXT_COLORS.MUTED,
-      }).setOrigin(0.5, 0);
+      const catText = this.add
+        .text(0, -CARD_H / 2 + 14, catLabel, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '10px',
+          color: TEXT_COLORS.MUTED,
+        })
+        .setOrigin(0.5, 0);
       container.add(catText);
 
-      const nameText = this.add.text(0, -20, item.name, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
-        color: TEXT_COLORS.PRIMARY,
-        align: 'center',
-        wordWrap: { width: CARD_W - 16 },
-      }).setOrigin(0.5, 0.5);
+      const nameText = this.add
+        .text(0, -20, item.name, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '14px',
+          color: TEXT_COLORS.PRIMARY,
+          align: 'center',
+          wordWrap: { width: CARD_W - 16 },
+        })
+        .setOrigin(0.5, 0.5);
       container.add(nameText);
 
-      const descText = this.add.text(0, 20, item.description, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '11px',
-        color: TEXT_COLORS.SECONDARY,
-        align: 'center',
-        wordWrap: { width: CARD_W - 16 },
-      }).setOrigin(0.5, 0);
+      const descText = this.add
+        .text(0, 20, item.description, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '11px',
+          color: TEXT_COLORS.SECONDARY,
+          align: 'center',
+          wordWrap: { width: CARD_W - 16 },
+        })
+        .setOrigin(0.5, 0);
       container.add(descText);
     }
 
     container.setSize(CARD_W, CARD_H);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, CARD_W, CARD_H),
-      Phaser.Geom.Rectangle.Contains
-    );
+    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, CARD_W, CARD_H), Phaser.Geom.Rectangle.Contains);
     container.setDepth(10);
 
     return { container, diceSprite, itemCard };
   }
 
-  private onCardClick(sprite: CardSprite): void {
-    if (sprite.selected) {
-      // Deselect
-      sprite.selected = false;
-      this.picksRemaining++;
-      this.drawSelectionBorder(sprite, false);
-    } else {
-      if (this.picksRemaining <= 0) return;
+  // ─── Card Action Tabs (slide-out USE button) ───
 
-      // Block selection if card needs an equipment slot and none are free
+  private setupCardClick(sprite: CardSprite): void {
+    const { container, itemCard, diceSprite: diceSpriteChild } = sprite;
+
+    const clickHandler = () => {
+      if (sprite.used || this.picksRemaining <= 0) return;
+
+      // Toggle: if this card already has tabs, dismiss
+      if (this.activeTabCard === sprite) {
+        this.dismissActiveTab();
+        return;
+      }
+
+      // Dismiss any other card's tabs first
+      this.dismissActiveTab();
+
+      // Block equipment cards if no free slot
       if (this.cardNeedsEquipSlot(sprite.item)) {
         const player = getPlayerState();
-        const selectedEquipCount = this.cardSprites
-          .filter(s => s.selected && this.cardNeedsEquipSlot(s.item)).length;
-        if (player.equipmentSlotsFree <= selectedEquipCount) return;
+        if (player.equipmentSlotsFree <= 0) return;
       }
 
-      // Block selection if card needs a consumable slot and none are free
-      if (this.cardNeedsConsumableSlot(sprite.item)) {
-        const player = getPlayerState();
-        const selectedConsumableCount = this.cardSprites
-          .filter(s => s.selected && this.cardNeedsConsumableSlot(s.item)).length;
-        if (player.consumableSlotsFree <= selectedConsumableCount) return;
+      // Lift card
+      this.tweens.add({
+        targets: container,
+        scaleX: 1.1,
+        scaleY: 1.1,
+        duration: 150,
+        ease: 'Back.easeOut',
+      });
+      container.setDepth(200);
+
+      // Build action tabs
+      const tabs = this.buildActionTabs(sprite);
+
+      // Show tabs — use ItemCard if available, otherwise build custom tabs on container
+      if (itemCard) {
+        itemCard.showActionTabs(tabs);
+      } else {
+        this.showContainerActionTabs(container, tabs);
       }
 
-      sprite.selected = true;
-      this.picksRemaining--;
-      this.drawSelectionBorder(sprite, true);
+      this.activeTabCard = sprite;
+
+      // Enable dice lineup interaction if card needs dice selection
+      if (this.cardNeedsDiceSelection(sprite.item)) {
+        this.setLineupInteractive(true);
+        this.selectedDiceIds.clear();
+        this.clearLineupSelections();
+        this.updateInstructionText();
+      }
+
+      // Install click-away dismiss
+      this.time.delayedCall(50, () => {
+        if (this.dismissHandler) {
+          this.input.off('pointerdown', this.dismissHandler);
+        }
+        this.dismissHandler = (pointer: Phaser.Input.Pointer) => {
+          const hitObjects = this.input.hitTestPointer(pointer);
+          // Don't dismiss if clicking the active card, its children, or lineup dice
+          if (this.activeTabCard) {
+            const activeContainer = this.activeTabCard.container;
+            if (hitObjects.includes(activeContainer)) return;
+            for (const go of hitObjects) {
+              if (go.parentContainer && go.parentContainer === activeContainer) return;
+              // Check if clicking an ItemCard's action tab
+              if (this.activeTabCard.itemCard && go.parentContainer === this.activeTabCard.itemCard) return;
+            }
+          }
+          // Don't dismiss if clicking lineup dice
+          for (const ds of this.lineupSprites) {
+            if (hitObjects.includes(ds)) return;
+            for (const go of hitObjects) {
+              if (go.parentContainer && go.parentContainer === ds) return;
+            }
+          }
+          this.dismissActiveTab();
+        };
+        this.input.on('pointerdown', this.dismissHandler);
+      });
+    };
+
+    container.on('pointerup', clickHandler);
+    if (diceSpriteChild) {
+      diceSpriteChild.on('pointerup', clickHandler);
+    }
+    if (itemCard) {
+      itemCard.on('pointerup', clickHandler);
     }
 
-    this.updatePicksText();
-    const selectedCount = this.cardSprites.filter(s => s.selected).length;
-    this.confirmBtn.setEnabled(selectedCount > 0);
-    this.confirmBtn.setText(selectedCount > 0 ? `Take ${selectedCount}` : 'Take Selected');
+    container.on('pointerover', () => {
+      if (!sprite.used && this.activeTabCard !== sprite) {
+        this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 80 });
+      }
+    });
+    container.on('pointerout', () => {
+      if (!sprite.used && this.activeTabCard !== sprite) {
+        this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 80 });
+      }
+    });
   }
 
-  /** Check if a pack item would consume an equipment slot */
-  private cardNeedsEquipSlot(item: PackItem): boolean {
-    if (item.category === 'equipment' && item.equipmentDef) return true;
-    if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
-    return false;
+  private buildActionTabs(sprite: CardSprite): CardActionTabConfig[] {
+    const item = sprite.item;
+
+    // BUMP_VALUE gets two tabs (+1 / -1)
+    if (item.diceSelection && item.diceSelection.effectType === 'BUMP_VALUE') {
+      return [
+        {
+          label: '+1\nUP',
+          color: 0x338833,
+          callback: () => {
+            item.diceSelection!.effectParams.bumpDirection = 'up';
+            this.onUseCard(sprite);
+          },
+        },
+        {
+          label: '-1\nDOWN',
+          color: 0x883333,
+          callback: () => {
+            item.diceSelection!.effectParams.bumpDirection = 'down';
+            this.onUseCard(sprite);
+          },
+        },
+      ];
+    }
+
+    return [
+      {
+        label: 'USE',
+        color: 0x338833,
+        callback: () => this.onUseCard(sprite),
+      },
+    ];
   }
 
-  /** Check if a pack item would consume a consumable slot */
-  private cardNeedsConsumableSlot(item: PackItem): boolean {
-    return item.category === 'supply' || item.category === 'trail_guide' || item.category === 'frontier';
+  /** Show action tabs on a plain container (for dice cards that don't use ItemCard) */
+  private showContainerActionTabs(container: Phaser.GameObjects.Container, tabs: CardActionTabConfig[]): void {
+    const tabW = 50;
+    const tabH = 45;
+    const tabGap = 4;
+    const tabRadius = 6;
+    const hw = CARD_W / 2;
+    const hh = CARD_H / 2;
+
+    for (let i = 0; i < tabs.length; i++) {
+      const cfg = tabs[i];
+      const tabContainer = this.add.container(hw, 0);
+      tabContainer.setDepth(-1);
+
+      const tabY = hh - tabH - (tabH + tabGap) * i - 20;
+
+      const bg = this.add.graphics();
+      bg.fillStyle(cfg.color, 0.95);
+      bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+      bg.lineStyle(1, 0xffffff, 0.2);
+      bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+      tabContainer.add(bg);
+
+      const label = this.add
+        .text(tabW / 2, tabY + tabH / 2, cfg.label, {
+          fontFamily: 'sans-serif',
+          fontSize: '16px',
+          color: '#ffffff',
+          align: 'center',
+          lineSpacing: -2,
+        })
+        .setOrigin(0.5);
+      tabContainer.add(label);
+
+      tabContainer.setSize(tabW, tabH);
+      tabContainer.setInteractive(
+        new Phaser.Geom.Rectangle(tabW / 2, tabY + tabH / 2, tabW, tabH),
+        Phaser.Geom.Rectangle.Contains,
+      );
+
+      tabContainer.on('pointerover', () => {
+        bg.clear();
+        bg.fillStyle(Phaser.Display.Color.ValueToColor(cfg.color).lighten(20).color, 0.95);
+        bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+        bg.lineStyle(1, 0xffffff, 0.4);
+        bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+      });
+
+      tabContainer.on('pointerout', () => {
+        bg.clear();
+        bg.fillStyle(cfg.color, 0.95);
+        bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+        bg.lineStyle(1, 0xffffff, 0.2);
+        bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
+      });
+
+      tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        pointer.event?.stopPropagation();
+        cfg.callback();
+      });
+
+      // Slide-out animation
+      const finalX = hw;
+      tabContainer.x = hw - tabW;
+      container.add(tabContainer);
+      container.sendToBack(tabContainer);
+
+      this.tweens.add({
+        targets: tabContainer,
+        x: finalX,
+        duration: 200,
+        ease: 'Back.easeOut',
+        delay: i * 50,
+      });
+
+      // Tag for cleanup
+      tabContainer.setName('actionTab');
+    }
+
+    this.sound.play('sfx_whoosh', { volume: 0.3 });
   }
 
-  private drawSelectionBorder(sprite: CardSprite, selected: boolean): void {
-    const container = sprite.container;
-    // Remove old selection border if exists
-    const existingBorder = container.getByName('selectionBorder') as Phaser.GameObjects.Graphics;
-    if (existingBorder) existingBorder.destroy();
+  /** Remove action tabs from a plain container */
+  private hideContainerActionTabs(container: Phaser.GameObjects.Container, animate: boolean): void {
+    const tabs = container.getAll().filter((c) => c.name === 'actionTab') as Phaser.GameObjects.Container[];
+    if (tabs.length === 0) return;
 
-    if (selected) {
-      // Use ItemCard size if present, otherwise fallback to CARD_W/CARD_H
-      const cw = sprite.itemCard ? sprite.itemCard.width : CARD_W;
-      const ch = sprite.itemCard ? sprite.itemCard.height : CARD_H;
-      const cr = sprite.itemCard ? 12 : CARD_RADIUS;
-
-      const border = this.add.graphics();
-      border.lineStyle(3, 0x44ff44, 1);
-      border.strokeRoundedRect(-cw / 2 - 4, -ch / 2 - 4, cw + 8, ch + 8, cr + 2);
-      border.setName('selectionBorder');
-      container.add(border);
-
-      this.tweens.add({ targets: container, y: container.y - 10, duration: 100 });
+    if (animate && this.scene) {
+      this.sound.play('sfx_whoosh2', { volume: 0.3 });
+      const tabW = 50;
+      const hw = CARD_W / 2;
+      for (const tab of tabs) {
+        this.tweens.add({
+          targets: tab,
+          x: hw - tabW,
+          duration: 150,
+          ease: 'Power2',
+          onComplete: () => tab.destroy(),
+        });
+      }
     } else {
-      this.tweens.add({ targets: container, y: this.cardY, duration: 100 });
+      for (const tab of tabs) tab.destroy();
     }
   }
 
-  private updatePicksText(): void {
-    const total = this.packDef.pickCount;
-    const picked = total - this.picksRemaining;
-    this.picksText.setText(`Choose ${total - picked} more (${picked}/${total} selected)`);
+  private dismissActiveTab(): void {
+    if (this.activeTabCard) {
+      const sprite = this.activeTabCard;
+      const { container, itemCard } = sprite;
+
+      // Hide tabs
+      if (itemCard) {
+        itemCard.hideActionTabs(true);
+      } else {
+        this.hideContainerActionTabs(container, true);
+      }
+
+      // Settle card back
+      if (!sprite.used) {
+        this.tweens.add({
+          targets: container,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 150,
+          ease: 'Power2',
+        });
+        container.setDepth(10);
+      }
+
+      // Clear dice selection state
+      this.setLineupInteractive(false);
+      this.selectedDiceIds.clear();
+      this.clearLineupSelections();
+      this.instructionText.setText('');
+
+      this.activeTabCard = null;
+    }
+
+    if (this.dismissHandler) {
+      this.input.off('pointerdown', this.dismissHandler);
+      this.dismissHandler = null;
+    }
   }
 
-  private onConfirm(): void {
-    const selected = this.cardSprites.filter(s => s.selected);
+  private clearLineupSelections(): void {
+    for (let i = 0; i < this.lineupSprites.length; i++) {
+      this.lineupSprites[i].setSelected(false);
+      this.lineupLockIcons[i]?.setVisible(false);
+    }
+  }
+
+  // ─── Card Use Logic ───
+
+  private cardNeedsDiceSelection(item: PackItem): boolean {
+    // drawCount === 0 means "use scene lineup" for ENHANCE/DESTROY/CLONE/etc.
+    // drawCount > 0 means draw random dice (old pattern — but we now use lineup for all)
+    return !!item.diceSelection;
+  }
+
+  private getRequiredDicePicks(): number {
+    if (!this.activeTabCard?.item.diceSelection) return 0;
+    return this.activeTabCard.item.diceSelection.pickCount;
+  }
+
+  private updateActiveTabEnabled(): void {
+    // For dice-selection cards, the USE tab should only be enabled when enough dice are selected
+    if (!this.activeTabCard) return;
+    if (!this.cardNeedsDiceSelection(this.activeTabCard.item)) return;
+
+    const required = this.getRequiredDicePicks();
+    const selected = this.selectedDiceIds.size;
+    const enabled = selected === required;
+
+    // Update tab visuals — just adjust alpha on action tabs
+    const { container, itemCard } = this.activeTabCard;
+    if (itemCard) {
+      // ItemCard manages its own tabs — we need to find them
+      // The tabs are children of the ItemCard container; adjust their alpha
+      const tabContainers = (itemCard as any).actionTabs as { container: Phaser.GameObjects.Container }[] | undefined;
+      if (tabContainers) {
+        for (const tab of tabContainers) {
+          tab.container.setAlpha(enabled ? 1 : 0.4);
+          if (enabled) {
+            tab.container.setInteractive();
+          } else {
+            tab.container.disableInteractive();
+          }
+        }
+      }
+    } else {
+      const tabs = container.getAll().filter((c) => c.name === 'actionTab') as Phaser.GameObjects.Container[];
+      for (const tab of tabs) {
+        tab.setAlpha(enabled ? 1 : 0.4);
+        if (enabled) {
+          tab.setInteractive();
+        } else {
+          tab.disableInteractive();
+        }
+      }
+    }
+  }
+
+  private updateInstructionText(): void {
+    if (!this.activeTabCard || !this.cardNeedsDiceSelection(this.activeTabCard.item)) {
+      this.instructionText.setText('');
+      return;
+    }
+    const required = this.getRequiredDicePicks();
+    const selected = this.selectedDiceIds.size;
+    const remaining = required - selected;
+    if (remaining > 0) {
+      this.instructionText.setText(`Select ${remaining} more dice from the lineup`);
+    } else {
+      this.instructionText.setText('Ready! Click USE to apply');
+    }
+  }
+
+  private onUseCard(sprite: CardSprite): void {
+    if (sprite.used) return;
+
+    const item = sprite.item;
     const player = getPlayerState();
 
-    // Collect dice selection configs to run after processing
-    const diceSelections: { config: import('../../game/DiceSelectionSystem').DiceSelectionConfig }[] = [];
+    // If card needs dice selection, validate
+    if (this.cardNeedsDiceSelection(item)) {
+      const required = this.getRequiredDicePicks();
+      if (this.selectedDiceIds.size !== required) return;
 
-    for (const sprite of selected) {
-      const item = sprite.item;
+      // Get actual selected dice from player's pool
+      const selectedDice = this.lineupDice.filter((d) => this.selectedDiceIds.has(d.id));
 
-      if (item.category === 'equipment' && item.equipmentDef) {
-        // Add equipment directly (free — already paid for the pack)
-        if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
-          player.equipment.push({
-            def: item.equipmentDef,
-            sellValue: Math.max(1, Math.floor(item.equipmentDef.cost / 2)),
-            state: item.equipmentDef.initialState ? { ...item.equipmentDef.initialState } : {},
-          });
-        }
-      } else if (item.category === 'dice' && item.die) {
-        player.addDie(item.die);
-      } else if (item.category === 'supply' && item.supplyCardId) {
-        // Add supply card to consumable slots
-        const cardData = supplyCardsData.find(c => c.id === item.supplyCardId);
-        if (cardData) {
-          const def = createSupplyConsumableDef(cardData);
-          player.addConsumable(def);
-        }
-      } else if (item.category === 'trail_guide' && item.trailGuideId) {
-        // Add trail guide to consumable slots
-        const tg = trailGuidesData.find(t => t.id === item.trailGuideId);
-        if (tg) {
-          const def = createTrailGuideConsumableDef(tg);
-          player.addConsumable(def);
-        }
-      } else if (item.category === 'frontier' && item.frontierEncounterId) {
-        // Add frontier encounter to consumable slots
-        const fe = frontierEncountersData.find(f => f.id === item.frontierEncounterId);
-        if (fe) {
-          const def = createFrontierConsumableDef(fe);
-          player.addConsumable(def);
-        }
-      } else if (item.instantEffect) {
-        this.applyInstantEffect(item.instantEffect, player);
-      } else if (item.diceSelection) {
-        diceSelections.push({ config: item.diceSelection });
+      // Apply the dice selection effect
+      const config = item.diceSelection!;
+      const result = applyDiceSelectionEffect(config, selectedDice);
+      this.showFloatingText(result);
+    } else if (item.category === 'equipment' && item.equipmentDef) {
+      if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
+        player.equipment.push({
+          def: item.equipmentDef,
+          sellValue: Math.max(1, Math.floor(item.equipmentDef.cost / 2)),
+          state: item.equipmentDef.initialState ? { ...item.equipmentDef.initialState } : {},
+        });
       }
+    } else if (item.category === 'dice' && item.die) {
+      player.addDie(item.die);
+    } else if (item.category === 'trail_guide' && item.trailGuideId) {
+      // Use immediately — upgrade hand level
+      const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
+      if (tg) {
+        const def = createTrailGuideConsumableDef(tg);
+        const consumed = createConsumableInstance(def);
+        player.lastUsedConsumable = def;
+        const result = executeConsumableEffect(consumed, player);
+        if (!result.success && result.failReason) {
+          this.showFloatingText(result.failReason);
+        }
+      }
+    } else if (item.category === 'supply' && item.supplyCardId) {
+      // Use immediately via executeConsumableEffect (handles doctor, compass, etc.)
+      const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
+      if (cardData) {
+        const def = createSupplyConsumableDef(cardData);
+        const consumed = createConsumableInstance(def);
+        player.lastUsedConsumable = def;
+        const result = executeConsumableEffect(consumed, player);
+        if (!result.success && result.failReason) {
+          this.showFloatingText(result.failReason);
+        }
+      }
+    } else if (item.category === 'frontier' && item.frontierEncounterId) {
+      const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
+      if (fe) {
+        const def = createFrontierConsumableDef(fe);
+        const consumed = createConsumableInstance(def);
+        player.lastUsedConsumable = def;
+        const result = executeConsumableEffect(consumed, player);
+        if (!result.success && result.failReason) {
+          this.showFloatingText(result.failReason);
+        }
+      }
+    } else if (item.instantEffect) {
+      this.applyInstantEffect(item.instantEffect, player);
     }
 
-    // Refresh shared UI to reflect changes
+    // Mark card as used
+    sprite.used = true;
+    this.dismissActiveTab();
+
+    // Gray out the card
+    this.markCardUsed(sprite);
+
+    // Decrement picks
+    this.picksRemaining--;
+    this.updatePicksText();
+
+    // Refresh all UI
+    this.refreshDiceLineup();
     this.equipBar.refresh();
     this.consumableBar.refresh();
     this.updateEquipHints();
     this.dicePouch.refresh();
     this.sidebar.refreshMoney();
 
-    // If any cards require dice selection, chain to DiceSelectionScene
-    if (diceSelections.length > 0) {
-      // For simplicity, run the first one; if multiple, they chain back here
-      // Store remaining selections in registry for chaining
-      this.registry.set('pendingDiceSelections', diceSelections.slice(1));
-      this.scene.start('DiceSelection', {
-        config: diceSelections[0].config,
-        returnScene: diceSelections.length > 1 ? 'DiceSelectionChain' : 'Shop',
+    // Auto-return to shop when picks exhausted
+    if (this.picksRemaining <= 0) {
+      this.time.delayedCall(800, () => {
+        this.scene.start('Shop');
       });
-      return;
+    }
+  }
+
+  private markCardUsed(sprite: CardSprite): void {
+    const { container, itemCard } = sprite;
+
+    if (itemCard) {
+      itemCard.markSold();
+    } else {
+      // Manual gray overlay for dice/generic cards
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x000000, 0.6);
+      overlay.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
+      container.add(overlay);
+
+      const usedLabel = this.add
+        .text(0, 0, 'USED', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '18px',
+          color: '#aaaaaa',
+        })
+        .setOrigin(0.5);
+      container.add(usedLabel);
     }
 
-    this.scene.start('Shop');
+    // Settle card scale
+    this.tweens.add({
+      targets: container,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 150,
+    });
+    container.setDepth(5);
+    container.disableInteractive();
+  }
+
+  private showFloatingText(message: string): void {
+    const text = this.add
+      .text(this.contentCX, this.lineupY, message, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: '#66ff66',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(1000);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 30,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  // ─── Helpers ───
+
+  private cardNeedsEquipSlot(item: PackItem): boolean {
+    if (item.category === 'equipment' && item.equipmentDef) return true;
+    if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
+    return false;
+  }
+
+  private updatePicksText(): void {
+    if (this.picksRemaining <= 0) {
+      this.picksText.setText('All picks used!');
+    } else {
+      const total = this.packDef.pickCount;
+      const used = total - this.picksRemaining;
+      this.picksText.setText(`Use ${this.picksRemaining} more (${used}/${total} used)`);
+    }
   }
 
   private applyInstantEffect(effect: InstantEffect, player: ReturnType<typeof getPlayerState>): void {
     switch (effect.type) {
-      case 'CREATE_DICE': {
-        const count = effect.count ?? 1;
-        const enhancement = (effect.enhancement ?? null) as DiceEnhancement;
-        for (let i = 0; i < count; i++) {
-          player.addDie(createDie({ enhancement }));
-        }
-        break;
-      }
       case 'DOUBLE_MONEY': {
         const gain = Math.min(player.economy.balance, effect.maxGain ?? 20);
         player.economy.earn(gain);
@@ -498,6 +1041,8 @@ export class BoosterPackScene extends Scene {
 
   private onResize(): void {
     this.cardSprites = [];
+    this.activeTabCard = null;
+    this.dismissHandler = null;
     this.children.removeAll(true);
     this.buildLayout();
   }
@@ -514,19 +1059,17 @@ export class BoosterPackScene extends Scene {
     this.equipBar.refresh();
     this.consumableBar.refresh();
     this.dicePouch.refresh();
+    this.refreshDiceLineup();
 
     if (!result.success && result.failReason) {
-      const text = this.add.text(this.contentCX, this.consumableBar.y, result.failReason, {
-        fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', stroke: '#000000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(1000);
+      this.showFloatingText(result.failReason);
       this.sound.play('sfx_cancel', { volume: 0.5 });
-      this.tweens.add({ targets: text, y: text.y - 15, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => text.destroy() });
     }
 
     if (result.diceSelection) {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
-        returnScene: 'Shop',
+        returnScene: 'BoosterPack',
       });
     }
   }

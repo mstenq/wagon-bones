@@ -91,19 +91,16 @@ export function createEquipmentInstance(def: EquipmentDef): EquipmentInstance {
   };
 }
 
-export function generateRandomEquipment(options?: {
-  rarity?: string;
-  excludeRarity?: string;
-}): EquipmentDef {
+export function generateRandomEquipment(options?: { rarity?: string; excludeRarity?: string }): EquipmentDef {
   let pool = [...ITEMS_POOL];
 
   if (options?.rarity) {
-    const filtered = pool.filter(i => i.rarity === options.rarity);
+    const filtered = pool.filter((i) => i.rarity === options.rarity);
     if (filtered.length > 0) pool = filtered;
   }
 
   if (options?.excludeRarity) {
-    const filtered = pool.filter(i => i.rarity !== options.excludeRarity);
+    const filtered = pool.filter((i) => i.rarity !== options.excludeRarity);
     if (filtered.length > 0) pool = filtered;
   }
 

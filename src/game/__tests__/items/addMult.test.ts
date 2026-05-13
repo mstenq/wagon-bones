@@ -88,9 +88,9 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
       });
       game.startRound();
       // Play through a day: SELECT → ROLL → SCORE → DAY_END
-      const diceIds = game.state.hand.slice(0, 5).map(d => d.id);
+      const diceIds = game.state.hand.slice(0, 5).map((d) => d.id);
       game.selectForRoll(diceIds);
-      const scoredIds = game.state.rolledDice.slice(0, 2).map(d => d.id);
+      const scoredIds = game.state.rolledDice.slice(0, 2).map((d) => d.id);
       game.selectForScore(scoredIds);
       game.calculateScore();
       game.endDay();
@@ -219,7 +219,7 @@ describe('DECAYING_MULT: Fading Memory', () => {
 describe('SELL_VALUE_AS_MULT: Desperado', () => {
   test('adds sell value of other equipment as mult', () => {
     const horseshoe = item('horseshoe'); // cost 2, sell = 1
-    const dynamite = item('dynamite');   // cost 5, sell = 2
+    const dynamite = item('dynamite'); // cost 5, sell = 2
     const desp = item('desperado');
 
     const { result } = calculateTestScore({

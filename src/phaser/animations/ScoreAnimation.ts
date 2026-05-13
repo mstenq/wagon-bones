@@ -34,14 +34,19 @@ function floatingText(
   const offsetY = direction === 'up' ? -40 : 48;
   const driftY = direction === 'up' ? -18 : 18;
 
-  const txt = scene.add.text(x, y + offsetY, text, {
-    fontFamily: 'Arial Black',
-    fontSize: '18px',
-    color,
-    stroke: '#000000',
-    strokeThickness: 3,
-    align: 'center',
-  }).setOrigin(0.5).setDepth(200).setScale(0.3).setAlpha(1);
+  const txt = scene.add
+    .text(x, y + offsetY, text, {
+      fontFamily: 'Arial Black',
+      fontSize: '18px',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+    })
+    .setOrigin(0.5)
+    .setDepth(200)
+    .setScale(0.3)
+    .setAlpha(1);
 
   // Pop in with scale + slight shake
   scene.tweens.add({
@@ -87,7 +92,12 @@ function floatingText(
 }
 
 /** Format a floating popup for a scoring contribution */
-function popupForDie(scene: Scene, sprite: DiceSprite, type: 'miles' | 'mult' | 'xmult' | 'money', value: number): void {
+function popupForDie(
+  scene: Scene,
+  sprite: DiceSprite,
+  type: 'miles' | 'mult' | 'xmult' | 'money',
+  value: number,
+): void {
   if (type === 'miles') {
     floatingText(scene, sprite.x, sprite.y, `+${value} mi`, POPUP_MILES_COLOR, 'up');
   } else if (type === 'mult') {
@@ -99,7 +109,13 @@ function popupForDie(scene: Scene, sprite: DiceSprite, type: 'miles' | 'mult' | 
   }
 }
 
-function popupForEquip(scene: Scene, equipBar: EquipmentBar, index: number, type: 'miles' | 'mult' | 'xmult' | 'money', value: number): void {
+function popupForEquip(
+  scene: Scene,
+  equipBar: EquipmentBar,
+  index: number,
+  type: 'miles' | 'mult' | 'xmult' | 'money',
+  value: number,
+): void {
   const cards = equipBar.getCards();
   if (index >= cards.length) return;
   const card = cards[index];
@@ -130,7 +146,11 @@ export interface ScoreAnimationConfig {
 }
 
 /** Determine which equipment indices trigger for a specific die, with their contribution type */
-function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _handType: string): { index: number; type: 'mult' | 'miles' | 'xmult' | 'money'; value: number }[] {
+function getTriggeredEquipForDie(
+  die: Die,
+  equipment: EquipmentInstance[],
+  _handType: string,
+): { index: number; type: 'mult' | 'miles' | 'xmult' | 'money'; value: number }[] {
   const triggered: { index: number; type: 'mult' | 'miles' | 'xmult' | 'money'; value: number }[] = [];
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
@@ -167,7 +187,18 @@ function getTriggeredEquipForDie(die: Die, equipment: EquipmentInstance[], _hand
 }
 
 /** Determine which equipment triggers independently (not per-die), with contribution details */
-function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: string, context: { rerollsRemaining: number; scoringDice: Die[]; equipmentCount: number; playerBalance: number; currentDay: number; maxDays: number }): { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] {
+function getIndependentTriggeredEquip(
+  equipment: EquipmentInstance[],
+  handType: string,
+  context: {
+    rerollsRemaining: number;
+    scoringDice: Die[];
+    equipmentCount: number;
+    playerBalance: number;
+    currentDay: number;
+    maxDays: number;
+  },
+): { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] {
   const triggered: { index: number; type: 'mult' | 'miles' | 'xmult'; value: number }[] = [];
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
@@ -233,7 +264,7 @@ function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: 
 
       // ─── Phase 2 xMult effects ───
       case 'UNCOMMON_EQUIP_XMULT': {
-        const uncommonCount = equipment.filter(e => e.def.rarity === 'uncommon').length;
+        const uncommonCount = equipment.filter((e) => e.def.rarity === 'uncommon').length;
         if (uncommonCount > 0) {
           triggered.push({ index: i, type: 'xmult', value: Math.pow(1.5, uncommonCount) });
         }
@@ -275,12 +306,22 @@ function getIndependentTriggeredEquip(equipment: EquipmentInstance[], handType: 
 
 function handTypeMatches(played: string, required: string): boolean {
   if (played === required) return true;
-  if (played === 'FULL_HOUSE' && (required === 'PAIR' || required === 'THREE_OF_A_KIND' || required === 'TWO_PAIR')) return true;
+  if (played === 'FULL_HOUSE' && (required === 'PAIR' || required === 'THREE_OF_A_KIND' || required === 'TWO_PAIR'))
+    return true;
   if (played === 'TWO_PAIR' && required === 'PAIR') return true;
-  if (played === 'FOUR_OF_A_KIND' && (required === 'THREE_OF_A_KIND' || required === 'PAIR' || required === 'TWO_PAIR')) return true;
-  if (played === 'FIVE_OF_A_KIND' && (required === 'FOUR_OF_A_KIND' || required === 'THREE_OF_A_KIND' || required === 'PAIR' || required === 'TWO_PAIR' || required === 'FULL_HOUSE')) return true;
-  if (played === 'FIVE_STRAIGHT' && (required === 'FOUR_STRAIGHT' || required === 'THREE_STRAIGHT')) return true;
-  if (played === 'FOUR_STRAIGHT' && required === 'THREE_STRAIGHT') return true;
+  if (played === 'FOUR_OF_A_KIND' && (required === 'THREE_OF_A_KIND' || required === 'PAIR' || required === 'TWO_PAIR'))
+    return true;
+  if (
+    played === 'FIVE_OF_A_KIND' &&
+    (required === 'FOUR_OF_A_KIND' ||
+      required === 'THREE_OF_A_KIND' ||
+      required === 'PAIR' ||
+      required === 'TWO_PAIR' ||
+      required === 'FULL_HOUSE')
+  )
+    return true;
+  if (played === 'FIVE_STRAIGHT' && (required === 'FOUR_STRAIGHT')) return true;
+  if (played === 'FOUR_STRAIGHT') return true;
   return false;
 }
 
@@ -297,16 +338,20 @@ function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, index: number): v
     yoyo: true,
     repeat: 2,
     ease: 'Sine.easeInOut',
-    onComplete: () => { card.x = origX; },
+    onComplete: () => {
+      card.x = origX;
+    },
   });
 }
 
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
   const { scene, diceSprites, result, sidebar, equipBar, equipment, lockedDiceIds, contentCX, onComplete } = config;
-  const scoringIds = new Set(result.handResult.scoringDice.map(d => d.id));
-  const scoringSprites = diceSprites.filter(s => scoringIds.has(s.dieData.id));
-  const playedNonScoringSprites = diceSprites.filter(s => lockedDiceIds.has(s.dieData.id) && !scoringIds.has(s.dieData.id));
-  const heldSprites = diceSprites.filter(s => !lockedDiceIds.has(s.dieData.id));
+  const scoringIds = new Set(result.handResult.scoringDice.map((d) => d.id));
+  const scoringSprites = diceSprites.filter((s) => scoringIds.has(s.dieData.id));
+  const playedNonScoringSprites = diceSprites.filter(
+    (s) => lockedDiceIds.has(s.dieData.id) && !scoringIds.has(s.dieData.id),
+  );
+  const heldSprites = diceSprites.filter((s) => !lockedDiceIds.has(s.dieData.id));
 
   // ─── Step 0: Separate played vs held dice ───
   // Held (unlocked) dice slide down; played dice stay in place.
@@ -319,7 +364,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   if (heldSprites.length > 0) {
     const totalW = (heldSprites.length - 1) * SPACING;
     const startX = contentCX - totalW / 2;
-    const rollY = scene.scale.height * 0.50;
+    const rollY = scene.scale.height * 0.5;
 
     for (let i = 0; i < heldSprites.length; i++) {
       const s = heldSprites[i];
@@ -357,354 +402,362 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   scene.time.delayedCall(SEPARATION_DURATION + 150, beginScoring);
 
   function beginScoring(): void {
+    const handBaseMiles = result.handResult.baseMiles;
+    const handBaseMult = result.handResult.baseMult;
 
-  const handBaseMiles = result.handResult.baseMiles;
-  const handBaseMult = result.handResult.baseMult;
+    // Initialize sidebar miles/mult with the hand base values
+    let currentMiles = handBaseMiles;
+    let currentMult = handBaseMult;
 
-  // Initialize sidebar miles/mult with the hand base values
-  let currentMiles = handBaseMiles;
-  let currentMult = handBaseMult;
+    sidebar.setMilesAnimated(currentMiles);
+    sidebar.setMultAnimated(currentMult);
 
-  sidebar.setMilesAnimated(currentMiles);
-  sidebar.setMultAnimated(currentMult);
+    // Sound for hand detection
+    scene.sound.play('sfx_chips1', { volume: 0.5 });
 
-  // Sound for hand detection
-  scene.sound.play('sfx_chips1', { volume: 0.5 });
+    let index = 0;
 
-  let index = 0;
+    function scoreNextDie() {
+      if (index >= scoringSprites.length) {
+        // All dice scored — Step 4: held-in-hand, then Step 5: independent equipment
+        startHeldInHandPhase();
+        return;
+      }
 
-  function scoreNextDie() {
-    if (index >= scoringSprites.length) {
-      // All dice scored — Step 4: held-in-hand, then Step 5: independent equipment
-      startHeldInHandPhase();
-      return;
-    }
+      const sprite = scoringSprites[index];
+      const die = sprite.dieData;
 
-    const sprite = scoringSprites[index];
-    const die = sprite.dieData;
+      // Save original position
+      const origX = sprite.x;
+      const origY = sprite.y;
 
-    // Save original position
-    const origX = sprite.x;
-    const origY = sprite.y;
+      // Shake animation
+      const shakeDuration = 60;
+      const shakeCount = 3;
+      const shakeIntensity = 3;
 
-    // Shake animation
-    const shakeDuration = 60;
-    const shakeCount = 3;
-    const shakeIntensity = 3;
-
-    let shakeStep = 0;
-    scene.time.addEvent({
-      delay: shakeDuration,
-      repeat: shakeCount * 2 - 1,
-      callback: () => {
-        shakeStep++;
-        if (shakeStep % 2 === 1) {
-          sprite.x = origX + (Math.random() > 0.5 ? shakeIntensity : -shakeIntensity);
-          sprite.y = origY + (Math.random() > 0.5 ? 1 : -1);
-        } else {
-          sprite.x = origX;
-          sprite.y = origY;
-        }
-      },
-    });
-
-    // After shake, process all scoring sub-events for this die sequentially
-    scene.time.delayedCall(shakeDuration * shakeCount * 2, () => {
-      // Ensure position reset
-      sprite.x = origX;
-      sprite.y = origY;
-
-      // Scale pop
-      scene.tweens.add({
-        targets: sprite,
-        scaleX: 1.15,
-        scaleY: 1.15,
-        duration: 100,
-        yoyo: true,
-        ease: 'Back.easeOut',
-      });
-
-      // Build a queue of sub-steps for this die
-      type DieSubStep = { action: () => void };
-      const subSteps: DieSubStep[] = [];
-
-      // Sub-step 1: Die value → miles
-      const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
-      subSteps.push({
-        action: () => {
-          currentMiles += dieMiles;
-          sidebar.setMilesAnimated(currentMiles);
-          scene.sound.play('sfx_chips2', { volume: 0.3, detune: index * 80 });
-          popupForDie(scene, sprite, 'miles', dieMiles);
+      let shakeStep = 0;
+      scene.time.addEvent({
+        delay: shakeDuration,
+        repeat: shakeCount * 2 - 1,
+        callback: () => {
+          shakeStep++;
+          if (shakeStep % 2 === 1) {
+            sprite.x = origX + (Math.random() > 0.5 ? shakeIntensity : -shakeIntensity);
+            sprite.y = origY + (Math.random() > 0.5 ? 1 : -1);
+          } else {
+            sprite.x = origX;
+            sprite.y = origY;
+          }
         },
       });
 
-      // Sub-step 2: Enhancement bonus (if any)
-      if (die.enhancement === 'bone') {
-        subSteps.push({
-          action: () => {
-            currentMult += 4;
-            sidebar.setMultAnimated(currentMult);
-            scene.sound.play('sfx_multhit1', { volume: 0.3 });
-            popupForDie(scene, sprite, 'mult', 4);
-          },
-        });
-      } else if (die.enhancement === 'wooden') {
-        subSteps.push({
-          action: () => {
-            currentMiles += 10;
-            sidebar.setMilesAnimated(currentMiles);
-            scene.sound.play('sfx_chips2', { volume: 0.3, detune: 200 });
-            popupForDie(scene, sprite, 'miles', 10);
-          },
-        });
-      } else if (die.enhancement === 'diamond') {
-        subSteps.push({
-          action: () => {
-            currentMult = currentMult * 2;
-            sidebar.setMultAnimated(currentMult);
-            scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
-            popupForDie(scene, sprite, 'xmult', 2);
-          },
-        });
-      }
+      // After shake, process all scoring sub-events for this die sequentially
+      scene.time.delayedCall(shakeDuration * shakeCount * 2, () => {
+        // Ensure position reset
+        sprite.x = origX;
+        sprite.y = origY;
 
-      // Sub-step: Dice aura bonus (if any)
-      if (die.aura === 'fire') {
-        subSteps.push({
-          action: () => {
-            currentMult += 10;
-            sidebar.setMultAnimated(currentMult);
-            scene.sound.play('sfx_multhit1', { volume: 0.35 });
-            popupForDie(scene, sprite, 'mult', 10);
-          },
+        // Scale pop
+        scene.tweens.add({
+          targets: sprite,
+          scaleX: 1.15,
+          scaleY: 1.15,
+          duration: 100,
+          yoyo: true,
+          ease: 'Back.easeOut',
         });
-      } else if (die.aura === 'icy') {
-        subSteps.push({
-          action: () => {
-            currentMiles += 50;
-            sidebar.setMilesAnimated(currentMiles);
-            scene.sound.play('sfx_chips2', { volume: 0.35, detune: 100 });
-            popupForDie(scene, sprite, 'miles', 50);
-          },
-        });
-      } else if (die.aura === 'holy') {
-        subSteps.push({
-          action: () => {
-            currentMult = currentMult * 1.5;
-            sidebar.setMultAnimated(currentMult);
-            scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
-            popupForDie(scene, sprite, 'xmult', 1.5);
-          },
-        });
-      }
 
-      // Sub-steps 3+: Per-die equipment triggers
-      const triggered = getTriggeredEquipForDie(die, equipment, result.handResult.type);
-      for (const entry of triggered) {
+        // Build a queue of sub-steps for this die
+        type DieSubStep = { action: () => void };
+        const subSteps: DieSubStep[] = [];
+
+        // Sub-step 1: Die value → miles
+        const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
         subSteps.push({
           action: () => {
-            wiggleEquipCard(scene, equipBar, entry.index);
-            popupForDie(scene, sprite, entry.type, entry.value);
-            if (entry.type === 'mult') {
-              currentMult += entry.value;
+            currentMiles += dieMiles;
+            sidebar.setMilesAnimated(currentMiles);
+            scene.sound.play('sfx_chips2', { volume: 0.3, detune: index * 80 });
+            popupForDie(scene, sprite, 'miles', dieMiles);
+          },
+        });
+
+        // Sub-step 2: Enhancement bonus (if any)
+        if (die.enhancement === 'bone') {
+          subSteps.push({
+            action: () => {
+              currentMult += 4;
               sidebar.setMultAnimated(currentMult);
               scene.sound.play('sfx_multhit1', { volume: 0.3 });
-            } else if (entry.type === 'xmult') {
-              currentMult = currentMult * entry.value;
-              sidebar.setMultAnimated(currentMult);
-              scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
-            } else if (entry.type === 'money') {
-              scene.sound.play('sfx_coin', { volume: 0.4 });
-            } else {
-              currentMiles += entry.value;
+              popupForDie(scene, sprite, 'mult', 4);
+            },
+          });
+        } else if (die.enhancement === 'wooden') {
+          subSteps.push({
+            action: () => {
+              currentMiles += 10;
               sidebar.setMilesAnimated(currentMiles);
               scene.sound.play('sfx_chips2', { volume: 0.3, detune: 200 });
-            }
-          },
-        });
-      }
-
-      // Process sub-steps sequentially with delay between each
-      let subIdx = 0;
-      function processNextSubStep() {
-        if (subIdx >= subSteps.length) {
-          index++;
-          scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, scoreNextDie);
-          return;
+              popupForDie(scene, sprite, 'miles', 10);
+            },
+          });
+        } else if (die.enhancement === 'diamond') {
+          subSteps.push({
+            action: () => {
+              currentMult = currentMult * 2;
+              sidebar.setMultAnimated(currentMult);
+              scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
+              popupForDie(scene, sprite, 'xmult', 2);
+            },
+          });
         }
-        subSteps[subIdx].action();
-        subIdx++;
-        if (subIdx < subSteps.length) {
-          scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, processNextSubStep);
-        } else {
-          // Last sub-step done — move to next die
-          index++;
-          scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, scoreNextDie);
+
+        // Sub-step: Dice aura bonus (if any)
+        if (die.aura === 'fire') {
+          subSteps.push({
+            action: () => {
+              currentMult += 10;
+              sidebar.setMultAnimated(currentMult);
+              scene.sound.play('sfx_multhit1', { volume: 0.35 });
+              popupForDie(scene, sprite, 'mult', 10);
+            },
+          });
+        } else if (die.aura === 'icy') {
+          subSteps.push({
+            action: () => {
+              currentMiles += 50;
+              sidebar.setMilesAnimated(currentMiles);
+              scene.sound.play('sfx_chips2', { volume: 0.35, detune: 100 });
+              popupForDie(scene, sprite, 'miles', 50);
+            },
+          });
+        } else if (die.aura === 'holy') {
+          subSteps.push({
+            action: () => {
+              currentMult = currentMult * 1.5;
+              sidebar.setMultAnimated(currentMult);
+              scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
+              popupForDie(scene, sprite, 'xmult', 1.5);
+            },
+          });
         }
-      }
-      // Delay before first sub-step so scale pop plays first
-      scene.time.delayedCall(120, processNextSubStep);
-    });
-  }
 
-  // ─── Held-in-Hand Animation Phase (Step 4) ───
+        // Sub-step: golden_dollar sticker — earn $3
+        if (die.sticker === 'golden_dollar') {
+          subSteps.push({
+            action: () => {
+              scene.sound.play('sfx_coin', { volume: 0.5 });
+              popupForDie(scene, sprite, 'money', 3);
+            },
+          });
+        }
 
-  function startHeldInHandPhase() {
-    const heldSteps: HeldAnimStep[] = result.heldSteps ?? [];
-    if (heldSteps.length === 0) {
-      startIndependentEquipPhase();
-      return;
+        // Sub-steps 3+: Per-die equipment triggers
+        const triggered = getTriggeredEquipForDie(die, equipment, result.handResult.type);
+        for (const entry of triggered) {
+          subSteps.push({
+            action: () => {
+              wiggleEquipCard(scene, equipBar, entry.index);
+              popupForDie(scene, sprite, entry.type, entry.value);
+              if (entry.type === 'mult') {
+                currentMult += entry.value;
+                sidebar.setMultAnimated(currentMult);
+                scene.sound.play('sfx_multhit1', { volume: 0.3 });
+              } else if (entry.type === 'xmult') {
+                currentMult = currentMult * entry.value;
+                sidebar.setMultAnimated(currentMult);
+                scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
+              } else if (entry.type === 'money') {
+                scene.sound.play('sfx_coin', { volume: 0.4 });
+              } else {
+                currentMiles += entry.value;
+                sidebar.setMilesAnimated(currentMiles);
+                scene.sound.play('sfx_chips2', { volume: 0.3, detune: 200 });
+              }
+            },
+          });
+        }
+
+        // Process sub-steps sequentially with delay between each
+        let subIdx = 0;
+        function processNextSubStep() {
+          if (subIdx >= subSteps.length) {
+            index++;
+            scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, scoreNextDie);
+            return;
+          }
+          subSteps[subIdx].action();
+          subIdx++;
+          if (subIdx < subSteps.length) {
+            scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, processNextSubStep);
+          } else {
+            // Last sub-step done — move to next die
+            index++;
+            scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, scoreNextDie);
+          }
+        }
+        // Delay before first sub-step so scale pop plays first
+        scene.time.delayedCall(120, processNextSubStep);
+      });
     }
 
-    // Get held dice sprites (rolled but not scored)
-    const heldSprites = diceSprites.filter(s => !scoringIds.has(s.dieData.id));
-    const heldSpriteMap = new Map<string, DiceSprite>();
-    for (const s of heldSprites) heldSpriteMap.set(s.dieData.id, s);
+    // ─── Held-in-Hand Animation Phase (Step 4) ───
 
-    let stepIdx = 0;
-
-    function animateNextHeldStep() {
-      if (stepIdx >= heldSteps.length) {
+    function startHeldInHandPhase() {
+      const heldSteps: HeldAnimStep[] = result.heldSteps ?? [];
+      if (heldSteps.length === 0) {
         startIndependentEquipPhase();
         return;
       }
 
-      const step = heldSteps[stepIdx];
-      const sprite = heldSpriteMap.get(step.dieId);
+      // Get held dice sprites (rolled but not scored)
+      const heldSprites = diceSprites.filter((s) => !scoringIds.has(s.dieData.id));
+      const heldSpriteMap = new Map<string, DiceSprite>();
+      for (const s of heldSprites) heldSpriteMap.set(s.dieData.id, s);
 
-      // Shake the held die sprite
-      if (sprite) {
-        const origX = sprite.x;
-        const origY = sprite.y;
-        const shakeDuration = 60;
-        const shakeCount = 3;
-        const shakeIntensity = 3;
+      let stepIdx = 0;
 
-        let shakeStep = 0;
-        scene.time.addEvent({
-          delay: shakeDuration,
-          repeat: shakeCount * 2 - 1,
-          callback: () => {
-            shakeStep++;
-            if (shakeStep % 2 === 1) {
-              sprite.x = origX + (Math.random() > 0.5 ? shakeIntensity : -shakeIntensity);
-              sprite.y = origY + (Math.random() > 0.5 ? 1 : -1);
-            } else {
-              sprite.x = origX;
-              sprite.y = origY;
-            }
-          },
-        });
+      function animateNextHeldStep() {
+        if (stepIdx >= heldSteps.length) {
+          startIndependentEquipPhase();
+          return;
+        }
 
-        // Scale pop after shake
-        scene.time.delayedCall(shakeDuration * shakeCount * 2, () => {
-          sprite.x = origX;
-          sprite.y = origY;
-          scene.tweens.add({
-            targets: sprite,
-            scaleX: 1.15,
-            scaleY: 1.15,
-            duration: 100,
-            yoyo: true,
-            ease: 'Back.easeOut',
+        const step = heldSteps[stepIdx];
+        const sprite = heldSpriteMap.get(step.dieId);
+
+        // Shake the held die sprite
+        if (sprite) {
+          const origX = sprite.x;
+          const origY = sprite.y;
+          const shakeDuration = 60;
+          const shakeCount = 3;
+          const shakeIntensity = 3;
+
+          let shakeStep = 0;
+          scene.time.addEvent({
+            delay: shakeDuration,
+            repeat: shakeCount * 2 - 1,
+            callback: () => {
+              shakeStep++;
+              if (shakeStep % 2 === 1) {
+                sprite.x = origX + (Math.random() > 0.5 ? shakeIntensity : -shakeIntensity);
+                sprite.y = origY + (Math.random() > 0.5 ? 1 : -1);
+              } else {
+                sprite.x = origX;
+                sprite.y = origY;
+              }
+            },
           });
-        });
+
+          // Scale pop after shake
+          scene.time.delayedCall(shakeDuration * shakeCount * 2, () => {
+            sprite.x = origX;
+            sprite.y = origY;
+            scene.tweens.add({
+              targets: sprite,
+              scaleX: 1.15,
+              scaleY: 1.15,
+              duration: 100,
+              yoyo: true,
+              ease: 'Back.easeOut',
+            });
+          });
+        }
+
+        // Wiggle triggering equipment card
+        if (step.equipIndex !== undefined) {
+          wiggleEquipCard(scene, equipBar, step.equipIndex);
+          popupForEquip(scene, equipBar, step.equipIndex, step.type, step.value);
+        }
+
+        // Popup above the held die
+        if (sprite) {
+          popupForDie(scene, sprite, step.type, step.value);
+        }
+
+        // Update sidebar values and play sound
+        if (step.type === 'mult') {
+          currentMult += step.value;
+          sidebar.setMultAnimated(currentMult);
+          scene.sound.play('sfx_multhit1', { volume: 0.3, detune: stepIdx * 50 });
+        } else if (step.type === 'xmult') {
+          currentMult = currentMult * step.value;
+          sidebar.setMultAnimated(currentMult);
+          scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
+        } else if (step.type === 'money') {
+          scene.sound.play('sfx_chips1', { volume: 0.25, detune: 300 });
+        }
+
+        stepIdx++;
+        scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, animateNextHeldStep);
       }
 
-      // Wiggle triggering equipment card
-      if (step.equipIndex !== undefined) {
-        wiggleEquipCard(scene, equipBar, step.equipIndex);
-        popupForEquip(scene, equipBar, step.equipIndex, step.type, step.value);
-      }
-
-      // Popup above the held die
-      if (sprite) {
-        popupForDie(scene, sprite, step.type, step.value);
-      }
-
-      // Update sidebar values and play sound
-      if (step.type === 'mult') {
-        currentMult += step.value;
-        sidebar.setMultAnimated(currentMult);
-        scene.sound.play('sfx_multhit1', { volume: 0.3, detune: stepIdx * 50 });
-      } else if (step.type === 'xmult') {
-        currentMult = currentMult * step.value;
-        sidebar.setMultAnimated(currentMult);
-        scene.sound.play('sfx_multhit2', { volume: 0.4, detune: -100 });
-      } else if (step.type === 'money') {
-        scene.sound.play('sfx_chips1', { volume: 0.25, detune: 300 });
-      }
-
-      stepIdx++;
+      // Small pause before starting held phase
       scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, animateNextHeldStep);
     }
 
-    // Small pause before starting held phase
-    scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, animateNextHeldStep);
-  }
+    // ─── Independent Equipment Animation Phase (Step 5) ───
 
-  // ─── Independent Equipment Animation Phase (Step 5) ───
+    function startIndependentEquipPhase() {
+      const independentEquip = getIndependentTriggeredEquip(equipment, result.handResult.type, {
+        rerollsRemaining: result.rerollsRemaining ?? 0,
+        scoringDice: result.handResult.scoringDice,
+        equipmentCount: equipment.length,
+        playerBalance: result.playerBalance ?? 0,
+        currentDay: result.currentDay ?? 1,
+        maxDays: result.maxDays ?? 4,
+      });
 
-  function startIndependentEquipPhase() {
-    const independentEquip = getIndependentTriggeredEquip(equipment, result.handResult.type, {
-      rerollsRemaining: result.rerollsRemaining ?? 0,
-      scoringDice: result.handResult.scoringDice,
-      equipmentCount: equipment.length,
-      playerBalance: result.playerBalance ?? 0,
-      currentDay: result.currentDay ?? 1,
-      maxDays: result.maxDays ?? 4,
-    });
+      if (independentEquip.length > 0) {
+        let equipIdx = 0;
+        function triggerNextEquip() {
+          if (equipIdx >= independentEquip.length) {
+            finishScoring();
+            return;
+          }
+          const entry = independentEquip[equipIdx];
+          wiggleEquipCard(scene, equipBar, entry.index);
+          popupForEquip(scene, equipBar, entry.index, entry.type, entry.value);
 
-    if (independentEquip.length > 0) {
-      let equipIdx = 0;
-      function triggerNextEquip() {
-        if (equipIdx >= independentEquip.length) {
-          finishScoring();
-          return;
+          if (entry.type === 'mult') {
+            currentMult += entry.value;
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit1', { volume: 0.35, detune: equipIdx * 60 });
+          } else if (entry.type === 'miles') {
+            currentMiles += entry.value;
+            sidebar.setMilesAnimated(currentMiles);
+            scene.sound.play('sfx_chips2', { volume: 0.35, detune: equipIdx * 60 });
+          } else if (entry.type === 'xmult') {
+            currentMult = currentMult * entry.value;
+            sidebar.setMultAnimated(currentMult);
+            scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
+          }
+
+          equipIdx++;
+          scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextEquip);
         }
-        const entry = independentEquip[equipIdx];
-        wiggleEquipCard(scene, equipBar, entry.index);
-        popupForEquip(scene, equipBar, entry.index, entry.type, entry.value);
-
-        if (entry.type === 'mult') {
-          currentMult += entry.value;
-          sidebar.setMultAnimated(currentMult);
-          scene.sound.play('sfx_multhit1', { volume: 0.35, detune: equipIdx * 60 });
-        } else if (entry.type === 'miles') {
-          currentMiles += entry.value;
-          sidebar.setMilesAnimated(currentMiles);
-          scene.sound.play('sfx_chips2', { volume: 0.35, detune: equipIdx * 60 });
-        } else if (entry.type === 'xmult') {
-          currentMult = currentMult * entry.value;
-          sidebar.setMultAnimated(currentMult);
-          scene.sound.play('sfx_multhit2', { volume: 0.45, detune: -200 });
-        }
-
-        equipIdx++;
         scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextEquip);
+      } else {
+        finishScoring();
       }
-      scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, triggerNextEquip);
-    } else {
-      finishScoring();
     }
-  }
 
-  function finishScoring() {
-    scene.time.delayedCall(ANIM.SCORE_FINAL_FLASH_DELAY, () => {
-      // Reset miles/mult to 0
-      sidebar.updateData({ milesBase: 0, mult: 0 });
+    function finishScoring() {
+      scene.time.delayedCall(ANIM.SCORE_FINAL_FLASH_DELAY, () => {
+        // Reset miles/mult to 0
+        sidebar.updateData({ milesBase: 0, mult: 0 });
 
-      // Bump round score
-      sidebar.setRoundScoreAnimated((result.roundScoreBefore ?? 0) + result.miles);
-      scene.sound.play('sfx_timpani', { volume: 0.5 });
+        // Bump round score
+        sidebar.setRoundScoreAnimated((result.roundScoreBefore ?? 0) + result.miles);
+        scene.sound.play('sfx_timpani', { volume: 0.5 });
 
-      scene.time.delayedCall(ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);
-    });
-  }
+        scene.time.delayedCall(ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);
+      });
+    }
 
-  // Start the scoring sequence after a short delay
-  scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, scoreNextDie);
-
+    // Start the scoring sequence after a short delay
+    scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, scoreNextDie);
   } // end beginScoring
 }

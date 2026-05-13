@@ -38,7 +38,13 @@ export function itemWithAura(id: string, auraId: 'fire' | 'icy' | 'holy' | 'ghos
     fire: { id: 'fire', name: 'Blazing', description: '+10 mult', costIncrease: 3, chance: 0 },
     icy: { id: 'icy', name: 'Frozen', description: '+50 miles', costIncrease: 3, chance: 0 },
     holy: { id: 'holy', name: 'Holy', description: 'x1.5 mult', costIncrease: 5, chance: 0 },
-    ghost: { id: 'ghost', name: 'Ghost', description: "Doesn't take up space in your inventory", costIncrease: 5, chance: 0 },
+    ghost: {
+      id: 'ghost',
+      name: 'Ghost',
+      description: "Doesn't take up space in your inventory",
+      costIncrease: 5,
+      chance: 0,
+    },
   } as const;
   return {
     ...inst,
@@ -79,7 +85,7 @@ export function diceWithValue(value: number, count: number): Die[] {
 
 /** Create dice from an array of values */
 export function diceFromValues(values: number[]): Die[] {
-  return values.map(v => die({ value: v }));
+  return values.map((v) => die({ value: v }));
 }
 
 /** Reset the test die ID counter (call in beforeEach if you want deterministic IDs) */
@@ -175,7 +181,7 @@ export interface ScoreTestOptions {
  */
 export function calculateTestScore(options: ScoreTestOptions) {
   const allDice = [...options.scoredDice, ...(options.heldDice ?? [])];
-  const scoredIds = options.scoredDice.map(d => d.id);
+  const scoredIds = options.scoredDice.map((d) => d.id);
 
   const { game, player } = setupGame({
     equipment: options.equipment ?? [],

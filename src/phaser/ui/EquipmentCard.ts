@@ -31,32 +31,38 @@ export class EquipmentCard extends GameObjects.Container {
     this.add(this.bg);
 
     // Name
-    const nameText = scene.add.text(0, -CARD_H / 2 + 16, def.name, {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      color: '#ffffff',
-      align: 'center',
-      wordWrap: { width: CARD_W - 16 },
-    }).setOrigin(0.5, 0);
+    const nameText = scene.add
+      .text(0, -CARD_H / 2 + 16, def.name, {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: CARD_W - 16 },
+      })
+      .setOrigin(0.5, 0);
     this.add(nameText);
 
     // Description
-    const descText = scene.add.text(0, -10, def.description, {
-      fontFamily: 'Arial',
-      fontSize: '12px',
-      color: '#cccccc',
-      align: 'center',
-      wordWrap: { width: CARD_W - 16 },
-    }).setOrigin(0.5, 0.5);
+    const descText = scene.add
+      .text(0, -10, def.description, {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        color: '#cccccc',
+        align: 'center',
+        wordWrap: { width: CARD_W - 16 },
+      })
+      .setOrigin(0.5, 0.5);
     this.add(descText);
 
     // Cost
-    this.costText = scene.add.text(0, CARD_H / 2 - 24, `$${def.cost}`, {
-      fontFamily: 'Arial Black',
-      fontSize: '18px',
-      color: '#ffd700',
-      align: 'center',
-    }).setOrigin(0.5);
+    this.costText = scene.add
+      .text(0, CARD_H / 2 - 24, `$${def.cost}`, {
+        fontFamily: 'Arial Black',
+        fontSize: '18px',
+        color: '#ffd700',
+        align: 'center',
+      })
+      .setOrigin(0.5);
     this.add(this.costText);
 
     // Sold overlay (hidden initially)
@@ -67,10 +73,7 @@ export class EquipmentCard extends GameObjects.Container {
     this.drawCard();
 
     this.setSize(CARD_W, CARD_H);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, CARD_W, CARD_H),
-      Phaser.Geom.Rectangle.Contains
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(0, 0, CARD_W, CARD_H), Phaser.Geom.Rectangle.Contains);
 
     scene.add.existing(this);
   }

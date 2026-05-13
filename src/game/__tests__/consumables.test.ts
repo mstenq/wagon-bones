@@ -19,17 +19,17 @@ beforeEach(() => {
 
 describe('ConsumableDef creation', () => {
   test('createSupplyConsumableDef creates a valid def from JSON', () => {
-    const card = supplyCardsData.find(c => c.id === 'coffee_tin')!;
+    const card = supplyCardsData.find((c) => c.id === 'coffee_tin')!;
     const def = createSupplyConsumableDef(card);
     expect(def.id).toBe('coffee_tin');
     expect(def.name).toBe('Coffee Tin');
     expect(def.category).toBe('supply');
-    expect(def.instantEffect).toBeDefined();
-    expect(def.instantEffect!.type).toBe('CREATE_DICE');
+    expect(def.diceSelection).toBeDefined();
+    expect(def.diceSelection!.effectType).toBe('ENHANCE');
   });
 
   test('createSupplyConsumableDef with diceSelection', () => {
-    const card = supplyCardsData.find(c => c.id === 'shallow_grave')!;
+    const card = supplyCardsData.find((c) => c.id === 'shallow_grave')!;
     const def = createSupplyConsumableDef(card);
     expect(def.diceSelection).toBeDefined();
     expect(def.diceSelection!.drawCount).toBe(5);

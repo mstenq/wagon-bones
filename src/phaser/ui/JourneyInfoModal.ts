@@ -18,10 +18,7 @@ export class JourneyInfoModal extends GameObjects.Container {
     const dim = scene.add.graphics();
     dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
     dim.fillRect(0, 0, scene.scale.width, height);
-    dim.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
     this.add(dim);
 
     // Modal panel
@@ -38,11 +35,13 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.add(panel);
 
     // Title
-    const title = scene.add.text(panelX + panelW / 2, panelY + 24, 'Journey Info', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '24px',
-      color: TEXT_COLORS.GOLD,
-    }).setOrigin(0.5);
+    const title = scene.add
+      .text(panelX + panelW / 2, panelY + 24, 'Journey Info', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: TEXT_COLORS.GOLD,
+      })
+      .setOrigin(0.5);
     this.add(title);
 
     // ─── Trail Knowledge (Hand levels) ───
@@ -60,25 +59,37 @@ export class JourneyInfoModal extends GameObjects.Container {
     const colName = panelX + 24;
     const colLevel = panelX + panelW * 0.38;
     const colMiles = panelX + panelW * 0.52;
-    const colMult = panelX + panelW * 0.70;
+    const colMult = panelX + panelW * 0.7;
     const colPlayed = panelX + panelW - 50;
 
     // Header row
     const headerName = scene.add.text(colName, rowY, 'Hand', {
-      fontFamily: FONTS.PRIMARY, fontSize: '11px', color: TEXT_COLORS.MUTED,
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: TEXT_COLORS.MUTED,
     });
     const headerLevel = scene.add.text(colLevel, rowY, 'Level', {
-      fontFamily: FONTS.PRIMARY, fontSize: '11px', color: TEXT_COLORS.MUTED,
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: TEXT_COLORS.MUTED,
     });
     const headerMiles = scene.add.text(colMiles, rowY, 'Miles', {
-      fontFamily: FONTS.PRIMARY, fontSize: '11px', color: TEXT_COLORS.MUTED,
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: TEXT_COLORS.MUTED,
     });
     const headerMult = scene.add.text(colMult, rowY, 'Mult', {
-      fontFamily: FONTS.PRIMARY, fontSize: '11px', color: TEXT_COLORS.MUTED,
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: TEXT_COLORS.MUTED,
     });
-    const headerPlayed = scene.add.text(colPlayed, rowY, 'Played', {
-      fontFamily: FONTS.PRIMARY, fontSize: '11px', color: TEXT_COLORS.MUTED,
-    }).setOrigin(0.5, 0);
+    const headerPlayed = scene.add
+      .text(colPlayed, rowY, 'Played', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.MUTED,
+      })
+      .setOrigin(0.5, 0);
     this.add([headerName, headerLevel, headerMiles, headerMult, headerPlayed]);
     rowY += 20;
 
@@ -104,35 +115,45 @@ export class JourneyInfoModal extends GameObjects.Container {
         this.add(rowBg);
       }
 
-      const nameText = scene.add.text(colName, rowY + rowH / 2, hand.name, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '13px',
-        color: TEXT_COLORS.PRIMARY,
-      }).setOrigin(0, 0.5);
+      const nameText = scene.add
+        .text(colName, rowY + rowH / 2, hand.name, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '13px',
+          color: TEXT_COLORS.PRIMARY,
+        })
+        .setOrigin(0, 0.5);
 
-      const levelText = scene.add.text(colLevel, rowY + rowH / 2, `Lv.${stats.level}`, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '13px',
-        color: stats.level > 1 ? TEXT_COLORS.GOLD : TEXT_COLORS.SECONDARY,
-      }).setOrigin(0, 0.5);
+      const levelText = scene.add
+        .text(colLevel, rowY + rowH / 2, `Lv.${stats.level}`, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '13px',
+          color: stats.level > 1 ? TEXT_COLORS.GOLD : TEXT_COLORS.SECONDARY,
+        })
+        .setOrigin(0, 0.5);
 
-      const milesText = scene.add.text(colMiles, rowY + rowH / 2, `${hand.baseMiles + stats.milesPerLevel * (stats.level - 1)}`, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '14px',
-        color: '#6699ff',
-      }).setOrigin(0, 0.5);
+      const milesText = scene.add
+        .text(colMiles, rowY + rowH / 2, `${hand.baseMiles + stats.milesPerLevel * (stats.level - 1)}`, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '14px',
+          color: '#6699ff',
+        })
+        .setOrigin(0, 0.5);
 
-      const multText = scene.add.text(colMult, rowY + rowH / 2, `×${hand.baseMult + stats.multPerLevel * (stats.level - 1)}`, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '14px',
-        color: '#ff6666',
-      }).setOrigin(0, 0.5);
+      const multText = scene.add
+        .text(colMult, rowY + rowH / 2, `×${hand.baseMult + stats.multPerLevel * (stats.level - 1)}`, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '14px',
+          color: '#ff6666',
+        })
+        .setOrigin(0, 0.5);
 
-      const playedText = scene.add.text(colPlayed, rowY + rowH / 2, `${stats.timesPlayed}`, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '13px',
-        color: stats.timesPlayed > 0 ? TEXT_COLORS.PRIMARY : TEXT_COLORS.MUTED,
-      }).setOrigin(0.5, 0.5);
+      const playedText = scene.add
+        .text(colPlayed, rowY + rowH / 2, `${stats.timesPlayed}`, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '13px',
+          color: stats.timesPlayed > 0 ? TEXT_COLORS.PRIMARY : TEXT_COLORS.MUTED,
+        })
+        .setOrigin(0.5, 0.5);
 
       this.add([nameText, levelText, milesText, multText, playedText]);
       rowY += rowH;

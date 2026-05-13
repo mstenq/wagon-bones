@@ -107,12 +107,14 @@ export class Sidebar extends GameObjects.Container {
     titleBg.strokeRoundedRect(pad, y, w - pad * 2, 44, 6);
     this.add(titleBg);
 
-    this.titleText = scene.add.text(cx, y + 22, 'SHOP', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '22px',
-      color: TEXT_COLORS.GOLD,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.titleText = scene.add
+      .text(cx, y + 22, 'SHOP', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '22px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+      })
+      .setOrigin(0.5);
     this.add(this.titleText);
     y += 52;
 
@@ -145,7 +147,7 @@ export class Sidebar extends GameObjects.Container {
       // Right side content area
       const rightX = pad + 12 + profImgSize;
       const rightW = w - pad * 2 - (rightX - pad);
-      const rightEdge = (rightX + rightW )- pad;
+      const rightEdge = rightX + rightW - pad;
 
       // Title
       const profNameText = scene.add.text(rightX, y + 8, player.profession.title, {
@@ -174,11 +176,13 @@ export class Sidebar extends GameObjects.Container {
       moneyBoxBg.strokeRoundedRect(rightX, moneyBoxY, rightW - pad, moneyBoxH, 4);
       this.professionContainer.add(moneyBoxBg);
 
-      this.moneyText = scene.add.text(rightX + 8, moneyBoxY + moneyBoxH / 2, '$10', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '18px',
-        color: TEXT_COLORS.MONEY,
-      }).setOrigin(0, 0.5);
+      this.moneyText = scene.add
+        .text(rightX + 8, moneyBoxY + moneyBoxH / 2, '$10', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '18px',
+          color: TEXT_COLORS.MONEY,
+        })
+        .setOrigin(0, 0.5);
       this.professionContainer.add(this.moneyText);
 
       // Leg info (hugging bottom with inner padding)
@@ -200,18 +204,22 @@ export class Sidebar extends GameObjects.Container {
       this.professionContainer.add(this.legText);
 
       // Target info (hugging bottom-right)
-      const targetLabel = scene.add.text(rightEdge, bottomLabelY, 'Target', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '10px',
-        color: TEXT_COLORS.MUTED,
-      }).setOrigin(1, 0);
+      const targetLabel = scene.add
+        .text(rightEdge, bottomLabelY, 'Target', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '10px',
+          color: TEXT_COLORS.MUTED,
+        })
+        .setOrigin(1, 0);
       this.professionContainer.add(targetLabel);
 
-      this.targetText = scene.add.text(rightEdge, bottomValueY, '300 mi', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '14px',
-        color: TEXT_COLORS.SCORE_GREEN,
-      }).setOrigin(1, 0);
+      this.targetText = scene.add
+        .text(rightEdge, bottomValueY, '300 mi', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '14px',
+          color: TEXT_COLORS.SCORE_GREEN,
+        })
+        .setOrigin(1, 0);
       this.professionContainer.add(this.targetText);
 
       // Hover hitzone for tooltip
@@ -219,10 +227,7 @@ export class Sidebar extends GameObjects.Container {
       hitZone.fillStyle(0x000000, 0);
       hitZone.fillRect(pad, y, w - pad * 2, profH);
       this.professionContainer.add(hitZone);
-      hitZone.setInteractive(
-        new Phaser.Geom.Rectangle(pad, y, w - pad * 2, profH),
-        Phaser.Geom.Rectangle.Contains
-      );
+      hitZone.setInteractive(new Phaser.Geom.Rectangle(pad, y, w - pad * 2, profH), Phaser.Geom.Rectangle.Contains);
 
       hitZone.on('pointerover', () => {
         this.showProfTooltip(scene, w, profY + profH + 4, player.profession!);
@@ -242,11 +247,13 @@ export class Sidebar extends GameObjects.Container {
       moneyBg.strokeRoundedRect(pad, y, w - pad * 2, moneyH, 6);
       this.add(moneyBg);
 
-      this.moneyText = scene.add.text(cx, y + moneyH / 2, '$10', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '24px',
-        color: TEXT_COLORS.MONEY,
-      }).setOrigin(0.5);
+      this.moneyText = scene.add
+        .text(cx, y + moneyH / 2, '$10', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '24px',
+          color: TEXT_COLORS.MONEY,
+        })
+        .setOrigin(0.5);
       this.add(this.moneyText);
       y += moneyH + UI.SIDEBAR_SECTION_GAP;
 
@@ -265,11 +272,13 @@ export class Sidebar extends GameObjects.Container {
       });
       this.add(this.legText);
 
-      this.targetText = scene.add.text(w - pad - 8, y + 26, '300 mi', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '16px',
-        color: TEXT_COLORS.SCORE_GREEN,
-      }).setOrigin(1, 0);
+      this.targetText = scene.add
+        .text(w - pad - 8, y + 26, '300 mi', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '16px',
+          color: TEXT_COLORS.SCORE_GREEN,
+        })
+        .setOrigin(1, 0);
       this.add(this.targetText);
       y += legH + UI.SIDEBAR_SECTION_GAP;
     }
@@ -283,38 +292,48 @@ export class Sidebar extends GameObjects.Container {
     scoreBg.strokeRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
     this.add(scoreBg);
 
-    const scoreLabel = scene.add.text(pad + 8, y + scoreSectionH / 2, 'Round\nscore', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
-      lineSpacing: -2,
-    }).setOrigin(0, 0.5);
+    const scoreLabel = scene.add
+      .text(pad + 8, y + scoreSectionH / 2, 'Round\nscore', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '10px',
+        color: TEXT_COLORS.MUTED,
+        lineSpacing: -2,
+      })
+      .setOrigin(0, 0.5);
     this.add(scoreLabel);
 
-    this.roundScoreText = scene.add.text(w - pad - 8, y + scoreSectionH / 2, '0', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '20px',
-      color: TEXT_COLORS.PRIMARY,
-    }).setOrigin(1, 0.5);
+    this.roundScoreText = scene.add
+      .text(w - pad - 8, y + scoreSectionH / 2, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '20px',
+        color: TEXT_COLORS.PRIMARY,
+      })
+      .setOrigin(1, 0.5);
     this.add(this.roundScoreText);
     y += scoreSectionH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Hand Name / Level Display (above miles/mult) ───
     const handDisplayH = 32;
-    this.handNameText = scene.add.text(cx, y + handDisplayH / 2, '', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '16px',
-      color: TEXT_COLORS.GOLD,
-      align: 'center',
-    }).setOrigin(0.5).setVisible(false);
+    this.handNameText = scene.add
+      .text(cx, y + handDisplayH / 2, '', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
     this.add(this.handNameText);
 
-    this.handLevelText = scene.add.text(cx, y + handDisplayH / 2 + 1, '', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '11px',
-      color: TEXT_COLORS.MUTED,
-      align: 'center',
-    }).setOrigin(0.5, -0.5).setVisible(false);
+    this.handLevelText = scene.add
+      .text(cx, y + handDisplayH / 2 + 1, '', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.MUTED,
+        align: 'center',
+      })
+      .setOrigin(0.5, -0.5)
+      .setVisible(false);
     this.add(this.handLevelText);
     y += handDisplayH;
 
@@ -337,19 +356,23 @@ export class Sidebar extends GameObjects.Container {
     this.milesBaseBg.fillRoundedRect(pad + 6, pillY, pillW, pillH, 4);
     this.add(this.milesBaseBg);
 
-    this.milesBaseText = scene.add.text(pad + 6 + pillW / 2, pillY + pillH / 2, '0', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '18px',
-      color: TEXT_COLORS.PRIMARY,
-    }).setOrigin(0.5);
+    this.milesBaseText = scene.add
+      .text(pad + 6 + pillW / 2, pillY + pillH / 2, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '18px',
+        color: TEXT_COLORS.PRIMARY,
+      })
+      .setOrigin(0.5);
     this.add(this.milesBaseText);
 
     // "×" separator
-    const xText = scene.add.text(cx, pillY + pillH / 2, '×', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '16px',
-      color: TEXT_COLORS.SECONDARY,
-    }).setOrigin(0.5);
+    const xText = scene.add
+      .text(cx, pillY + pillH / 2, '×', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.SECONDARY,
+      })
+      .setOrigin(0.5);
     this.add(xText);
 
     // Mult (red pill)
@@ -358,11 +381,13 @@ export class Sidebar extends GameObjects.Container {
     this.multBg.fillRoundedRect(w - pad - 6 - pillW, pillY, pillW, pillH, 4);
     this.add(this.multBg);
 
-    this.multText = scene.add.text(w - pad - 6 - pillW / 2, pillY + pillH / 2, '0', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '18px',
-      color: TEXT_COLORS.PRIMARY,
-    }).setOrigin(0.5);
+    this.multText = scene.add
+      .text(w - pad - 6 - pillW / 2, pillY + pillH / 2, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '18px',
+        color: TEXT_COLORS.PRIMARY,
+      })
+      .setOrigin(0.5);
     this.add(this.multText);
     y += scoreDisplayH + UI.SIDEBAR_SECTION_GAP;
 
@@ -378,18 +403,22 @@ export class Sidebar extends GameObjects.Container {
     daysBg.strokeRoundedRect(pad, y, halfW, rowH, 6);
     this.add(daysBg);
 
-    const daysLabel = scene.add.text(pad + halfW / 2, y + 12, 'Travel Days', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
-    }).setOrigin(0.5);
+    const daysLabel = scene.add
+      .text(pad + halfW / 2, y + 12, 'Travel Days', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '10px',
+        color: TEXT_COLORS.MUTED,
+      })
+      .setOrigin(0.5);
     this.add(daysLabel);
 
-    this.daysText = scene.add.text(pad + halfW / 2, y + 34, '4', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '22px',
-      color: '#66aaff',
-    }).setOrigin(0.5);
+    this.daysText = scene.add
+      .text(pad + halfW / 2, y + 34, '4', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '22px',
+        color: '#66aaff',
+      })
+      .setOrigin(0.5);
     this.add(this.daysText);
 
     // Re-rolls
@@ -401,30 +430,38 @@ export class Sidebar extends GameObjects.Container {
     rerollBg.strokeRoundedRect(rerollX, y, halfW, rowH, 6);
     this.add(rerollBg);
 
-    const rerollLabel = scene.add.text(rerollX + halfW / 2, y + 12, 'Re-rolls', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
-    }).setOrigin(0.5);
+    const rerollLabel = scene.add
+      .text(rerollX + halfW / 2, y + 12, 'Re-rolls', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '10px',
+        color: TEXT_COLORS.MUTED,
+      })
+      .setOrigin(0.5);
     this.add(rerollLabel);
 
-    this.rerollsText = scene.add.text(rerollX + halfW / 2, y + 34, '3', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '22px',
-      color: '#ff6666',
-    }).setOrigin(0.5);
+    this.rerollsText = scene.add
+      .text(rerollX + halfW / 2, y + 34, '3', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '22px',
+        color: '#ff6666',
+      })
+      .setOrigin(0.5);
     this.add(this.rerollsText);
     y += rowH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Journey Info Button ───
     this.journeyInfoBtn = new Button(scene, cx, y + 20, 'Journey Info', w - pad * 2 - 8, 34);
-    this.journeyInfoBtn.onClick(() => { if (this.onJourneyInfo) this.onJourneyInfo(); });
+    this.journeyInfoBtn.onClick(() => {
+      if (this.onJourneyInfo) this.onJourneyInfo();
+    });
     this.add(this.journeyInfoBtn);
     y += 46;
 
     // ─── Options Button ───
     this.optionsBtn = new Button(scene, cx, y + 20, 'Options', w - pad * 2 - 8, 34);
-    this.optionsBtn.onClick(() => { if (this.onOptions) this.onOptions(); });
+    this.optionsBtn.onClick(() => {
+      if (this.onOptions) this.onOptions();
+    });
     this.add(this.optionsBtn);
     y += 46;
   }
@@ -461,9 +498,10 @@ export class Sidebar extends GameObjects.Container {
       this.rerollsText.setText(`${data.rerolls}`);
     }
     if (data.leg !== undefined && data.totalLegs !== undefined) {
-      const roundLabel = data.round !== undefined && data.totalRounds !== undefined
-        ? `Leg ${data.leg} - ${data.round}/${data.totalRounds}`
-        : `${data.leg} / ${data.totalLegs}`;
+      const roundLabel =
+        data.round !== undefined && data.totalRounds !== undefined
+          ? `Leg ${data.leg} - ${data.round}/${data.totalRounds}`
+          : `${data.leg} / ${data.totalLegs}`;
       this.legText.setText(roundLabel);
     }
     if (data.targetMiles !== undefined) {

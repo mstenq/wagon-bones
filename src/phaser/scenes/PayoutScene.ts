@@ -40,30 +40,36 @@ export class PayoutScene extends Scene {
 
     // Title
     const roundLabel = data.round === GAMEPLAY.ROUNDS_PER_LEG ? 'Boss Defeated!' : 'Round Complete!';
-    this.add.text(width / 2, height * 0.12, roundLabel, {
-      fontFamily: FONTS.HEADING,
-      fontSize: '42px',
-      color: TEXT_COLORS.WIN,
-      stroke: '#000000',
-      strokeThickness: 5,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * 0.12, roundLabel, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '42px',
+        color: TEXT_COLORS.WIN,
+        stroke: '#000000',
+        strokeThickness: 5,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     // Subtitle — leg/round info
-    this.add.text(width / 2, height * 0.19, `Leg ${data.leg} — Round ${data.round}/${GAMEPLAY.ROUNDS_PER_LEG}`, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '18px',
-      color: TEXT_COLORS.SECONDARY,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * 0.19, `Leg ${data.leg} — Round ${data.round}/${GAMEPLAY.ROUNDS_PER_LEG}`, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '18px',
+        color: TEXT_COLORS.SECONDARY,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     // Miles scored
-    this.add.text(width / 2, height * 0.25, `${data.totalMiles} / ${data.targetMiles} miles`, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '22px',
-      color: TEXT_COLORS.SCORE_GREEN,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * 0.25, `${data.totalMiles} / ${data.targetMiles} miles`, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '22px',
+        color: TEXT_COLORS.SCORE_GREEN,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     // Calculate payout
     const payout = player.calculatePayout(data.daysRemaining);
@@ -84,12 +90,14 @@ export class PayoutScene extends Scene {
     panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 12);
 
     // Panel title
-    this.add.text(width / 2, panelY + 22, `Collect Earnings: $${payout.total}`, {
-      fontFamily: FONTS.HEADING,
-      fontSize: '22px',
-      color: TEXT_COLORS.GOLD,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, panelY + 22, `Collect Earnings: $${payout.total}`, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '22px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     // Divider
     const divY = panelY + 42;
@@ -113,50 +121,55 @@ export class PayoutScene extends Scene {
       });
 
       // Amount
-      this.add.text(rightX, y, row.amount, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '18px',
-        color: TEXT_COLORS.MONEY,
-      }).setOrigin(1, 0);
+      this.add
+        .text(rightX, y, row.amount, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '18px',
+          color: TEXT_COLORS.MONEY,
+        })
+        .setOrigin(1, 0);
     }
 
     // Collect button
     const btnY = panelY + panelH + 30;
-    new Button(this, width / 2, btnY, 'Collect & Continue', 260, 50)
-      .onClick(() => {
-        // Apply payout
-        player.economy.earn(payout.total);
+    new Button(this, width / 2, btnY, 'Collect & Continue', 260, 50).onClick(() => {
+      // Apply payout
+      player.economy.earn(payout.total);
 
-        // Advance round
-        const journeyDone = player.advanceRound();
+      // Advance round
+      const journeyDone = player.advanceRound();
 
-        if (journeyDone) {
-          this.scene.start('GameOver', {
-            won: true,
-            victory: true,
-            totalMiles: data.totalMiles,
-            targetMiles: data.targetMiles,
-            leg: GAMEPLAY.LEGS,
-            round: GAMEPLAY.ROUNDS_PER_LEG,
-          });
-        } else {
-          this.scene.start('Shop');
-        }
-      });
+      if (journeyDone) {
+        this.scene.start('GameOver', {
+          won: true,
+          victory: true,
+          totalMiles: data.totalMiles,
+          targetMiles: data.targetMiles,
+          leg: GAMEPLAY.LEGS,
+          round: GAMEPLAY.ROUNDS_PER_LEG,
+        });
+      } else {
+        this.scene.start('Shop');
+      }
+    });
 
     EventBus.emit(Events.SCENE_READY, this);
   }
 
-  private buildPayoutRows(payout: PayoutBreakdown, data: PayoutData): { label: string; amount: string; highlight?: boolean }[] {
+  private buildPayoutRows(
+    payout: PayoutBreakdown,
+    data: PayoutData,
+  ): { label: string; amount: string; highlight?: boolean }[] {
     const rows: { label: string; amount: string; highlight?: boolean }[] = [];
     const player = getPlayerState();
 
     // Round reward
-    const roundName = data.round === GAMEPLAY.ROUNDS_PER_LEG
-      ? 'Defeat the Boss'
-      : data.round === 2
-        ? 'Complete Round 2'
-        : 'Complete Round 1';
+    const roundName =
+      data.round === GAMEPLAY.ROUNDS_PER_LEG
+        ? 'Defeat the Boss'
+        : data.round === 2
+          ? 'Complete Round 2'
+          : 'Complete Round 1';
     rows.push({ label: roundName, amount: `$${payout.roundReward}`, highlight: true });
 
     // Days remaining
@@ -170,7 +183,7 @@ export class PayoutScene extends Scene {
     // Interest
     if (payout.interest > 0) {
       rows.push({
-        label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${player.interestCap/5} max)`,
+        label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${player.interestCap / 5} max)`,
         amount: `$${payout.interest}`,
       });
     } else {

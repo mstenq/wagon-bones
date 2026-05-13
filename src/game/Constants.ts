@@ -33,16 +33,26 @@ export const GAMEPLAY = {
   ROUND_REWARDS: [3, 4, 5],
   // Interest: $1 per INTEREST_PER dollars held, capped at INTEREST_CAP
   INTEREST_PER: 5,
-  INTEREST_CAP: 25,  // default cap; vouchers can raise this
+  INTEREST_CAP: 25, // default cap; vouchers can raise this
 };
 
 // ─── RNG / Chance Tuning ───
 export const CHANCES = {
-  STICKER_EFFECT: 0.08,      
-  DICE_AURA: 0.10,          
-  AURA_HOLY: 0.10,          
-  AURA_FIRE: 0.30,         
-  AURA_ICY: 0.10,           
+  STICKER_EFFECT: 0.08,
+  DICE_AURA: 0.1,
+  AURA_HOLY: 0.1,
+  AURA_FIRE: 0.3,
+  AURA_ICY: 0.1,
+};
+
+// ─── Shop Stock Category Weights ───
+// Controls the mix of equipment vs consumables in shop slots.
+// Each slot rolls independently from this weighted pool.
+export const SHOP_WEIGHTS = {
+  equipment: 20, // ~71%
+  supply: 4, // ~14%
+  trail_guide: 4, // ~14%
+  frontier: 2, // added when Demon Hunter profession is active
 };
 
 // ─── Pack Weight Multipliers ───
@@ -123,7 +133,7 @@ export const FONTS = {
 // ─── UI Layout ───
 export const UI = {
   // Sidebar (Balatro-style left panel)
-  SIDEBAR_WIDTH_RATIO: 0.24,     // 24% of screen width
+  SIDEBAR_WIDTH_RATIO: 0.24, // 24% of screen width
   SIDEBAR_PADDING: 12,
   SIDEBAR_BG: 0x111122,
   SIDEBAR_BORDER: 0x333355,
@@ -132,7 +142,7 @@ export const UI = {
   // Equipment bar (top of main area, left 80%)
   EQUIP_BAR_HEIGHT: 250,
   EQUIP_BAR_RATIO: 0.8,
-  EQUIP_CARD_SCALE: .9,
+  EQUIP_CARD_SCALE: 0.9,
   EQUIP_CARD_SPACING: 160,
 
   // Consumable bar (top of main area, right 20%)
@@ -164,10 +174,10 @@ export const UI = {
 
   // Game scene (main content area — right of sidebar)
   HAND_Y_RATIO: 0.72,
-  ROLL_Y_RATIO: 0.50,
+  ROLL_Y_RATIO: 0.5,
   DICE_SPACING: 80,
-  DICE_ARC_HEIGHT: 12,      // max Y lift at center of arc (px)
-  DICE_ARC_ROTATION: 0.04,  // max rotation at edges (radians, ~2.3°)
+  DICE_ARC_HEIGHT: 12, // max Y lift at center of arc (px)
+  DICE_ARC_ROTATION: 0.04, // max rotation at edges (radians, ~2.3°)
   FELT_PADDING: 12,
   FELT_ALPHA: 0.4,
   FELT_RADIUS: 16,
@@ -197,24 +207,24 @@ export const ANIM = {
   ROLL_INTERVAL: 60,
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
-  SCORE_STEP_DELAY: 200,           // ms between each scoring step (dice, equip, held)
-  SCORE_SUBSTEP_DELAY: 300,        // ms between sub-events on the same die (miles → mult → etc)
+  SCORE_STEP_DELAY: 200, // ms between each scoring step (dice, equip, held)
+  SCORE_SUBSTEP_DELAY: 300, // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,
   SCORE_COMPLETE_DELAY: 400,
   HOVER_DURATION: 100,
   CARD_HOVER_SCALE: 1.05,
 
   // Card wobble / tilt / drag swing
-  CARD_WOBBLE_ANGLE: 0.018,           // radians, ~1°
-  CARD_WOBBLE_DURATION_MIN: 1800,     // ms per half-cycle
+  CARD_WOBBLE_ANGLE: 0.018, // radians, ~1°
+  CARD_WOBBLE_DURATION_MIN: 1800, // ms per half-cycle
   CARD_WOBBLE_DURATION_MAX: 2600,
-  CARD_TILT_MAX: 0.08,                // radians, ~4.5° max rotation on hover
-  CARD_TILT_SCALE_AMOUNT: 0.06,       // scaleX foreshortening at max tilt
-  CARD_TILT_LIFT: 1.05,               // scale-up when hovered (card "lifts" toward you)
-  CARD_TILT_LERP: 0.15,              // lerp speed toward target tilt (0-1, lower = smoother)
-  CARD_DRAG_SWING_FACTOR: 0.04,       // rotation per px of velocity
-  CARD_DRAG_SWING_MAX: 0.35,          // radians, ~20° max swing
-  CARD_DRAG_SWING_DAMPING: 0.75,      // velocity damping per frame (lower = more responsive)
-  CARD_DRAG_SETTLE_DURATION: 500,     // ms to settle back after drop
-  CARD_DRAG_LIFT_Y: -6,               // Y offset while dragging (card lifts up)
+  CARD_TILT_MAX: 0.08, // radians, ~4.5° max rotation on hover
+  CARD_TILT_SCALE_AMOUNT: 0.06, // scaleX foreshortening at max tilt
+  CARD_TILT_LIFT: 1.05, // scale-up when hovered (card "lifts" toward you)
+  CARD_TILT_LERP: 0.15, // lerp speed toward target tilt (0-1, lower = smoother)
+  CARD_DRAG_SWING_FACTOR: 0.04, // rotation per px of velocity
+  CARD_DRAG_SWING_MAX: 0.35, // radians, ~20° max swing
+  CARD_DRAG_SWING_DAMPING: 0.75, // velocity damping per frame (lower = more responsive)
+  CARD_DRAG_SETTLE_DURATION: 500, // ms to settle back after drop
+  CARD_DRAG_LIFT_Y: -6, // Y offset while dragging (card lifts up)
 };

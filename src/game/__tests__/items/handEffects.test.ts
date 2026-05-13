@@ -46,10 +46,10 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
 
   test('does not activate on straight', () => {
     const { result } = calculateTestScore({
-      scoredDice: diceFromValues([4, 5, 6]),
+      scoredDice: diceFromValues([4, 5, 6, 7]),
       equipment: [item('wedding_ring')],
     });
-    // THREE_STRAIGHT: baseMult=1, no pair → no bonus
+    // FOUR_STRAIGHT: baseMult=1, no pair → no bonus
     expect(result.mult).toBe(1);
   });
 });
@@ -121,14 +121,6 @@ describe('HAND_MULT: Deputy Brothers (two pair, +10)', () => {
 });
 
 describe('HAND_MULT: Trail Markers (three straight, +6)', () => {
-  test('activates on three straight', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceFromValues([4, 5, 6]),
-      equipment: [item('trail_markers')],
-    });
-    // THREE_STRAIGHT: baseMult=1, +6 = 7
-    expect(result.mult).toBe(7);
-  });
 
   test('activates on four straight (contains three straight)', () => {
     const { result } = calculateTestScore({

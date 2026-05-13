@@ -43,22 +43,28 @@ export class ProfessionSelectScene extends Scene {
     bg.fillRect(0, 0, width, height);
 
     // Title
-    this.add.text(width / 2, 36, 'Choose Your Profession', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '36px',
-      color: TEXT_COLORS.GOLD,
-      stroke: '#000000',
-      strokeThickness: 4,
-      align: 'center',
-    }).setOrigin(0.5).setDepth(60);
+    this.add
+      .text(width / 2, 36, 'Choose Your Profession', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '36px',
+        color: TEXT_COLORS.GOLD,
+        stroke: '#000000',
+        strokeThickness: 4,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(60);
 
     // Subtitle
-    this.add.text(width / 2, 70, 'Each profession grants unique bonuses for the journey ahead', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '15px',
-      color: TEXT_COLORS.MUTED,
-      align: 'center',
-    }).setOrigin(0.5).setDepth(60);
+    this.add
+      .text(width / 2, 70, 'Each profession grants unique bonuses for the journey ahead', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '15px',
+        color: TEXT_COLORS.MUTED,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(60);
 
     // Confirm button (bottom)
     this.confirmBtn = new Button(this, width / 2, height - 40, 'Begin Journey', 220, 48);
@@ -143,20 +149,18 @@ export class ProfessionSelectScene extends Scene {
         this.scrollContainer.y = Phaser.Math.Clamp(
           newY,
           scrollAreaTop + scrollAreaH - this.contentHeight,
-          scrollAreaTop
+          scrollAreaTop,
         );
       });
-      this.input.on('pointerup', () => { this.isDragging = false; });
+      this.input.on('pointerup', () => {
+        this.isDragging = false;
+      });
     }
   }
 
   private doScroll(dy: number, scrollAreaTop: number, scrollAreaH: number): void {
     const newY = this.scrollContainer.y - dy * 0.5;
-    this.scrollContainer.y = Phaser.Math.Clamp(
-      newY,
-      scrollAreaTop + scrollAreaH - this.contentHeight,
-      scrollAreaTop
-    );
+    this.scrollContainer.y = Phaser.Math.Clamp(newY, scrollAreaTop + scrollAreaH - this.contentHeight, scrollAreaTop);
   }
 
   private createProfessionCard(prof: ProfessionDef, cx: number, cy: number): Phaser.GameObjects.Container {
@@ -181,34 +185,40 @@ export class ProfessionSelectScene extends Scene {
     }
 
     // Title (e.g. "Demon Hunter", "Con Artist")
-    const titleText = this.add.text(0, -CARD_H / 2 + IMAGE_SIZE + 26, prof.title, {
-      fontFamily: FONTS.HEADING,
-      fontSize: '16px',
-      color: TEXT_COLORS.GOLD,
-      align: 'center',
-      wordWrap: { width: CARD_W - 16 },
-    }).setOrigin(0.5);
+    const titleText = this.add
+      .text(0, -CARD_H / 2 + IMAGE_SIZE + 26, prof.title, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+        wordWrap: { width: CARD_W - 16 },
+      })
+      .setOrigin(0.5);
     container.add(titleText);
 
     // Character name
-    const nameText = this.add.text(0, titleText.y + titleText.height + 4, prof.name, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '13px',
-      color: TEXT_COLORS.PRIMARY,
-      align: 'center',
-      wordWrap: { width: CARD_W - 16 },
-    }).setOrigin(0.5, 0);
+    const nameText = this.add
+      .text(0, titleText.y + titleText.height + 4, prof.name, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '13px',
+        color: TEXT_COLORS.PRIMARY,
+        align: 'center',
+        wordWrap: { width: CARD_W - 16 },
+      })
+      .setOrigin(0.5, 0);
     container.add(nameText);
 
     // Description
-    const desc = this.add.text(0, CARD_H / 2 - 14, prof.description, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '12px',
-      color: TEXT_COLORS.MUTED,
-      align: 'center',
-      wordWrap: { width: CARD_W - 20 },
-      lineSpacing: 2,
-    }).setOrigin(0.5, 1);
+    const desc = this.add
+      .text(0, CARD_H / 2 - 14, prof.description, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '12px',
+        color: TEXT_COLORS.MUTED,
+        align: 'center',
+        wordWrap: { width: CARD_W - 20 },
+        lineSpacing: 2,
+      })
+      .setOrigin(0.5, 1);
     container.add(desc);
 
     // Invisible hit area sprite for precise interaction

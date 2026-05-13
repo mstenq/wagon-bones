@@ -24,10 +24,7 @@ export class DicePouchModal extends GameObjects.Container {
     const dim = scene.add.graphics();
     dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
     dim.fillRect(0, 0, scene.scale.width, height);
-    dim.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
     this.add(dim);
 
     // Modal panel
@@ -44,11 +41,13 @@ export class DicePouchModal extends GameObjects.Container {
     this.add(panel);
 
     // Title
-    const title = scene.add.text(panelX + panelW / 2, panelY + 24, 'Dice Pouch', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '24px',
-      color: TEXT_COLORS.GOLD,
-    }).setOrigin(0.5);
+    const title = scene.add
+      .text(panelX + panelW / 2, panelY + 24, 'Dice Pouch', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: TEXT_COLORS.GOLD,
+      })
+      .setOrigin(0.5);
     this.add(title);
 
     // Filter buttons
@@ -116,11 +115,13 @@ export class DicePouchModal extends GameObjects.Container {
     }
 
     if (dice.length === 0) {
-      const emptyText = this.scene.add.text(panelX + panelW / 2, startY + availH / 2, 'No dice', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '16px',
-        color: TEXT_COLORS.DISABLED,
-      }).setOrigin(0.5);
+      const emptyText = this.scene.add
+        .text(panelX + panelW / 2, startY + availH / 2, 'No dice', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '16px',
+          color: TEXT_COLORS.DISABLED,
+        })
+        .setOrigin(0.5);
       this.diceContainer.add(emptyText);
       return;
     }
@@ -149,11 +150,13 @@ export class DicePouchModal extends GameObjects.Container {
     }
 
     // Count text
-    const countText = this.scene.add.text(panelX + panelW / 2, startY + 8, `${dice.length} dice`, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '12px',
-      color: TEXT_COLORS.MUTED,
-    }).setOrigin(0.5);
+    const countText = this.scene.add
+      .text(panelX + panelW / 2, startY + 8, `${dice.length} dice`, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '12px',
+        color: TEXT_COLORS.MUTED,
+      })
+      .setOrigin(0.5);
     this.diceContainer.add(countText);
   }
 }

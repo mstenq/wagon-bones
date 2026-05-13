@@ -4,7 +4,12 @@
 import { Die, DiceSticker } from './types';
 import { createDie } from './DiceSystem';
 import { generateShopStock, EquipmentDef } from './ItemsSystem';
-import { DiceSelectionConfig, DiceSelectionEffectType, DiceSelectionEffectParams, pickRandomAura } from './DiceSelectionSystem';
+import {
+  DiceSelectionConfig,
+  DiceSelectionEffectType,
+  DiceSelectionEffectParams,
+  pickRandomAura,
+} from './DiceSelectionSystem';
 import { CHANCES, PACK_WEIGHTS } from './Constants';
 import packsData from '../data/packs.json';
 import supplyCardsData from '../data/supply_cards.json';
@@ -13,8 +18,8 @@ import frontierEncountersData from '../data/frontier_encounters.json';
 import diceEnhancementsData from '../data/dice_enhancements.json';
 import stickerData from '../data/pip_enhancements.json';
 
-const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
-const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
+const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
+const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
 
 // ─── Sticker Definitions ───
 
@@ -38,20 +43,20 @@ export interface PackDefinition {
   tier: PackTier;
   name: string;
   cost: number;
-  totalCards: number;   // how many cards/items shown
-  pickCount: number;    // how many the player can choose
-  weight: number;       // spawn weight
-  color: number;        // display color
+  totalCards: number; // how many cards/items shown
+  pickCount: number; // how many the player can choose
+  weight: number; // spawn weight
+  color: number; // display color
 }
 
 export interface InstantEffect {
-  type: string;                // CREATE_DICE, DOUBLE_MONEY, TRADE_EQUIPMENT, CREATE_EQUIPMENT, etc.
-  enhancement?: string;        // for CREATE_DICE
-  count?: number;              // for CREATE_DICE
-  maxGain?: number;            // for DOUBLE_MONEY, TRADE_EQUIPMENT
-  rarity?: string;             // for CREATE_EQUIPMENT (target rarity)
-  excludeRarity?: string;      // for CREATE_EQUIPMENT (exclude rarity)
-  setMoneyZero?: boolean;      // for CREATE_EQUIPMENT (magic beans)
+  type: string; // CREATE_DICE, DOUBLE_MONEY, TRADE_EQUIPMENT, CREATE_EQUIPMENT, etc.
+  enhancement?: string; // for CREATE_DICE
+  count?: number; // for CREATE_DICE
+  maxGain?: number; // for DOUBLE_MONEY, TRADE_EQUIPMENT
+  rarity?: string; // for CREATE_EQUIPMENT (target rarity)
+  excludeRarity?: string; // for CREATE_EQUIPMENT (exclude rarity)
+  setMoneyZero?: boolean; // for CREATE_EQUIPMENT (magic beans)
 }
 
 /** A generated item inside an opened pack */
@@ -66,8 +71,8 @@ export interface PackItem {
   supplyCardId?: string;
   trailGuideId?: string;
   frontierEncounterId?: string;
-  diceSelection?: DiceSelectionConfig;  // if present, using this card launches dice selection
-  instantEffect?: InstantEffect;        // if present, effect is applied immediately on confirm
+  diceSelection?: DiceSelectionConfig; // if present, using this card launches dice selection
+  instantEffect?: InstantEffect; // if present, effect is applied immediately on confirm
 }
 
 /** A pack instance ready to buy in the shop */
@@ -78,7 +83,7 @@ export interface PackInstance {
 
 // ─── Pack Definitions (loaded from JSON) ───
 
-const PACK_DEFS: PackDefinition[] = packsData.map(p => ({
+const PACK_DEFS: PackDefinition[] = packsData.map((p) => ({
   ...p,
   category: p.category as PackCategory,
   tier: p.tier as PackTier,
@@ -98,7 +103,7 @@ function getEffectiveWeight(def: PackDefinition): number {
 
 /** Pick N random packs using weighted selection */
 export function generateShopPacks(count: number = 2): PackInstance[] {
-  const effectiveWeights = PACK_DEFS.map(d => getEffectiveWeight(d));
+  const effectiveWeights = PACK_DEFS.map((d) => getEffectiveWeight(d));
   const totalWeight = effectiveWeights.reduce((sum, w) => sum + w, 0);
   const packs: PackInstance[] = [];
 
@@ -107,7 +112,10 @@ export function generateShopPacks(count: number = 2): PackInstance[] {
     let picked = PACK_DEFS[0];
     for (let j = 0; j < PACK_DEFS.length; j++) {
       roll -= effectiveWeights[j];
-      if (roll <= 0) { picked = PACK_DEFS[j]; break; }
+      if (roll <= 0) {
+        picked = PACK_DEFS[j];
+        break;
+      }
     }
     packs.push({ def: picked, id: `pack_${nextPackId++}` });
   }
@@ -177,7 +185,7 @@ function generateDicePackContents(count: number): PackItem[] {
 }
 
 function generateSupplyPackContents(count: number): PackItem[] {
-  return pickRandom(SUPPLY_CARDS, count).map(s => {
+  return pickRandom(SUPPLY_CARDS, count).map((s) => {
     const item: PackItem = {
       id: s.id + '_' + Math.random().toString(36).slice(2, 6),
       name: s.name,
@@ -186,7 +194,12 @@ function generateSupplyPackContents(count: number): PackItem[] {
       supplyCardId: s.id,
     };
     if ('diceSelection' in s && s.diceSelection) {
-      const ds = s.diceSelection as { drawCount: number; pickCount: number; effectType: string; effectParams: Record<string, unknown> };
+      const ds = s.diceSelection as {
+        drawCount: number;
+        pickCount: number;
+        effectType: string;
+        effectParams: Record<string, unknown>;
+      };
       item.diceSelection = {
         drawCount: ds.drawCount,
         pickCount: ds.pickCount,
@@ -205,7 +218,7 @@ function generateSupplyPackContents(count: number): PackItem[] {
 }
 
 function generateTrailGuidePackContents(count: number): PackItem[] {
-  return pickRandom(TRAIL_GUIDES, count).map(tg => ({
+  return pickRandom(TRAIL_GUIDES, count).map((tg) => ({
     id: tg.id + '_' + Math.random().toString(36).slice(2, 6),
     name: tg.name,
     description: tg.description,
@@ -215,7 +228,7 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
 }
 
 function generateFrontierPackContents(count: number): PackItem[] {
-  return pickRandom(FRONTIER_ENCOUNTERS, count).map(fe => {
+  return pickRandom(FRONTIER_ENCOUNTERS, count).map((fe) => {
     const item: PackItem = {
       id: fe.id + '_' + Math.random().toString(36).slice(2, 6),
       name: fe.name,
@@ -224,7 +237,12 @@ function generateFrontierPackContents(count: number): PackItem[] {
       frontierEncounterId: fe.id,
     };
     if ('diceSelection' in fe && fe.diceSelection) {
-      const ds = fe.diceSelection as { drawCount: number; pickCount: number; effectType: string; effectParams: Record<string, unknown> };
+      const ds = fe.diceSelection as {
+        drawCount: number;
+        pickCount: number;
+        effectType: string;
+        effectParams: Record<string, unknown>;
+      };
       item.diceSelection = {
         drawCount: ds.drawCount,
         pickCount: ds.pickCount,
@@ -244,7 +262,7 @@ function generateFrontierPackContents(count: number): PackItem[] {
 
 function generateEquipmentPackContents(count: number): PackItem[] {
   const defs = generateShopStock(count);
-  return defs.map(def => ({
+  return defs.map((def) => ({
     id: def.id + '_' + Math.random().toString(36).slice(2, 6),
     name: def.name,
     description: def.description,

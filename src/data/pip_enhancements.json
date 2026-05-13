@@ -14,13 +14,13 @@
   {
     "id": "golden_dollar",
     "name": "Golden Dollar",
-    "description": "When this die scores, earn $3",
+    "description": "When this die scores earn $3",
     "color": "0xffd700"
   },
   {
     "id": "blue_moon",
     "name": "Blue Moon",
-    "description": "When this die scores, gain a trail guide for the scored hand",
+    "description": "If this dice is not scored and held in hand at end of round, receive a trail guide for the scored hand",
     "color": "0x2196f3"
   }
 ]

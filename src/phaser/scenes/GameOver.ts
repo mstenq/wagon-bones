@@ -32,56 +32,59 @@ export class GameOver extends Scene {
     bg.fillRect(0, 0, width, height);
 
     const isVictory = data.won && data.victory;
-    const title = isVictory
-      ? 'JOURNEY COMPLETE!'
-      : data.won
-        ? 'LANDMARK REACHED!'
-        : 'TRAIL ENDS HERE';
+    const title = isVictory ? 'JOURNEY COMPLETE!' : data.won ? 'LANDMARK REACHED!' : 'TRAIL ENDS HERE';
     const color = data.won ? TEXT_COLORS.WIN : TEXT_COLORS.LOSE;
 
-    this.add.text(width / 2, height * 0.30, title, {
-      fontFamily: FONTS.HEADING,
-      fontSize: isVictory ? '56px' : '48px',
-      color,
-      stroke: '#000000',
-      strokeThickness: 6,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * 0.3, title, {
+        fontFamily: FONTS.HEADING,
+        fontSize: isVictory ? '56px' : '48px',
+        color,
+        stroke: '#000000',
+        strokeThickness: 6,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     if (isVictory) {
-      this.add.text(width / 2, height * 0.41, 'You conquered all 8 legs of the trail!', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '22px',
-        color: TEXT_COLORS.GOLD,
-        align: 'center',
-      }).setOrigin(0.5);
+      this.add
+        .text(width / 2, height * 0.41, 'You conquered all 8 legs of the trail!', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '22px',
+          color: TEXT_COLORS.GOLD,
+          align: 'center',
+        })
+        .setOrigin(0.5);
     }
 
     const milesLabel = `${data.totalMiles} / ${data.targetMiles} miles`;
     const legLabel = data.leg ? `Leg ${data.leg}${data.round ? ` — Round ${data.round}` : ''}` : '';
     const infoY = isVictory ? 0.48 : 0.42;
 
-    this.add.text(width / 2, height * infoY, milesLabel, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '28px',
-      color: TEXT_COLORS.PRIMARY,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * infoY, milesLabel, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '28px',
+        color: TEXT_COLORS.PRIMARY,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     if (legLabel) {
-      this.add.text(width / 2, height * infoY + 36, legLabel, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '18px',
-        color: TEXT_COLORS.SECONDARY,
-        align: 'center',
-      }).setOrigin(0.5);
+      this.add
+        .text(width / 2, height * infoY + 36, legLabel, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '18px',
+          color: TEXT_COLORS.SECONDARY,
+          align: 'center',
+        })
+        .setOrigin(0.5);
     }
 
-    new Button(this, width / 2, height * 0.60, 'Play Again', 200, 48)
-      .onClick(() => {
-        resetPlayerState();
-        this.scene.start('MainMenu');
-      });
+    new Button(this, width / 2, height * 0.6, 'Play Again', 200, 48).onClick(() => {
+      resetPlayerState();
+      this.scene.start('MainMenu');
+    });
 
     EventBus.emit(Events.SCENE_READY, this);
   }

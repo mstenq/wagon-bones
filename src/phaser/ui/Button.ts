@@ -25,22 +25,25 @@ export class Button extends GameObjects.Container {
     this._height = height;
 
     this.bg = scene.add.graphics();
-    this.label = scene.add.text(0, 0, text, {
-      fontFamily: 'Arial',
-      fontSize: '18px',
-      color: TEXT_COLOR,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.label = scene.add
+      .text(0, 0, text, {
+        fontFamily: 'Arial',
+        fontSize: '18px',
+        color: TEXT_COLOR,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     this.add([this.bg, this.label]);
     this.setSize(width, height);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, width, height),
-      Phaser.Geom.Rectangle.Contains
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
 
-    this.on('pointerover', () => { if (this._enabled) this.drawBg(HOVER_BG); });
-    this.on('pointerout', () => { if (this._enabled) this.drawBg(DEFAULT_BG); });
+    this.on('pointerover', () => {
+      if (this._enabled) this.drawBg(HOVER_BG);
+    });
+    this.on('pointerout', () => {
+      if (this._enabled) this.drawBg(DEFAULT_BG);
+    });
     this.on('pointerdown', () => {
       if (this._enabled && this.onClickCallback) {
         if (this.scene.sound?.get('sfx_button') || this.scene.cache?.audio?.exists('sfx_button')) {

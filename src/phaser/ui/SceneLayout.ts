@@ -108,9 +108,12 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   const consumableX = contentX + equipW + barGap;
   const consumableBar = new ConsumableBar(scene, consumableX, 8, consumableW, equipBarH);
 
-
   // ─── Dice Pouch (bottom-right) ───
-  const dicePouch = new DicePouch(scene, width - UI.POUCH_MARGIN - UI.POUCH_SIZE, height - UI.POUCH_MARGIN - UI.POUCH_SIZE);
+  const dicePouch = new DicePouch(
+    scene,
+    width - UI.POUCH_MARGIN - UI.POUCH_SIZE,
+    height - UI.POUCH_MARGIN - UI.POUCH_SIZE,
+  );
   dicePouch.setClickCallback(() => {
     new DicePouchModal(scene, sidebarW, width - sidebarW, height);
   });

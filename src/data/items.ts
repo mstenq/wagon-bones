@@ -6,17 +6,17 @@
 
 /** Visual style for a hint segment */
 export type HintStyle =
-  | 'miles'      // blue text — distance/miles values
-  | 'mult'       // red rounded-rect background, white text — multiplier chips
-  | 'xmult'      // red rounded-rect background, white text — xMult values
-  | 'odds'       // green text — probability displays like "1 in 6"
-  | 'inactive'   // gray text — "Inactive" when condition not met
-  | 'condition'  // amber text — activation requirement label
-  | 'active'     // bright green text — "Active!" when condition is met
-  | 'money'      // gold text — dollar amounts
-  | 'text'       // default light text — plain labels
-  | 'aura_fire'  // fire aura label (orange-red)
-  | 'aura_icy'   // icy aura label (cyan)
+  | 'miles' // blue text — distance/miles values
+  | 'mult' // red rounded-rect background, white text — multiplier chips
+  | 'xmult' // red rounded-rect background, white text — xMult values
+  | 'odds' // green text — probability displays like "1 in 6"
+  | 'inactive' // gray text — "Inactive" when condition not met
+  | 'condition' // amber text — activation requirement label
+  | 'active' // bright green text — "Active!" when condition is met
+  | 'money' // gold text — dollar amounts
+  | 'text' // default light text — plain labels
+  | 'aura_fire' // fire aura label (orange-red)
+  | 'aura_icy' // icy aura label (cyan)
   | 'aura_holy'; // holy aura label (golden-white)
 
 /** A single styled text chunk in a hint line */
@@ -52,13 +52,11 @@ const active = (text: string): HintSegment => ({ text, style: 'active' });
 const money = (text: string): HintSegment => ({ text, style: 'money' });
 const text = (t: string): HintSegment => ({ text: t, style: 'text' });
 
-
 // ─── Hand type display names ───
 const HAND_NAMES: Record<HandType, string> = {
   [HandType.PAIR]: 'Pair',
   [HandType.TWO_PAIR]: 'Two Pair',
   [HandType.THREE_OF_A_KIND]: '3 of a Kind',
-  [HandType.THREE_STRAIGHT]: '3 Straight',
   [HandType.FOUR_OF_A_KIND]: '4 of a Kind',
   [HandType.FOUR_STRAIGHT]: '4 Straight',
   [HandType.FULL_HOUSE]: 'Full House',
@@ -68,7 +66,16 @@ const HAND_NAMES: Record<HandType, string> = {
 };
 
 /** Check if a played hand type contains the required hand type */
-type HandsWithContainment = Extract<HandType, HandType.FIVE_OF_A_KIND | HandType.FOUR_OF_A_KIND | HandType.FULL_HOUSE | HandType.THREE_OF_A_KIND | HandType.TWO_PAIR | HandType.FIVE_STRAIGHT | HandType.FOUR_STRAIGHT>;
+type HandsWithContainment = Extract<
+  HandType,
+  | HandType.FIVE_OF_A_KIND
+  | HandType.FOUR_OF_A_KIND
+  | HandType.FULL_HOUSE
+  | HandType.THREE_OF_A_KIND
+  | HandType.TWO_PAIR
+  | HandType.FIVE_STRAIGHT
+  | HandType.FOUR_STRAIGHT
+>;
 function handContains(played: HandType | null, required: HandType): boolean {
   if (!played) return false;
   const CONTAINMENT: Record<HandsWithContainment, HandType[]> = {
@@ -77,8 +84,8 @@ function handContains(played: HandType | null, required: HandType): boolean {
     FULL_HOUSE: [HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.TWO_PAIR],
     THREE_OF_A_KIND: [HandType.PAIR],
     TWO_PAIR: [HandType.PAIR],
-    FIVE_STRAIGHT: [HandType.FOUR_STRAIGHT, HandType.THREE_STRAIGHT],
-    FOUR_STRAIGHT: [HandType.THREE_STRAIGHT],
+    FIVE_STRAIGHT: [HandType.FOUR_STRAIGHT,],
+    FOUR_STRAIGHT: [],
   };
   if (played === required) return true;
   return CONTAINMENT[played as HandsWithContainment]?.includes(required) ?? false;
@@ -105,7 +112,7 @@ const items: ItemDef[] = [
     description: 'Scored 1s give +3 mult',
     effectType: 'PIP_MULT',
     effectParams: { pip: 1, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition("per 1")]],
+    hintDisplay: () => [[mult('+3'), condition('per 1')]],
   },
   {
     id: 'double_deuces',
@@ -115,7 +122,7 @@ const items: ItemDef[] = [
     description: 'Scored 2s give +3 mult',
     effectType: 'PIP_MULT',
     effectParams: { pip: 2, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition("per 2")]],
+    hintDisplay: () => [[mult('+3'), condition('per 2')]],
   },
   {
     id: 'triad_totem',
@@ -125,7 +132,7 @@ const items: ItemDef[] = [
     description: 'Scored 3s give +3 mult',
     effectType: 'PIP_MULT',
     effectParams: { pip: 3, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition("per 3")]],
+    hintDisplay: () => [[mult('+3'), condition('per 3')]],
   },
   {
     id: 'four_aces_brand',
@@ -135,7 +142,7 @@ const items: ItemDef[] = [
     description: 'Scored 4s give +3 mult',
     effectType: 'PIP_MULT',
     effectParams: { pip: 4, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition("per 4")]],
+    hintDisplay: () => [[mult('+3'), condition('per 4')]],
   },
   {
     id: 'high_five',
@@ -145,7 +152,7 @@ const items: ItemDef[] = [
     description: 'Scored 5s give +3 mult',
     effectType: 'PIP_MULT',
     effectParams: { pip: 5, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition("per 5")]],
+    hintDisplay: () => [[mult('+3'), condition('per 5')]],
   },
   {
     id: 'devils_dice',
@@ -155,7 +162,7 @@ const items: ItemDef[] = [
     description: 'Scored 6s give +3 mult',
     effectType: 'PIP_MULT',
     effectParams: { pip: 6, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition("per 6")]],
+    hintDisplay: () => [[mult('+3'), condition('per 6')]],
   },
   {
     id: 'wedding_ring',
@@ -166,7 +173,8 @@ const items: ItemDef[] = [
     effectType: 'HAND_MULT',
     effectParams: { handType: HandType.PAIR, value: 8 },
     hintDisplay: (game) => {
-      if (game && handContains(game.state.currentHandType, HandType.PAIR)) return [[mult('+8'), condition(HAND_NAMES.PAIR)],[active('Active!')]];
+      if (game && handContains(game.state.currentHandType, HandType.PAIR))
+        return [[mult('+8'), condition(HAND_NAMES.PAIR)], [active('Active!')]];
       return [[mult('+8'), condition(HAND_NAMES.PAIR)], [inactive('Inactive')]];
     },
   },
@@ -179,7 +187,8 @@ const items: ItemDef[] = [
     effectType: 'HAND_MULT',
     effectParams: { handType: HandType.THREE_OF_A_KIND, value: 12 },
     hintDisplay: (game) => {
-      if (game && handContains(game.state.currentHandType, HandType.THREE_OF_A_KIND)) return [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND)],[active('Active!')]];
+      if (game && handContains(game.state.currentHandType, HandType.THREE_OF_A_KIND))
+        return [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND)], [active('Active!')]];
       return [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND)], [inactive('Inactive')]];
     },
   },
@@ -192,21 +201,9 @@ const items: ItemDef[] = [
     effectType: 'HAND_MULT',
     effectParams: { handType: HandType.TWO_PAIR, value: 10 },
     hintDisplay: (game) => {
-      if (game && handContains(game.state.currentHandType, HandType.TWO_PAIR)) return [[mult('+10'), condition(HAND_NAMES.TWO_PAIR)],[active('Active!')]];
+      if (game && handContains(game.state.currentHandType, HandType.TWO_PAIR))
+        return [[mult('+10'), condition(HAND_NAMES.TWO_PAIR)], [active('Active!')]];
       return [[mult('+10'), condition(HAND_NAMES.TWO_PAIR)], [inactive('Inactive')]];
-    },
-  },
-  {
-    id: 'trail_markers',
-    name: 'Trail Markers',
-    cost: 3,
-    rarity: 'common',
-    description: 'If played hand contains a 3 straight +6 mult',
-    effectType: 'HAND_MULT',
-    effectParams: { handType: HandType.THREE_STRAIGHT, value: 6 },
-    hintDisplay: (game) => {
-      if (game && handContains(game.state.currentHandType, HandType.THREE_STRAIGHT)) return [[mult('+6'), condition(HAND_NAMES.THREE_STRAIGHT)],[active('Active!')]];
-      return [[mult('+6'), condition(HAND_NAMES.THREE_STRAIGHT)], [inactive('Inactive')]];
     },
   },
   {
@@ -218,7 +215,8 @@ const items: ItemDef[] = [
     effectType: 'HAND_MILES',
     effectParams: { handType: HandType.PAIR, value: 50 },
     hintDisplay: (game) => {
-      if (game && handContains(game.state.currentHandType, HandType.PAIR)) return [[miles('+50'), condition(HAND_NAMES.PAIR)],[active('Active!')]];
+      if (game && handContains(game.state.currentHandType, HandType.PAIR))
+        return [[miles('+50'), condition(HAND_NAMES.PAIR)], [active('Active!')]];
       return [[miles('+50'), condition(HAND_NAMES.PAIR)], [inactive('Inactive')]];
     },
   },
@@ -231,7 +229,8 @@ const items: ItemDef[] = [
     effectType: 'HAND_MILES',
     effectParams: { handType: HandType.THREE_OF_A_KIND, value: 100 },
     hintDisplay: (game) => {
-      if (game && handContains(game.state.currentHandType, HandType.THREE_OF_A_KIND)) return [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND)],[active('Active!')]];
+      if (game && handContains(game.state.currentHandType, HandType.THREE_OF_A_KIND))
+        return [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND)], [active('Active!')]];
       return [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND)], [inactive('Inactive')]];
     },
   },
@@ -259,9 +258,9 @@ const items: ItemDef[] = [
     effectType: 'CONDITIONAL_MULT',
     effectParams: { condition: 'SCORED_DICE_LTE', threshold: 3, value: 20 },
     hintDisplay: (game) => {
-        console.log(game)
+      console.log(game);
       const diceCount = game?.state.rolledDice?.length ?? 0;
-      if (diceCount > 0 && diceCount <= 3) return [[mult('+20'), condition('3 or less dice')],[active('Active!')]];
+      if (diceCount > 0 && diceCount <= 3) return [[mult('+20'), condition('3 or less dice')], [active('Active!')]];
       return [[mult('+20'), condition('3 or less dice')], [inactive('Inactive')]];
     },
   },
@@ -274,9 +273,10 @@ const items: ItemDef[] = [
     effectType: 'CONDITIONAL_MULT',
     effectParams: { condition: 'NO_REROLLS', value: 15 },
     hintDisplay: (game) => {
-        if(!game) return [[mult('+15'), condition('No rerolls')]];
-        if (game.state.rerollsRemaining === 0) return [[mult('+15'), condition(`${game.state.rerollsRemaining}/0 rerolls`)],[active('Active!')]];
-        return [[mult('+15'), condition(`${game.state.rerollsRemaining}/0 rerolls`)], [inactive("Inactive")]];
+      if (!game) return [[mult('+15'), condition('No rerolls')]];
+      if (game.state.rerollsRemaining === 0)
+        return [[mult('+15'), condition(`${game.state.rerollsRemaining}/0 rerolls`)], [active('Active!')]];
+      return [[mult('+15'), condition(`${game.state.rerollsRemaining}/0 rerolls`)], [inactive('Inactive')]];
     },
   },
   {
@@ -383,9 +383,9 @@ const items: ItemDef[] = [
     effectType: 'HELD_LOWEST_MULT',
     effectParams: {},
     hintDisplay: (game) => {
-      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
+      const held = game?.state.rolledDice?.filter((d) => !game.state.selectedForScore.some((s) => s.id === d.id)) ?? [];
       if (held.length > 0) {
-        const lowest = Math.min(...held.map(d => d.value));
+        const lowest = Math.min(...held.map((d) => d.value));
         return [[mult(`+${lowest * 2}`), condition('lowest held')]];
       }
       return [[mult('+?'), condition('lowest held')]];
@@ -400,8 +400,8 @@ const items: ItemDef[] = [
     effectType: 'HELD_PIP_XMULT',
     effectParams: { pip: 1, value: 1.5 },
     hintDisplay: (game) => {
-      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
-      const count = held.filter(d => d.value === 1).length;
+      const held = game?.state.rolledDice?.filter((d) => !game.state.selectedForScore.some((s) => s.id === d.id)) ?? [];
+      const count = held.filter((d) => d.value === 1).length;
       if (count > 0) return [[mult(`x${1.5 ** count}`), condition(`${count}x 1s held`)]];
       return [[mult('x1.5'), condition('per 1 held')], [inactive('Inactive')]];
     },
@@ -415,8 +415,8 @@ const items: ItemDef[] = [
     effectType: 'HELD_ENHANCED_MONEY',
     effectParams: { chance: [1, 2], value: 1 },
     hintDisplay: (game) => {
-      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
-      const enhanced = held.filter(d => d.enhancement !== null).length;
+      const held = game?.state.rolledDice?.filter((d) => !game.state.selectedForScore.some((s) => s.id === d.id)) ?? [];
+      const enhanced = held.filter((d) => d.enhancement !== null).length;
       if (enhanced > 0) return [[money(`$1`), odds('1 in 2'), condition(`${enhanced} enhanced`)]];
       return [[money('$1'), odds('1 in 2'), condition('enhanced held')]];
     },
@@ -430,8 +430,8 @@ const items: ItemDef[] = [
     effectType: 'HELD_PIP_MULT',
     effectParams: { pip: 11, value: 11 },
     hintDisplay: (game) => {
-      const held = game?.state.rolledDice?.filter(d => !game.state.selectedForScore.some(s => s.id === d.id)) ?? [];
-      const count = held.filter(d => d.value === 11).length;
+      const held = game?.state.rolledDice?.filter((d) => !game.state.selectedForScore.some((s) => s.id === d.id)) ?? [];
+      const count = held.filter((d) => d.value === 11).length;
       if (count > 0) return [[mult(`+${count * 11}`), condition(`${count}x 11s held`)]];
       return [[mult('+11'), condition('per 11 held')], [inactive('Inactive')]];
     },
@@ -448,7 +448,7 @@ const items: ItemDef[] = [
     effectParams: { value: 0.25 },
     initialState: { xMult: 1 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'rabbits_foot');
+      const equip = player.equipment.find((e) => e.def.id === 'rabbits_foot');
       const xm = equip?.state.xMult ?? 1;
       return [[mult(`x${xm.toFixed(2)}`)]];
     },
@@ -462,7 +462,7 @@ const items: ItemDef[] = [
     effectType: 'UNCOMMON_EQUIP_XMULT',
     effectParams: {},
     hintDisplay: (_game, player) => {
-      const count = player.equipment.filter(e => e.def.rarity === 'uncommon').length;
+      const count = player.equipment.filter((e) => e.def.rarity === 'uncommon').length;
       if (count > 0) return [[mult(`x${(1.5 ** count).toFixed(2)}`), condition(`${count} uncommon`)]];
       return [[mult('x1.5'), condition('per uncommon')], [inactive('None')]];
     },
@@ -490,7 +490,7 @@ const items: ItemDef[] = [
     effectParams: { value: 2 },
     initialState: { mult: 0 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'bargain_bin');
+      const equip = player.equipment.find((e) => e.def.id === 'bargain_bin');
       const m = equip?.state.mult ?? 0;
       return [[mult(`+${m}`)]];
     },
@@ -505,7 +505,7 @@ const items: ItemDef[] = [
     effectParams: { decayPerRound: 4, maxRounds: 5 },
     initialState: { mult: 20, roundsPlayed: 0 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'fading_memory');
+      const equip = player.equipment.find((e) => e.def.id === 'fading_memory');
       const m = equip?.state.mult ?? 20;
       const rounds = equip?.state.roundsPlayed ?? 0;
       return [[mult(`+${m}`), condition(`${5 - rounds} rounds left`)]];
@@ -521,7 +521,7 @@ const items: ItemDef[] = [
     effectParams: { handType: HandType.TWO_PAIR, value: 2 },
     initialState: { mult: 0 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'card_counter');
+      const equip = player.equipment.find((e) => e.def.id === 'card_counter');
       const m = equip?.state.mult ?? 0;
       return [[mult(`+${m}`), condition(HAND_NAMES.TWO_PAIR)]];
     },
@@ -536,7 +536,7 @@ const items: ItemDef[] = [
     effectParams: { value: 1.5 },
     initialState: { pip: 7 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'lucky_number');
+      const equip = player.equipment.find((e) => e.def.id === 'lucky_number');
       const pip = equip?.state.pip ?? '?';
       return [[mult('x1.5'), condition(`per ${pip}`)]];
     },
@@ -551,7 +551,7 @@ const items: ItemDef[] = [
     effectParams: { decayPerDie: 0.01 },
     initialState: { xMult: 2 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'worn_deck');
+      const equip = player.equipment.find((e) => e.def.id === 'worn_deck');
       const xm = equip?.state.xMult ?? 2;
       return [[mult(`x${xm.toFixed(2)}`)]];
     },
@@ -566,7 +566,7 @@ const items: ItemDef[] = [
     effectParams: {},
     initialState: { daysRemaining: 10 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'war_drums');
+      const equip = player.equipment.find((e) => e.def.id === 'war_drums');
       const days = equip?.state.daysRemaining ?? 0;
       if (days > 0) return [[active(`${days} days left`)]];
       return [[inactive('Expired')]];
@@ -582,7 +582,7 @@ const items: ItemDef[] = [
     effectParams: { value: 3 },
     initialState: { miles: 0 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'bone_collector');
+      const equip = player.equipment.find((e) => e.def.id === 'bone_collector');
       const m = equip?.state.miles ?? 0;
       return [[miles(`+${m}`)]];
     },
@@ -597,7 +597,7 @@ const items: ItemDef[] = [
     effectParams: { value: 0.25 },
     initialState: { xMult: 1 },
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'snake_oil_ledger');
+      const equip = player.equipment.find((e) => e.def.id === 'snake_oil_ledger');
       const xm = equip?.state.xMult ?? 1;
       return [[mult(`x${xm.toFixed(2)}`)]];
     },
@@ -644,7 +644,7 @@ const items: ItemDef[] = [
     effectType: 'SELL_VALUE_AS_MULT',
     effectParams: {},
     hintDisplay: (_game, player) => {
-      const equip = player.equipment.find(e => e.def.id === 'desperado');
+      const equip = player.equipment.find((e) => e.def.id === 'desperado');
       let total = 0;
       for (const e of player.equipment) {
         if (e !== equip) total += e.sellValue;

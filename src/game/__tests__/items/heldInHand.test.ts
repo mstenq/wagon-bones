@@ -172,7 +172,7 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
 
 // ─── HELD_ENHANCED_MONEY: Prospector's Pouch ───
 
-describe('HELD_ENHANCED_MONEY: Prospector\'s Pouch', () => {
+describe("HELD_ENHANCED_MONEY: Prospector's Pouch", () => {
   test('does not trigger on non-enhanced held dice', () => {
     const { result, player } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
@@ -190,10 +190,7 @@ describe('HELD_ENHANCED_MONEY: Prospector\'s Pouch', () => {
     try {
       const { player } = calculateTestScore({
         scoredDice: diceWithValue(5, 2),
-        heldDice: [
-          die({ value: 3, enhancement: 'bone' }),
-          die({ value: 7, enhancement: 'steel' }),
-        ],
+        heldDice: [die({ value: 3, enhancement: 'bone' }), die({ value: 7, enhancement: 'steel' })],
         equipment: [item('prospectors_pouch')],
         money: 10,
       });

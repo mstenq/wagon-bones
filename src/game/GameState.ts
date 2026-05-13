@@ -4,14 +4,31 @@
 // Emits callbacks so the rendering layer can react to state changes.
 
 import {
-  RoundState, GameConfig, DEFAULT_CONFIG,
-  HandResult, ScoreResult, GameEventType, GameEventCallback, HandType,
+  RoundState,
+  GameConfig,
+  DEFAULT_CONFIG,
+  HandResult,
+  ScoreResult,
+  GameEventType,
+  GameEventCallback,
+  HandType,
 } from './types';
-import {
-  rollDice, detectBestHand, scoreHand, createDie,
-} from './DiceSystem';
+import { rollDice, detectBestHand, scoreHand, createDie } from './DiceSystem';
 import { getPlayerState } from './PlayerState';
-import { applyEquipmentEffects, getConfigModifiers, processEndOfRound, processHeldInHand, processEquipmentOnHandPlayed, processEquipmentOnReroll, processEquipmentOnDiceSpent, processEquipmentOnRoundStart, processEquipmentOnDayEnd, findDeathPrevention, getDayModifiers } from './EquipmentEffects';
+import {
+  applyEquipmentEffects,
+  getConfigModifiers,
+  processEndOfRound,
+  processHeldInHand,
+  processEquipmentOnHandPlayed,
+  processEquipmentOnReroll,
+  processEquipmentOnDiceSpent,
+  processEquipmentOnRoundStart,
+  processEquipmentOnDayEnd,
+  findDeathPrevention,
+  getDayModifiers,
+} from './EquipmentEffects';
+import { getRandomTrailGuideDef } from './ConsumablesSystem';
 
 export class GameState {
   config: GameConfig;
@@ -40,7 +57,7 @@ export class GameState {
 
   private emit(event: GameEventType, data?: unknown): void {
     const cbs = this.listeners.get(event);
-    if (cbs) cbs.forEach(cb => cb(data));
+    if (cbs) cbs.forEach((cb) => cb(data));
   }
 
   // ─── Initialization ───
@@ -123,7 +140,7 @@ export class GameState {
     if (this.state.phase !== 'SELECT') return false;
     if (diceIds.length < 1 || diceIds.length > this.config.rollSize) return false;
 
-    const selected = this.state.hand.filter(d => diceIds.includes(d.id));
+    const selected = this.state.hand.filter((d) => diceIds.includes(d.id));
     if (selected.length !== diceIds.length) return false;
 
     this.state.selectedForRoll = selected;
@@ -145,7 +162,7 @@ export class GameState {
     if (diceIds.length === 0) return false;
     if (this.state.rerollsRemaining <= 0) return false;
 
-    this.state.rolledDice = this.state.rolledDice.map(d => {
+    this.state.rolledDice = this.state.rolledDice.map((d) => {
       if (diceIds.includes(d.id)) {
         return { ...d, value: Math.ceil(Math.random() * 12) };
       }
@@ -171,7 +188,7 @@ export class GameState {
     if (this.state.phase !== 'ROLL') return false;
     if (diceIds.length < 1 || diceIds.length > this.config.scoreSize) return false;
 
-    const selected = this.state.rolledDice.filter(d => diceIds.includes(d.id));
+    const selected = this.state.rolledDice.filter((d) => diceIds.includes(d.id));
     if (selected.length !== diceIds.length) return false;
 
     this.state.selectedForScore = selected;
@@ -190,8 +207,20 @@ export class GameState {
     const handResult: HandResult = detectBestHand(this.state.selectedForScore);
     this.state.currentHandType = handResult.type;
     this.state.handHistory.push(handResult.type);
-    console.log('[SCORE] Step 0: Hand detected:', handResult.name, '| baseMiles:', handResult.baseMiles, '| baseMult:', handResult.baseMult);
-    console.log('[SCORE] Scoring dice:', this.state.selectedForScore.map(d => `${d.id}(value:${d.value}, aura:${d.aura}, enh:${d.enhancement})`).join(', '));
+    console.log(
+      '[SCORE] Step 0: Hand detected:',
+      handResult.name,
+      '| baseMiles:',
+      handResult.baseMiles,
+      '| baseMult:',
+      handResult.baseMult,
+    );
+    console.log(
+      '[SCORE] Scoring dice:',
+      this.state.selectedForScore
+        .map((d) => `${d.id}(value:${d.value}, aura:${d.aura}, enh:${d.enhancement}, sticker:${d.sticker})`)
+        .join(', '),
+    );
 
     // Apply hand level scaling before scoring
     const player = getPlayerState();
@@ -206,16 +235,30 @@ export class GameState {
       baseMult: handResult.baseMult + stats.multPerLevel * levelBonus,
     };
     if (levelBonus > 0) {
-      console.log('[SCORE] Hand level:', stats.level, '| +miles/lvl:', stats.milesPerLevel * levelBonus, '| +mult/lvl:', stats.multPerLevel * levelBonus);
+      console.log(
+        '[SCORE] Hand level:',
+        stats.level,
+        '| +miles/lvl:',
+        stats.milesPerLevel * levelBonus,
+        '| +mult/lvl:',
+        stats.multPerLevel * levelBonus,
+      );
     }
     console.log('[SCORE] After leveling: baseMiles:', leveledResult.baseMiles, '| baseMult:', leveledResult.baseMult);
 
     const baseResult = scoreHand(leveledResult, player.equipment);
-    console.log('[SCORE] After scoreHand: totalValue:', baseResult.totalValue, '| mult:', baseResult.mult, '| miles:', baseResult.miles);
+    console.log(
+      '[SCORE] After scoreHand: totalValue:',
+      baseResult.totalValue,
+      '| mult:',
+      baseResult.mult,
+      '| miles:',
+      baseResult.miles,
+    );
 
     // Determine held-in-hand dice (rolled but not scored)
-    const scoredIds = new Set(this.state.selectedForScore.map(d => d.id));
-    const heldDice = this.state.rolledDice.filter(d => !scoredIds.has(d.id));
+    const scoredIds = new Set(this.state.selectedForScore.map((d) => d.id));
+    const heldDice = this.state.rolledDice.filter((d) => !scoredIds.has(d.id));
 
     // Step 4: Process held-in-hand abilities (steel dice, held equipment)
     const heldResult = processHeldInHand(heldDice, player.equipment);
@@ -234,7 +277,11 @@ export class GameState {
     console.log('[SCORE] After held-in-hand: mult:', afterHeldResult.mult, '| miles:', afterHeldResult.miles);
 
     // Step 5: Apply independent equipment effects (Dynamite, Horseshoe, auras, etc.)
-    console.log('[SCORE] Equipment:', player.equipment.map(e => `${e.def.name}(${e.def.effectType}, aura:${e.def.aura?.id ?? 'none'})`).join(', ') || 'none');
+    console.log(
+      '[SCORE] Equipment:',
+      player.equipment.map((e) => `${e.def.name}(${e.def.effectType}, aura:${e.def.aura?.id ?? 'none'})`).join(', ') ||
+        'none',
+    );
     const finalResult = applyEquipmentEffects(afterHeldResult, player.equipment, {
       handResult: leveledResult,
       scoringDice: this.state.selectedForScore,
@@ -253,6 +300,16 @@ export class GameState {
     finalResult.maxDays = this.config.maxDays;
 
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
+
+    // Process sticker rewards
+    // blue_moon: grant trail guides for the scored hand type
+    if (heldResult.trailGuidesForHand > 0) {
+      for (let i = 0; i < heldResult.trailGuidesForHand; i++) {
+        const tgDef = getRandomTrailGuideDef();
+        player.addConsumable(tgDef);
+      }
+      console.log(`[SCORE] Blue Moon: granted ${heldResult.trailGuidesForHand} trail guide(s)`);
+    }
 
     // Record hand played
     player.recordHandPlayed(handType);
@@ -284,7 +341,7 @@ export class GameState {
 
     // Mark only scored dice as spent (unscored dice stay available for next day).
     // Returns true if all dice were spent and an auto-refresh occurred.
-    const scoredIds = this.state.selectedForScore.map(d => d.id);
+    const scoredIds = this.state.selectedForScore.map((d) => d.id);
     const scoredDice = this.state.selectedForScore;
     player.markDiceSpent(scoredIds);
 
@@ -362,7 +419,7 @@ export class GameState {
   useRemainingAndRefresh(): void {
     const player = getPlayerState();
     // Mark all currently available dice as spent to trigger auto-refresh
-    const availableIds = player.availableDice.map(d => d.id);
+    const availableIds = player.availableDice.map((d) => d.id);
     player.markDiceSpent(availableIds); // will auto-clear since all are now spent
 
     // Rebuild hand from the full pool

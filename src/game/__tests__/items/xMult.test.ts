@@ -1,7 +1,12 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { diceWithValue, item, itemWithState, calculateTestScore, resetDieIds } from '../testHelpers';
-import { processEquipmentOnLuckyTrigger, processEquipmentOnSell, processEquipmentOnBossDefeat, processEquipmentOnReroll } from '../../EquipmentEffects';
+import {
+  processEquipmentOnLuckyTrigger,
+  processEquipmentOnSell,
+  processEquipmentOnBossDefeat,
+  processEquipmentOnReroll,
+} from '../../EquipmentEffects';
 
 beforeEach(() => resetDieIds());
 
@@ -99,13 +104,13 @@ describe('DECAYING_XMULT: Worn Deck', () => {
     processEquipmentOnReroll([inst], 5);
     processEquipmentOnReroll([inst], 5);
     // 10 total dice rerolled: 2 - 10*0.01 = 1.90
-    expect(inst.state.xMult).toBeCloseTo(1.90, 5);
+    expect(inst.state.xMult).toBeCloseTo(1.9, 5);
 
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBeCloseTo(1.90, 5);
+    expect(result.mult).toBeCloseTo(1.9, 5);
   });
 
   test('does not go below 0', () => {
@@ -132,7 +137,7 @@ describe('SELL_XMULT_GAIN: Snake Oil Ledger', () => {
     expect(inst.state.xMult).toBeCloseTo(1.25, 5);
 
     processEquipmentOnSell([inst]);
-    expect(inst.state.xMult).toBeCloseTo(1.50, 5);
+    expect(inst.state.xMult).toBeCloseTo(1.5, 5);
   });
 
   test('accumulated xMult applied during scoring', () => {

@@ -4,7 +4,7 @@
 // Balatro-inspired layout: sidebar left, equipment top, dice center, pouch bottom-right.
 
 import { Scene } from 'phaser';
-import * as Phaser from 'phaser'
+import * as Phaser from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { GameState } from '../../game/GameState';
 import { Die, ScoreResult, HandType } from '../../game/types';
@@ -16,6 +16,7 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { ConsumableInstance, executeConsumableEffect } from '../../game/ConsumablesSystem';
+import { DiceSelectionConfig, applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playRollAnimation } from '../animations/RollAnimation';
@@ -91,6 +92,14 @@ export class GameScene extends Scene {
   // Refresh prompt overlay
   private refreshOverlay: Phaser.GameObjects.Container | null = null;
 
+  // Consumable targeting mode (inline dice selection for consumables like coffee_tin)
+  private consumableTargeting: DiceSelectionConfig | null = null;
+  private consumableTargetIds: Set<string> = new Set();
+  private consumableConfirmBtn: Button | null = null;
+  private consumableCancelBtn: Button | null = null;
+  private savedInstructionText: string = '';
+  private savedLockedDiceIds: Set<string> = new Set();
+
   constructor() {
     super('Game');
   }
@@ -142,25 +151,36 @@ export class GameScene extends Scene {
     });
 
     // Instruction text
-    this.instructionText = this.add.text(this.contentCX, height - 60, '', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '16px',
-      color: TEXT_COLORS.SECONDARY,
-      align: 'center',
-    }).setOrigin(0.5).setDepth(50);
+    this.instructionText = this.add
+      .text(this.contentCX, height - 60, '', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '16px',
+        color: TEXT_COLORS.SECONDARY,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
 
     // Create buttons (all hidden initially)
     const btnY = height - 30;
-    this.readyBtn = new Button(this, this.contentCX, btnY, 'Roll Selected', 200, 40).onClick(() => this.onReadyToRoll());
+    this.readyBtn = new Button(this, this.contentCX, btnY, 'Roll Selected', 200, 40).onClick(() =>
+      this.onReadyToRoll(),
+    );
     this.rollBtn = new Button(this, this.contentCX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
-    this.rerollBtn = new Button(this, this.contentCX - 110, btnY, 'Re-roll All', 200, 40).onClick(() => this.onReroll());
+    this.rerollBtn = new Button(this, this.contentCX - 110, btnY, 'Re-roll All', 200, 40).onClick(() =>
+      this.onReroll(),
+    );
     this.scoreBtn = new Button(this, this.contentCX + 110, btnY, 'Score Hand', 160, 40).onClick(() => this.onScore());
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
 
     // Sort buttons (small, positioned above the main buttons)
     const sortY = btnY - 50;
-    this.sortAscBtn = new Button(this, this.contentCX - 50, sortY, '↑ Low', 80, 28).onClick(() => this.setSortOrder('asc'));
-    this.sortDescBtn = new Button(this, this.contentCX + 50, sortY, '↓ High', 80, 28).onClick(() => this.setSortOrder('desc'));
+    this.sortAscBtn = new Button(this, this.contentCX - 50, sortY, '↑ Low', 80, 28).onClick(() =>
+      this.setSortOrder('asc'),
+    );
+    this.sortDescBtn = new Button(this, this.contentCX + 50, sortY, '↓ High', 80, 28).onClick(() =>
+      this.setSortOrder('desc'),
+    );
 
     this.hideAllButtons();
 
@@ -267,11 +287,14 @@ export class GameScene extends Scene {
     // Create stacks
     this.availableStacks = [];
     for (const [key, dice] of groups) {
-      const countText = this.add.text(0, this.availableY + 44, '', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
-        color: TEXT_COLORS.SECONDARY,
-      }).setOrigin(0.5).setDepth(15);
+      const countText = this.add
+        .text(0, this.availableY + 44, '', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '14px',
+          color: TEXT_COLORS.SECONDARY,
+        })
+        .setOrigin(0.5)
+        .setDepth(15);
 
       const stack: DiceStackData = { key, dice: [...dice], sprites: [], countText, addBtn: null, targetX: 0 };
       this.availableStacks.push(stack);
@@ -289,9 +312,7 @@ export class GameScene extends Scene {
     const remaining = hand.length;
     const spent = this.gameState.state.spent.length;
     const required = Math.min(MAX_SELECT_FOR_ROLL, remaining);
-    this.instructionText.setText(
-      `Select ${required} dice to roll (${spent} dice spent, ${remaining} available)`
-    );
+    this.instructionText.setText(`Select ${required} dice to roll (${spent} dice spent, ${remaining} available)`);
 
     this.updateHUD();
   }
@@ -318,9 +339,7 @@ export class GameScene extends Scene {
       this.showSortButtons();
       this.updateRollButtons();
 
-      this.instructionText.setText(
-        'Lock dice you want to keep, then re-roll the rest'
-      );
+      this.instructionText.setText('Lock dice you want to keep, then re-roll the rest');
     });
 
     this.updateHUD();
@@ -338,6 +357,13 @@ export class GameScene extends Scene {
 
       sprite.on('pointerup', () => {
         if (this.wasDragging || this.animating) return;
+
+        // Consumable targeting mode takes over click behavior
+        if (this.consumableTargeting) {
+          this.onConsumableTargetClick(sprite);
+          return;
+        }
+
         const id = sprite.dieData.id;
         const lockIdx = this.rollSprites.indexOf(sprite);
         const lockIcon = this.lockIcons[lockIdx];
@@ -361,9 +387,13 @@ export class GameScene extends Scene {
   private createLockIcons(): void {
     this.clearLockIcons();
     for (const sprite of this.rollSprites) {
-      const lockIcon = this.add.text(sprite.x, sprite.y + 46, '🔒', {
-        fontSize: '14px',
-      }).setOrigin(0.5).setDepth(11).setVisible(false);
+      const lockIcon = this.add
+        .text(sprite.x, sprite.y + 46, '🔒', {
+          fontSize: '14px',
+        })
+        .setOrigin(0.5)
+        .setDepth(11)
+        .setVisible(false);
       this.lockIcons.push(lockIcon);
     }
   }
@@ -391,9 +421,7 @@ export class GameScene extends Scene {
     this.sortAndRepositionDice();
     this.updateRollButtons();
 
-    this.instructionText.setText(
-      'Lock dice you want to keep, then re-roll the rest'
-    );
+    this.instructionText.setText('Lock dice you want to keep, then re-roll the rest');
     this.updateHUD();
   }
 
@@ -466,27 +494,32 @@ export class GameScene extends Scene {
     if (this.animating) return;
 
     // Re-roll all dice that are NOT locked
-    const allIds = this.gameState.state.rolledDice.map(d => d.id);
-    const idsToReroll = allIds.filter(id => !this.lockedDiceIds.has(id));
+    const allIds = this.gameState.state.rolledDice.map((d) => d.id);
+    const idsToReroll = allIds.filter((id) => !this.lockedDiceIds.has(id));
     if (idsToReroll.length === 0) return;
 
     const success = this.gameState.reroll(idsToReroll);
     if (success) {
       this.animating = true;
-      const rerolledSprites = this.rollSprites.filter(s => idsToReroll.includes(s.dieData.id));
+      const rerolledSprites = this.rollSprites.filter((s) => idsToReroll.includes(s.dieData.id));
       const rolled = this.gameState.state.rolledDice;
 
-      playRollAnimation(this, rerolledSprites, rerolledSprites.map(s => {
-        return rolled.find(d => d.id === s.dieData.id)!;
-      }), () => {
-        this.animating = false;
-        for (const sprite of this.rollSprites) {
-          const updated = rolled.find(d => d.id === sprite.dieData.id);
-          if (updated) sprite.setDieData(updated);
-        }
-        this.sortAndRepositionDice();
-        this.updateRollButtons();
-      });
+      playRollAnimation(
+        this,
+        rerolledSprites,
+        rerolledSprites.map((s) => {
+          return rolled.find((d) => d.id === s.dieData.id)!;
+        }),
+        () => {
+          this.animating = false;
+          for (const sprite of this.rollSprites) {
+            const updated = rolled.find((d) => d.id === sprite.dieData.id);
+            if (updated) sprite.setDieData(updated);
+          }
+          this.sortAndRepositionDice();
+          this.updateRollButtons();
+        },
+      );
 
       this.updateHUD();
     }
@@ -494,9 +527,7 @@ export class GameScene extends Scene {
 
   private onScore(): void {
     if (this.animating) return;
-    const ids = this.gameState.state.rolledDice
-      .filter(d => this.lockedDiceIds.has(d.id))
-      .map(d => d.id);
+    const ids = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id)).map((d) => d.id);
     if (ids.length === 0) return;
 
     const success = this.gameState.selectForScore(ids);
@@ -512,14 +543,13 @@ export class GameScene extends Scene {
     if (this.animating) return;
 
     // Compute unscored dice IDs before endDay clears state
-    const scoredIds = new Set(this.gameState.state.selectedForScore.map(d => d.id));
-    const unscoredIds = this.gameState.state.selectedForRoll
-      .filter(d => !scoredIds.has(d.id))
-      .map(d => d.id);
+    const scoredIds = new Set(this.gameState.state.selectedForScore.map((d) => d.id));
+    const unscoredIds = this.gameState.state.selectedForRoll.filter((d) => !scoredIds.has(d.id)).map((d) => d.id);
 
     // Gold dice held in hand earn $3 each (before payout so interest sees updated balance)
-    const goldHeldCount = this.gameState.state.selectedForRoll
-      .filter(d => !scoredIds.has(d.id) && d.enhancement === 'gold').length;
+    const goldHeldCount = this.gameState.state.selectedForRoll.filter(
+      (d) => !scoredIds.has(d.id) && d.enhancement === 'gold',
+    ).length;
 
     const outcome = this.gameState.endDay();
 
@@ -625,10 +655,10 @@ export class GameScene extends Scene {
     this.rerollBtn.setEnabled(rerollCount > 0 && hasRerolls);
     this.rerollBtn.setText(
       hasRerolls
-        ? (lockedCount === 0
+        ? lockedCount === 0
           ? `Re-roll All (${this.gameState.state.rerollsRemaining} remaining)`
-          : `Re-roll ${rerollCount} (${this.gameState.state.rerollsRemaining} remaining)`)
-        : 'No Re-rolls'
+          : `Re-roll ${rerollCount} (${this.gameState.state.rerollsRemaining} remaining)`
+        : 'No Re-rolls',
     );
 
     this.scoreBtn.setEnabled(lockedCount > 0);
@@ -637,9 +667,10 @@ export class GameScene extends Scene {
 
   /** Sort roll sprites by die value and reposition them with lock icons */
   private sortAndRepositionDice(): void {
-    const cmp = this.sortOrder === 'asc'
-      ? (a: DiceSprite, b: DiceSprite) => a.dieData.value - b.dieData.value
-      : (a: DiceSprite, b: DiceSprite) => b.dieData.value - a.dieData.value;
+    const cmp =
+      this.sortOrder === 'asc'
+        ? (a: DiceSprite, b: DiceSprite) => a.dieData.value - b.dieData.value
+        : (a: DiceSprite, b: DiceSprite) => b.dieData.value - a.dieData.value;
     this.rollSprites.sort(cmp);
 
     const rollY = this.scale.height * UI.ROLL_Y_RATIO;
@@ -696,7 +727,17 @@ export class GameScene extends Scene {
     const player = getPlayerState();
     const boss = player.currentBoss;
     this.sidebar.updateData({
-      title: boss ? boss.name : s.phase === 'SELECT' ? 'SELECT DICE' : s.phase === 'ROLL' ? 'ROLL PHASE' : s.phase === 'SCORE' ? 'SCORING' : s.phase === 'DAY_END' ? 'DAY COMPLETE' : 'GAME',
+      title: boss
+        ? boss.name
+        : s.phase === 'SELECT'
+          ? 'SELECT DICE'
+          : s.phase === 'ROLL'
+            ? 'ROLL PHASE'
+            : s.phase === 'SCORE'
+              ? 'SCORING'
+              : s.phase === 'DAY_END'
+                ? 'DAY COMPLETE'
+                : 'GAME',
       roundScore: s.totalMiles,
       milesBase: 0,
       mult: 0,
@@ -719,7 +760,12 @@ export class GameScene extends Scene {
 
   // ─── Refresh Prompt ───
 
-  private showRefreshPrompt(prompt: { availableCount: number; refreshCost: number; canAfford: boolean; freeIfUsed: boolean }): void {
+  private showRefreshPrompt(prompt: {
+    availableCount: number;
+    refreshCost: number;
+    canAfford: boolean;
+    freeIfUsed: boolean;
+  }): void {
     this.destroyRefreshOverlay();
     const { width, height } = this.scale;
 
@@ -745,49 +791,63 @@ export class GameScene extends Scene {
     this.refreshOverlay.add(panel);
 
     // Title
-    const title = this.add.text(cx, panelY + 30, 'Not Enough Dice!', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '22px',
-      color: TEXT_COLORS.GOLD,
-      align: 'center',
-    }).setOrigin(0.5);
+    const title = this.add
+      .text(cx, panelY + 30, 'Not Enough Dice!', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '22px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+      })
+      .setOrigin(0.5);
     this.refreshOverlay.add(title);
 
     // Description
-    const desc = this.add.text(cx, panelY + 60, `You only have ${prompt.availableCount} dice available (need ${this.gameState.config.rollSize})`, {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '14px',
-      color: TEXT_COLORS.SECONDARY,
-      align: 'center',
-    }).setOrigin(0.5);
+    const desc = this.add
+      .text(
+        cx,
+        panelY + 60,
+        `You only have ${prompt.availableCount} dice available (need ${this.gameState.config.rollSize})`,
+        {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '14px',
+          color: TEXT_COLORS.SECONDARY,
+          align: 'center',
+        },
+      )
+      .setOrigin(0.5);
     this.refreshOverlay.add(desc);
 
     // Option 1: Use remaining and refresh for free
     if (prompt.freeIfUsed) {
-      const freeBtn = new Button(this, cx, panelY + 110, `Use remaining ${prompt.availableCount} dice & refresh for free`, 380, 40)
-        .onClick(() => {
-          const player = getPlayerState();
-          const remainingIds = player.availableDice.map(d => d.id);
-          this.gameState.useRemainingAndRefresh();
-          // Keep any existing forced dice and add remaining pre-refresh dice
-          for (const id of remainingIds) this.forcedDiceIds.add(id);
-          this.destroyRefreshOverlay();
-          this.enterDrawPhaseLayout();
-        });
+      const freeBtn = new Button(
+        this,
+        cx,
+        panelY + 110,
+        `Use remaining ${prompt.availableCount} dice & refresh for free`,
+        380,
+        40,
+      ).onClick(() => {
+        const player = getPlayerState();
+        const remainingIds = player.availableDice.map((d) => d.id);
+        this.gameState.useRemainingAndRefresh();
+        // Keep any existing forced dice and add remaining pre-refresh dice
+        for (const id of remainingIds) this.forcedDiceIds.add(id);
+        this.destroyRefreshOverlay();
+        this.enterDrawPhaseLayout();
+      });
       freeBtn.setDepth(101);
       this.refreshOverlay.add(freeBtn);
     }
 
     // Option 2: Pay to refresh now
     const costLabel = prompt.refreshCost === 0 ? 'Refresh for free' : `Spend $${prompt.refreshCost} to refresh now`;
-    const payBtn = new Button(this, cx, panelY + 160, costLabel, 380, 40)
-      .onClick(() => {
-        const success = this.gameState.refreshSpentDice();
-        if (success) {
-          this.destroyRefreshOverlay();
-          this.enterDrawPhase();
-        }
-      });
+    const payBtn = new Button(this, cx, panelY + 160, costLabel, 380, 40).onClick(() => {
+      const success = this.gameState.refreshSpentDice();
+      if (success) {
+        this.destroyRefreshOverlay();
+        this.enterDrawPhase();
+      }
+    });
     payBtn.setEnabled(prompt.canAfford);
     payBtn.setDepth(101);
     this.refreshOverlay.add(payBtn);
@@ -811,9 +871,9 @@ export class GameScene extends Scene {
 
   /** Calculate target X positions for all non-empty stacks */
   private layoutStacks(): void {
-    const visibleStacks = this.availableStacks.filter(s => s.dice.length > 0);
+    const visibleStacks = this.availableStacks.filter((s) => s.dice.length > 0);
     const spacing = DICE_SPACING + 16;
-    const totalWidth = Math.max(0, (visibleStacks.length - 1)) * spacing;
+    const totalWidth = Math.max(0, visibleStacks.length - 1) * spacing;
     const startX = this.contentCX - totalWidth / 2;
 
     for (let i = 0; i < visibleStacks.length; i++) {
@@ -843,22 +903,16 @@ export class GameScene extends Scene {
     const representativeDie = stack.dice[0]; // All visually identical
 
     // Stacking offsets for depth effect
-    const rotations = maxVisible === 1 ? [0]
-      : maxVisible === 2 ? [-0.07, 0.03]
-      : [-0.07, 0.04, -0.01];
-    const yOffsets = maxVisible === 1 ? [0]
-      : maxVisible === 2 ? [5, 0]
-      : [8, 4, 0];
-    const xOffsets = maxVisible === 1 ? [0]
-      : maxVisible === 2 ? [-2, 0]
-      : [-3, 1, 0];
+    const rotations = maxVisible === 1 ? [0] : maxVisible === 2 ? [-0.07, 0.03] : [-0.07, 0.04, -0.01];
+    const yOffsets = maxVisible === 1 ? [0] : maxVisible === 2 ? [5, 0] : [8, 4, 0];
+    const xOffsets = maxVisible === 1 ? [0] : maxVisible === 2 ? [-2, 0] : [-3, 1, 0];
 
     for (let i = 0; i < maxVisible; i++) {
       const sprite = new DiceSprite(
         this,
         stack.targetX + xOffsets[i],
         this.availableY + yOffsets[i],
-        representativeDie
+        representativeDie,
       );
       sprite.setRotation(rotations[i]);
       sprite.setDepth(10 + i);
@@ -882,11 +936,21 @@ export class GameScene extends Scene {
     stack.countText.setVisible(stack.dice.length > 1);
 
     // Add "Add X" button below the stack
-    if (stack.addBtn) { stack.addBtn.destroy(); stack.addBtn = null; }
+    if (stack.addBtn) {
+      stack.addBtn.destroy();
+      stack.addBtn = null;
+    }
     const remaining = MAX_SELECT_FOR_ROLL - this.selectedHandIds.size;
     if (remaining > 0 && stack.dice.length > 0) {
       const addCount = Math.min(remaining, stack.dice.length);
-      stack.addBtn = new Button(this, stack.targetX, this.availableY + (stack.dice.length > 1 ? 72 : 56), `Add ${addCount}`, 72, 28);
+      stack.addBtn = new Button(
+        this,
+        stack.targetX,
+        this.availableY + (stack.dice.length > 1 ? 72 : 56),
+        `Add ${addCount}`,
+        72,
+        28,
+      );
       stack.addBtn.setDepth(15);
       // Smaller font for this button
       (stack.addBtn as any).label?.setFontSize?.(13);
@@ -1002,7 +1066,7 @@ export class GameScene extends Scene {
       ease: 'Back.easeOut',
       onComplete: () => {
         this.animating = false;
-      }
+      },
     });
 
     // Reposition existing play area sprites to accommodate
@@ -1078,7 +1142,7 @@ export class GameScene extends Scene {
           if (completed >= this.playAreaSprites.length) {
             this.animating = false;
           }
-        }
+        },
       });
     }
 
@@ -1088,11 +1152,21 @@ export class GameScene extends Scene {
   /** Refresh the add buttons on all stacks to reflect current remaining slots */
   private refreshAllAddButtons(): void {
     for (const stack of this.availableStacks) {
-      if (stack.addBtn) { stack.addBtn.destroy(); stack.addBtn = null; }
+      if (stack.addBtn) {
+        stack.addBtn.destroy();
+        stack.addBtn = null;
+      }
       const remaining = MAX_SELECT_FOR_ROLL - this.selectedHandIds.size;
       if (remaining > 0 && stack.dice.length > 0) {
         const addCount = Math.min(remaining, stack.dice.length);
-        stack.addBtn = new Button(this, stack.targetX, this.availableY + (stack.dice.length > 1 ? 72 : 56), `Add ${addCount}`, 72, 28);
+        stack.addBtn = new Button(
+          this,
+          stack.targetX,
+          this.availableY + (stack.dice.length > 1 ? 72 : 56),
+          `Add ${addCount}`,
+          72,
+          28,
+        );
         stack.addBtn.setDepth(15);
         stack.addBtn.onClick(() => this.onAddAllClick(stack));
       }
@@ -1118,14 +1192,17 @@ export class GameScene extends Scene {
 
     // Find or create the matching stack
     const key = this.getDiceGroupKey(die);
-    let stack = this.availableStacks.find(s => s.key === key);
+    let stack = this.availableStacks.find((s) => s.key === key);
 
     if (!stack) {
-      const countText = this.add.text(0, this.availableY + 44, '', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
-        color: TEXT_COLORS.SECONDARY,
-      }).setOrigin(0.5).setDepth(15);
+      const countText = this.add
+        .text(0, this.availableY + 44, '', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '14px',
+          color: TEXT_COLORS.SECONDARY,
+        })
+        .setOrigin(0.5)
+        .setDepth(15);
       stack = { key, dice: [], sprites: [], countText, addBtn: null, targetX: 0 };
       this.availableStacks.push(stack);
     }
@@ -1150,7 +1227,7 @@ export class GameScene extends Scene {
         sprite.destroy();
         this.renderStack(targetStack);
         this.animating = false;
-      }
+      },
     });
 
     // Animate other stacks to new positions
@@ -1356,7 +1433,7 @@ export class GameScene extends Scene {
   /** Reposition lock icons to match current rollSprites order */
   private repositionLockIcons(positions: number[]): void {
     // Rebuild lock icons to match the new sprite order
-    const lockStates = this.rollSprites.map(s => this.lockedDiceIds.has(s.dieData.id));
+    const lockStates = this.rollSprites.map((s) => this.lockedDiceIds.has(s.dieData.id));
     const rollY = this.scale.height * UI.ROLL_Y_RATIO;
     for (let i = 0; i < this.lockIcons.length; i++) {
       const icon = this.lockIcons[i];
@@ -1384,6 +1461,13 @@ export class GameScene extends Scene {
 
     sprite.on('pointerup', () => {
       if (this.wasDragging) return;
+
+      // Consumable targeting mode takes over click behavior
+      if (this.consumableTargeting) {
+        this.onConsumableTargetClick(sprite);
+        return;
+      }
+
       this.onPlayAreaDiceClick(sprite);
     });
   }
@@ -1398,19 +1482,271 @@ export class GameScene extends Scene {
     this.dicePouch.refresh();
 
     if (!result.success && result.failReason) {
-      const text = this.add.text(this.contentCX, this.consumableBar.y, result.failReason, {
-        fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', stroke: '#000000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(1000);
+      const text = this.add
+        .text(this.contentCX, this.consumableBar.y, result.failReason, {
+          fontFamily: 'sans-serif',
+          fontSize: '24px',
+          color: '#fff',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(1000);
       this.sound.play('sfx_cancel', { volume: 0.5 });
-      this.tweens.add({ targets: text, y: text.y - 15, alpha: 0, duration: 2000, ease: 'Power2', onComplete: () => text.destroy() });
+      this.tweens.add({
+        targets: text,
+        y: text.y - 15,
+        alpha: 0,
+        duration: 2000,
+        ease: 'Power2',
+        onComplete: () => text.destroy(),
+      });
     }
 
     if (result.diceSelection) {
-      this.scene.start('DiceSelection', {
-        config: result.diceSelection,
-        returnScene: 'Game',
-      });
+      this.enterConsumableTargeting(result.diceSelection);
     }
   }
 
+  // ─── Consumable Targeting Mode ───
+  // When a consumable with diceSelection is used, we enter a targeting mode
+  // where the player selects dice from the visible roll/play area to apply the effect.
+
+  private enterConsumableTargeting(config: DiceSelectionConfig): void {
+    this.consumableTargeting = config;
+    this.consumableTargetIds = new Set();
+
+    // Save current state so we can restore
+    this.savedInstructionText = this.instructionText.text;
+    this.savedLockedDiceIds = new Set(this.lockedDiceIds);
+
+    // Clear existing lock selections — we repurpose selection for targeting
+    this.lockedDiceIds.clear();
+    for (let i = 0; i < this.rollSprites.length; i++) {
+      this.rollSprites[i].setSelected(false);
+      if (this.lockIcons[i]) this.lockIcons[i].setVisible(false);
+    }
+
+    // Hide normal game buttons
+    this.hideAllButtons();
+
+    // Show targeting UI
+    const btnY = this.scale.height - 30;
+
+    // For BUMP_VALUE, show two confirm buttons (+1 / -1)
+    if (config.effectType === 'BUMP_VALUE') {
+      this.consumableConfirmBtn = new Button(this, this.contentCX - 70, btnY, '+1 Up', 120, 40);
+      this.consumableConfirmBtn.setEnabled(false);
+      this.consumableConfirmBtn.onClick(() => {
+        config.effectParams.bumpDirection = 'up';
+        this.applyConsumableTargeting();
+      });
+
+      this.consumableCancelBtn = new Button(this, this.contentCX + 70, btnY, '-1 Down', 120, 40);
+      this.consumableCancelBtn.onClick(() => {
+        config.effectParams.bumpDirection = 'down';
+        this.applyConsumableTargeting();
+      });
+      (this.consumableCancelBtn as Button).setEnabled(false);
+    } else {
+      this.consumableConfirmBtn = new Button(this, this.contentCX - 80, btnY, 'Apply', 140, 40);
+      this.consumableConfirmBtn.setEnabled(false);
+      this.consumableConfirmBtn.onClick(() => this.applyConsumableTargeting());
+
+      this.consumableCancelBtn = new Button(this, this.contentCX + 80, btnY, 'Cancel', 120, 40);
+      this.consumableCancelBtn.onClick(() => this.cancelConsumableTargeting());
+    }
+
+    this.updateConsumableTargetingText();
+  }
+
+  /** Get the dice sprites currently visible for targeting */
+  private getTargetableDice(): { sprites: DiceSprite[]; dice: Die[] } {
+    const phase = this.gameState.state.phase;
+    if (phase === 'ROLL' && this.rollSprites.length > 0) {
+      return {
+        sprites: this.rollSprites,
+        dice: this.gameState.state.rolledDice,
+      };
+    }
+    if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
+      return {
+        sprites: this.playAreaSprites,
+        dice: this.playAreaSprites.map((s) => s.dieData),
+      };
+    }
+    // Fallback — roll sprites if available
+    if (this.rollSprites.length > 0) {
+      return {
+        sprites: this.rollSprites,
+        dice: this.gameState.state.rolledDice,
+      };
+    }
+    return { sprites: [], dice: [] };
+  }
+
+  /** Called when a die is clicked during consumable targeting mode */
+  private onConsumableTargetClick(sprite: DiceSprite): void {
+    if (!this.consumableTargeting) return;
+    const id = sprite.dieData.id;
+    const required = this.consumableTargeting.pickCount;
+
+    if (this.consumableTargetIds.has(id)) {
+      // Deselect
+      this.consumableTargetIds.delete(id);
+      sprite.setSelected(false);
+      this.sound.play('sfx_card_slide2', { volume: 0.25 });
+    } else if (this.consumableTargetIds.size < required) {
+      // Select
+      this.consumableTargetIds.add(id);
+      sprite.setSelected(true);
+      this.sound.play('sfx_highlight1', { volume: 0.3 });
+    }
+
+    const enough = this.consumableTargetIds.size === required;
+    if (this.consumableConfirmBtn) this.consumableConfirmBtn.setEnabled(enough);
+    // For BUMP_VALUE, the cancel button is actually the -1 Down button
+    if (this.consumableTargeting.effectType === 'BUMP_VALUE' && this.consumableCancelBtn) {
+      (this.consumableCancelBtn as Button).setEnabled(enough);
+    }
+    this.updateConsumableTargetingText();
+  }
+
+  private updateConsumableTargetingText(): void {
+    if (!this.consumableTargeting) return;
+    const required = this.consumableTargeting.pickCount;
+    const selected = this.consumableTargetIds.size;
+    const remaining = required - selected;
+    const name = this.consumableTargeting.cardName || 'Effect';
+    if (remaining > 0) {
+      this.instructionText.setText(`${name}: Select ${remaining} more dice`);
+    } else {
+      this.instructionText.setText(`${name}: Ready! Click Apply`);
+    }
+  }
+
+  private applyConsumableTargeting(): void {
+    if (!this.consumableTargeting) return;
+    const required = this.consumableTargeting.pickCount;
+    if (this.consumableTargetIds.size !== required) return;
+
+    // Get the actual dice objects from the targetable set
+    const { dice } = this.getTargetableDice();
+    const selectedDice = dice.filter((d) => this.consumableTargetIds.has(d.id));
+
+    // Apply the effect
+    const resultMsg = applyDiceSelectionEffect(this.consumableTargeting, selectedDice);
+
+    // Show result feedback
+    const text = this.add
+      .text(this.contentCX, this.scale.height * UI.ROLL_Y_RATIO - 60, resultMsg, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: '#66ff66',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(1000);
+    this.tweens.add({
+      targets: text,
+      y: text.y - 30,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    });
+
+    this.exitConsumableTargeting();
+
+    // Refresh dice visuals — update the sprites to reflect changes
+    this.refreshDiceSpritesAfterEffect();
+  }
+
+  private cancelConsumableTargeting(): void {
+    this.exitConsumableTargeting();
+  }
+
+  private exitConsumableTargeting(): void {
+    // Cleanup targeting UI
+    if (this.consumableConfirmBtn) {
+      this.consumableConfirmBtn.destroy();
+      this.consumableConfirmBtn = null;
+    }
+    if (this.consumableCancelBtn) {
+      this.consumableCancelBtn.destroy();
+      this.consumableCancelBtn = null;
+    }
+
+    // Clear targeting selections
+    const { sprites } = this.getTargetableDice();
+    for (const s of sprites) {
+      s.setSelected(false);
+    }
+
+    this.consumableTargeting = null;
+    this.consumableTargetIds.clear();
+
+    // Restore saved state
+    this.lockedDiceIds = new Set(this.savedLockedDiceIds);
+    this.instructionText.setText(this.savedInstructionText);
+
+    // Restore lock icon visuals and selected state
+    for (let i = 0; i < this.rollSprites.length; i++) {
+      const id = this.rollSprites[i].dieData.id;
+      const isLocked = this.lockedDiceIds.has(id);
+      this.rollSprites[i].setSelected(isLocked);
+      if (this.lockIcons[i]) this.lockIcons[i].setVisible(isLocked);
+    }
+
+    // Restore game buttons for current phase
+    const phase = this.gameState.state.phase;
+    if (phase === 'ROLL') {
+      this.rerollBtn.setVisible(true);
+      this.scoreBtn.setVisible(true);
+      this.showSortButtons();
+      this.updateRollButtons();
+    } else if (phase === 'SELECT') {
+      this.readyBtn.setVisible(true);
+      this.updateDrawButtons();
+    }
+
+    // Refresh UI
+    this.sidebar.refreshMoney();
+    this.equipBar.refresh();
+    this.consumableBar.refresh();
+    this.dicePouch.refresh();
+  }
+
+  /** Refresh dice sprites in-place after a consumable effect changes dice data */
+  private refreshDiceSpritesAfterEffect(): void {
+    const player = getPlayerState();
+
+    // Update roll sprites if in ROLL phase
+    for (const sprite of this.rollSprites) {
+      const updated = player.dice.find((d) => d.id === sprite.dieData.id);
+      if (updated) {
+        sprite.setDieData(updated);
+      }
+    }
+
+    // Update rolledDice in game state to match
+    for (let i = 0; i < this.gameState.state.rolledDice.length; i++) {
+      const rd = this.gameState.state.rolledDice[i];
+      const updated = player.dice.find((d) => d.id === rd.id);
+      if (updated) {
+        this.gameState.state.rolledDice[i] = updated;
+      }
+    }
+
+    // Update play area sprites if in SELECT phase
+    for (const sprite of this.playAreaSprites) {
+      const updated = player.dice.find((d) => d.id === sprite.dieData.id);
+      if (updated) {
+        sprite.setDieData(updated);
+      }
+    }
+
+    this.dicePouch.refresh();
+  }
 }

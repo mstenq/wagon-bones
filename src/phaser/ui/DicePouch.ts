@@ -22,28 +22,31 @@ export class DicePouch extends GameObjects.Container {
     this.drawBg(false);
 
     // Dice icon (emoji or text)
-    const icon = scene.add.text(size / 2, size / 2 - 8, '🎲', {
-      fontSize: '22px',
-    }).setOrigin(0.5);
+    const icon = scene.add
+      .text(size / 2, size / 2 - 8, '🎲', {
+        fontSize: '22px',
+      })
+      .setOrigin(0.5);
     this.add(icon);
 
     // Count text
-    this.countText = scene.add.text(size / 2, size / 2 + 14, '0/0', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '11px',
-      color: TEXT_COLORS.SECONDARY,
-    }).setOrigin(0.5);
+    this.countText = scene.add
+      .text(size / 2, size / 2 + 14, '0/0', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.SECONDARY,
+      })
+      .setOrigin(0.5);
     this.add(this.countText);
 
     this.setSize(size, size);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, size, size),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
 
     this.on('pointerover', () => this.drawBg(true));
     this.on('pointerout', () => this.drawBg(false));
-    this.on('pointerdown', () => { if (this.onClick) this.onClick(); });
+    this.on('pointerdown', () => {
+      if (this.onClick) this.onClick();
+    });
 
     this.setDepth(150);
     scene.add.existing(this);

@@ -65,12 +65,14 @@ export class BoosterPackCard extends GameObjects.Container {
     tagBg.strokeRoundedRect(-tagW / 2, tagY - PRICE_TAG_H / 2, tagW, PRICE_TAG_H, 6);
     this.add(tagBg);
 
-    this.costText = scene.add.text(0, tagY, `$${pack.def.cost}`, {
-      fontFamily: 'Arial Black',
-      fontSize: '14px',
-      color: '#ffd700',
-      align: 'center',
-    }).setOrigin(0.5);
+    this.costText = scene.add
+      .text(0, tagY, `$${pack.def.cost}`, {
+        fontFamily: 'Arial Black',
+        fontSize: '14px',
+        color: '#ffd700',
+        align: 'center',
+      })
+      .setOrigin(0.5);
     this.add(this.costText);
 
     // Sold overlay (hidden initially)
@@ -92,17 +94,18 @@ export class BoosterPackCard extends GameObjects.Container {
     scene.add.existing(this);
   }
 
-  get pack(): PackInstance { return this._pack; }
-  get sold(): boolean { return this._sold; }
+  get pack(): PackInstance {
+    return this._pack;
+  }
+  get sold(): boolean {
+    return this._sold;
+  }
 
   markSold(): void {
     this._sold = true;
     this.soldOverlay.clear();
     this.soldOverlay.fillStyle(0x000000, 0.6);
-    this.soldOverlay.fillRoundedRect(
-      -this._displayW / 2, -this._displayH / 2,
-      this._displayW, this._displayH, 10,
-    );
+    this.soldOverlay.fillRoundedRect(-this._displayW / 2, -this._displayH / 2, this._displayW, this._displayH, 10);
     this.soldOverlay.setVisible(true);
     this.costText.setText('OPENED');
     this.costText.setColor('#888888');
@@ -130,43 +133,45 @@ export class BoosterPackCard extends GameObjects.Container {
     const catLabel = CATEGORY_LABELS[def.category] ?? def.category;
 
     // Title
-    const nameText = this.scene.add.text(TOOLTIP_PAD, TOOLTIP_PAD, def.name, {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0, 0);
+    const nameText = this.scene.add
+      .text(TOOLTIP_PAD, TOOLTIP_PAD, def.name, {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0, 0);
 
     // Category & tier
-    const subtitleText = this.scene.add.text(
-      TOOLTIP_PAD,
-      TOOLTIP_PAD + nameText.height + 4,
-      `${tierLabel} ${catLabel} Pack`,
-      {
+    const subtitleText = this.scene.add
+      .text(TOOLTIP_PAD, TOOLTIP_PAD + nameText.height + 4, `${tierLabel} ${catLabel} Pack`, {
         fontFamily: 'Arial',
         fontSize: '11px',
         color: '#aaaacc',
-      },
-    ).setOrigin(0, 0);
+      })
+      .setOrigin(0, 0);
 
     // Pick info
-    const pickText = this.scene.add.text(
-      TOOLTIP_PAD,
-      TOOLTIP_PAD + nameText.height + 4 + subtitleText.height + 8,
-      `Pick ${def.pickCount} of ${def.totalCards}`,
-      {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        color: '#cccccc',
-      },
-    ).setOrigin(0, 0);
+    const pickText = this.scene.add
+      .text(
+        TOOLTIP_PAD,
+        TOOLTIP_PAD + nameText.height + 4 + subtitleText.height + 8,
+        `Pick ${def.pickCount} of ${def.totalCards}`,
+        {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          color: '#cccccc',
+        },
+      )
+      .setOrigin(0, 0);
 
     const tooltipChildren: GameObjects.GameObject[] = [nameText, subtitleText, pickText];
     const bottomY = TOOLTIP_PAD + nameText.height + 4 + subtitleText.height + 8 + pickText.height;
 
     // Compute size
     const contentWidth = tooltipChildren.reduce(
-      (max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0), 0,
+      (max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0),
+      0,
     );
     const tooltipW = contentWidth + TOOLTIP_PAD * 2;
     const tooltipH = bottomY + TOOLTIP_PAD;

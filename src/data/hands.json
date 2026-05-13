@@ -2,7 +2,6 @@
   { "type": "HIGH_VALUE",       "name": "High Value",       "baseMiles": 5,   "baseMult": 1, "rank": 1  },
   { "type": "PAIR",             "name": "Two of a Kind",    "baseMiles": 10,  "baseMult": 1, "rank": 2  },
   { "type": "TWO_PAIR",         "name": "Two Pair",         "baseMiles": 15,  "baseMult": 2, "rank": 3  },
-  { "type": "THREE_STRAIGHT",   "name": "3 Straight",       "baseMiles": 15,  "baseMult": 1, "rank": 4  },
   { "type": "THREE_OF_A_KIND",  "name": "Three of a Kind",  "baseMiles": 20,  "baseMult": 3, "rank": 5  },
   { "type": "FOUR_STRAIGHT",    "name": "4 Straight",       "baseMiles": 20,  "baseMult": 3, "rank": 6  },
   { "type": "FULL_HOUSE",       "name": "Full House",       "baseMiles": 25,  "baseMult": 4, "rank": 7  },

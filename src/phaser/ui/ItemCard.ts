@@ -60,16 +60,16 @@ interface ActionTabInstance {
 }
 
 const RARITY_LABELS: Record<string, string> = {
-  common:    'Common',
-  uncommon:  'Uncommon',
-  rare:      'Rare',
+  common: 'Common',
+  uncommon: 'Uncommon',
+  rare: 'Rare',
   legendary: 'Legendary',
 };
 
 const RARITY_LABEL_COLORS: Record<string, string> = {
-  common:    '#88aa88',
-  uncommon:  '#8888cc',
-  rare:      '#ccaa44',
+  common: '#88aa88',
+  uncommon: '#8888cc',
+  rare: '#ccaa44',
   legendary: '#cc66aa',
 };
 
@@ -113,10 +113,7 @@ export class ItemCard extends GameObjects.Container {
     this.add(this.soldOverlay);
 
     this.setSize(this._cardW, this._cardH);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, this._cardW, this._cardH),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(0, 0, this._cardW, this._cardH), Phaser.Geom.Rectangle.Contains);
 
     // Tooltip on hover
     this.on('pointerover', this.showTooltip, this);
@@ -125,8 +122,12 @@ export class ItemCard extends GameObjects.Container {
     scene.add.existing(this);
   }
 
-  get def(): CardData { return this._def; }
-  get sold(): boolean { return this._sold; }
+  get def(): CardData {
+    return this._def;
+  }
+  get sold(): boolean {
+    return this._sold;
+  }
 
   // ─── Public API ───
 
@@ -134,10 +135,7 @@ export class ItemCard extends GameObjects.Container {
     this._sold = true;
     this.soldOverlay.clear();
     this.soldOverlay.fillStyle(0x000000, 0.6);
-    this.soldOverlay.fillRoundedRect(
-      -this._cardW / 2, -this._cardH / 2,
-      this._cardW, this._cardH, CARD_RADIUS,
-    );
+    this.soldOverlay.fillRoundedRect(-this._cardW / 2, -this._cardH / 2, this._cardW, this._cardH, CARD_RADIUS);
     this.soldOverlay.setVisible(true);
     if (this.costText) {
       this.costText.setText('SOLD');
@@ -263,7 +261,7 @@ export class ItemCard extends GameObjects.Container {
     }
 
     // Price tag floating above the card (shop mode)
-    const showCost = this._options.showCost ?? (mode === 'shop');
+    const showCost = this._options.showCost ?? mode === 'shop';
     if ((showCost && this._def.cost !== undefined) || this._options.sellValue !== undefined) {
       const value = this._options.sellValue !== undefined ? this._options.sellValue : this._def.cost!;
       const prefix = this._options.sellValue !== undefined ? 'Sell $' : '$';
@@ -278,12 +276,14 @@ export class ItemCard extends GameObjects.Container {
       tagBg.strokeRoundedRect(-tagW / 2, tagY - tagH / 2, tagW, tagH, 6 * scale);
       this.add(tagBg);
 
-      this.costText = this.scene.add.text(0, tagY, `${prefix}${value}`, {
-        fontFamily: 'Arial Black',
-        fontSize: `${Math.round(14 * scale)}px`,
-        color: '#ffd700',
-        align: 'center',
-      }).setOrigin(0.5);
+      this.costText = this.scene.add
+        .text(0, tagY, `${prefix}${value}`, {
+          fontFamily: 'Arial Black',
+          fontSize: `${Math.round(14 * scale)}px`,
+          color: '#ffd700',
+          align: 'center',
+        })
+        .setOrigin(0.5);
       this.add(this.costText);
     }
   }
@@ -291,18 +291,18 @@ export class ItemCard extends GameObjects.Container {
   // ─── Hint Display ───
 
   private static readonly HINT_COLORS: Record<string, { text: string; bg?: number }> = {
-    miles:      { text: '#55aaff' },
-    mult:       { text: '#ffffff', bg: 0xcc3333 },
-    xmult:      { text: '#ffffff', bg: 0xcc3333 },
-    odds:       { text: '#55cc55' },
-    inactive:   { text: '#777777' },
-    condition:  { text: '#ddaa44' },
-    active:     { text: '#55dd55' },
-    money:      { text: '#ffd700' },
-    text:       { text: '#7b7b7b' },
-    aura_fire:  { text: '#ff4500' },
-    aura_icy:   { text: '#00bfff' },
-    aura_holy:  { text: '#fffacd' },
+    miles: { text: '#55aaff' },
+    mult: { text: '#ffffff', bg: 0xcc3333 },
+    xmult: { text: '#ffffff', bg: 0xcc3333 },
+    odds: { text: '#55cc55' },
+    inactive: { text: '#777777' },
+    condition: { text: '#ddaa44' },
+    active: { text: '#55dd55' },
+    money: { text: '#ffd700' },
+    text: { text: '#7b7b7b' },
+    aura_fire: { text: '#ff4500' },
+    aura_icy: { text: '#00bfff' },
+    aura_holy: { text: '#fffacd' },
   };
 
   /** Build aura bonus row if this card has a scoring aura */
@@ -399,11 +399,13 @@ export class ItemCard extends GameObjects.Container {
           this.hintObjects.push(chipG);
         }
 
-        const segText = this.scene.add.text(curX + segW / 2, rowY, seg.text, {
-          fontFamily: 'sans-serif',
-          fontSize: `${fontSize}px`,
-          color: colors.text,
-        }).setOrigin(0.5);
+        const segText = this.scene.add
+          .text(curX + segW / 2, rowY, seg.text, {
+            fontFamily: 'sans-serif',
+            fontSize: `${fontSize}px`,
+            color: colors.text,
+          })
+          .setOrigin(0.5);
         this.add(segText);
         this.hintObjects.push(segText);
 
@@ -414,9 +416,15 @@ export class ItemCard extends GameObjects.Container {
 
   // ─── Action Tabs (Sell / Use) ───
 
-  get tabsVisible(): boolean { return this._tabsVisible; }
-  get cardWidth(): number { return this._cardW; }
-  get cardHeight(): number { return this._cardH; }
+  get tabsVisible(): boolean {
+    return this._tabsVisible;
+  }
+  get cardWidth(): number {
+    return this._cardW;
+  }
+  get cardHeight(): number {
+    return this._cardH;
+  }
 
   /** Show action tabs on the right side of the card. Call hideActionTabs() first to replace. */
   showActionTabs(tabs: CardActionTabConfig[]): void {
@@ -440,26 +448,34 @@ export class ItemCard extends GameObjects.Container {
       tabContainer.setDepth(-1); // render behind card content
 
       // Position: bottom-aligned, stacking upward
-      const tabY = (hh - tabH - (tabH + tabGap) * i) - 20;
+      const tabY = hh - tabH - (tabH + tabGap) * i - 20;
 
       const bg = this.scene.add.graphics();
       bg.fillStyle(cfg.color, 0.95);
       bg.fillRoundedRect(0, tabY, tabW, tabH, {
-        tl: 0, tr: tabRadius, bl: 0, br: tabRadius,
+        tl: 0,
+        tr: tabRadius,
+        bl: 0,
+        br: tabRadius,
       });
       bg.lineStyle(1, 0xffffff, 0.2);
       bg.strokeRoundedRect(0, tabY, tabW, tabH, {
-        tl: 0, tr: tabRadius, bl: 0, br: tabRadius,
+        tl: 0,
+        tr: tabRadius,
+        bl: 0,
+        br: tabRadius,
       });
       tabContainer.add(bg);
 
-      const label = this.scene.add.text(tabW / 2, tabY + tabH / 2, cfg.label, {
-        fontFamily: 'sans-serif',
-        fontSize: `${fontSize}px`,
-        color: cfg.textColor ?? '#ffffff',
-        align: 'center',
-        lineSpacing: -2,
-      }).setOrigin(0.5);
+      const label = this.scene.add
+        .text(tabW / 2, tabY + tabH / 2, cfg.label, {
+          fontFamily: 'sans-serif',
+          fontSize: `${fontSize}px`,
+          color: cfg.textColor ?? '#ffffff',
+          align: 'center',
+          lineSpacing: -2,
+        })
+        .setOrigin(0.5);
       tabContainer.add(label);
 
       // Make tab interactive
@@ -565,44 +581,47 @@ export class ItemCard extends GameObjects.Container {
     }
     const rarityLabel = this._def.rarity ? (RARITY_LABELS[this._def.rarity] ?? this._def.rarity) : null;
 
-    const infoText = this.scene.add.text(0, 0, lines.join('\n'), {
-      fontFamily: 'Arial',
-      fontSize: '13px',
-      color: '#dddddd',
-      lineSpacing: 4,
-      wordWrap: { width: 200 },
-    }).setOrigin(0, 0);
+    const infoText = this.scene.add
+      .text(0, 0, lines.join('\n'), {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        color: '#dddddd',
+        lineSpacing: 4,
+        wordWrap: { width: 200 },
+      })
+      .setOrigin(0, 0);
 
     // Title styling
-    const nameText = this.scene.add.text(TOOLTIP_PAD, TOOLTIP_PAD, this._def.name, {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      color: (this._def.rarity && RARITY_LABEL_COLORS[this._def.rarity]) || '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0, 0);
+    const nameText = this.scene.add
+      .text(TOOLTIP_PAD, TOOLTIP_PAD, this._def.name, {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: (this._def.rarity && RARITY_LABEL_COLORS[this._def.rarity]) || '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0, 0);
 
-    const descText = this.scene.add.text(TOOLTIP_PAD, TOOLTIP_PAD + nameText.height + 6, this._def.description, {
-      fontFamily: 'Arial',
-      fontSize: '12px',
-      color: '#cccccc',
-      lineSpacing: 3,
-      wordWrap: { width: 200 },
-    }).setOrigin(0, 0);
+    const descText = this.scene.add
+      .text(TOOLTIP_PAD, TOOLTIP_PAD + nameText.height + 6, this._def.description, {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        color: '#cccccc',
+        lineSpacing: 3,
+        wordWrap: { width: 200 },
+      })
+      .setOrigin(0, 0);
 
     let bottomY = TOOLTIP_PAD + nameText.height + 6 + descText.height;
     const tooltipChildren: GameObjects.GameObject[] = [nameText, descText];
 
     if (rarityLabel) {
-      const rarityText = this.scene.add.text(
-        TOOLTIP_PAD,
-        bottomY + 8,
-        rarityLabel,
-        {
+      const rarityText = this.scene.add
+        .text(TOOLTIP_PAD, bottomY + 8, rarityLabel, {
           fontFamily: 'Arial',
           fontSize: '11px',
           color: (this._def.rarity && RARITY_LABEL_COLORS[this._def.rarity]) || '#888888',
-        },
-      ).setOrigin(0, 0);
+        })
+        .setOrigin(0, 0);
       bottomY = bottomY + 8 + rarityText.height;
       tooltipChildren.push(rarityText);
     }
@@ -610,23 +629,23 @@ export class ItemCard extends GameObjects.Container {
     // Aura info (if present on EquipmentDef)
     const aura = this._def.aura;
     if (aura) {
-      const auraText = this.scene.add.text(
-        TOOLTIP_PAD,
-        bottomY + 6,
-        `✦ ${aura.name}: ${aura.description}`,
-        {
+      const auraText = this.scene.add
+        .text(TOOLTIP_PAD, bottomY + 6, `✦ ${aura.name}: ${aura.description}`, {
           fontFamily: 'Arial',
           fontSize: '11px',
           color: '#ddaa44',
           fontStyle: 'bold',
-        },
-      ).setOrigin(0, 0);
+        })
+        .setOrigin(0, 0);
       bottomY = bottomY + 6 + auraText.height;
       tooltipChildren.push(auraText);
     }
 
     // Compute size
-    const contentWidth = tooltipChildren.reduce((max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0), 0);
+    const contentWidth = tooltipChildren.reduce(
+      (max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0),
+      0,
+    );
     const tooltipW = contentWidth + TOOLTIP_PAD * 2;
     const tooltipH = bottomY + TOOLTIP_PAD;
 

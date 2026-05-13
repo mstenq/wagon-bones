@@ -10,6 +10,19 @@ import { HandType } from './types';
 
 export type ConsumableCategory = 'supply' | 'trail_guide' | 'frontier';
 
+/** Returns the texture key prefix used when loading/displaying a consumable category's image.
+ *  Trail guide IDs already include `tg_`, so their prefix is empty. */
+export function getConsumableTexturePrefix(category: ConsumableCategory): string {
+  switch (category) {
+    case 'supply':
+      return 'supply_';
+    case 'trail_guide':
+      return ''; // IDs are already prefixed (e.g. tg_high_value)
+    case 'frontier':
+      return 'fe_';
+  }
+}
+
 export interface ConsumableDef {
   id: string;
   name: string;
@@ -40,7 +53,10 @@ const TRAIL_GUIDES = trailGuidesData;
 const FRONTIER_ENCOUNTERS = frontierEncountersData;
 
 /** Create a ConsumableDef from a supply card JSON entry */
-export function createSupplyConsumableDef(cardData: (typeof SUPPLY_CARDS)[number], aura?: ItemAura | null): ConsumableDef {
+export function createSupplyConsumableDef(
+  cardData: (typeof SUPPLY_CARDS)[number],
+  aura?: ItemAura | null,
+): ConsumableDef {
   const def: ConsumableDef = {
     id: cardData.id,
     name: cardData.name,
@@ -53,7 +69,12 @@ export function createSupplyConsumableDef(cardData: (typeof SUPPLY_CARDS)[number
     def.instantEffect = cardData.instantEffect as InstantEffect;
   }
   if ('diceSelection' in cardData && cardData.diceSelection) {
-    const ds = cardData.diceSelection as { drawCount: number; pickCount: number; effectType: string; effectParams: Record<string, unknown> };
+    const ds = cardData.diceSelection as {
+      drawCount: number;
+      pickCount: number;
+      effectType: string;
+      effectParams: Record<string, unknown>;
+    };
     def.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
@@ -68,7 +89,10 @@ export function createSupplyConsumableDef(cardData: (typeof SUPPLY_CARDS)[number
 }
 
 /** Create a ConsumableDef from a trail guide JSON entry */
-export function createTrailGuideConsumableDef(tgData: (typeof TRAIL_GUIDES)[number], aura?: ItemAura | null): ConsumableDef {
+export function createTrailGuideConsumableDef(
+  tgData: (typeof TRAIL_GUIDES)[number],
+  aura?: ItemAura | null,
+): ConsumableDef {
   return {
     id: tgData.id,
     name: tgData.name,
@@ -81,7 +105,10 @@ export function createTrailGuideConsumableDef(tgData: (typeof TRAIL_GUIDES)[numb
 }
 
 /** Create a ConsumableDef from a frontier encounter JSON entry */
-export function createFrontierConsumableDef(feData: (typeof FRONTIER_ENCOUNTERS)[number], aura?: ItemAura | null): ConsumableDef {
+export function createFrontierConsumableDef(
+  feData: (typeof FRONTIER_ENCOUNTERS)[number],
+  aura?: ItemAura | null,
+): ConsumableDef {
   const def: ConsumableDef = {
     id: feData.id,
     name: feData.name,
@@ -94,7 +121,12 @@ export function createFrontierConsumableDef(feData: (typeof FRONTIER_ENCOUNTERS)
     def.instantEffect = feData.instantEffect as InstantEffect;
   }
   if ('diceSelection' in feData && feData.diceSelection) {
-    const ds = feData.diceSelection as { drawCount: number; pickCount: number; effectType: string; effectParams: Record<string, unknown> };
+    const ds = feData.diceSelection as {
+      drawCount: number;
+      pickCount: number;
+      effectType: string;
+      effectParams: Record<string, unknown>;
+    };
     def.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
@@ -136,14 +168,14 @@ export function getRandomFrontierDef(aura?: ItemAura | null): ConsumableDef {
 
 /** Get a supply card def by id */
 export function getSupplyDefById(id: string, aura?: ItemAura | null): ConsumableDef | null {
-  const card = SUPPLY_CARDS.find(c => c.id === id);
+  const card = SUPPLY_CARDS.find((c) => c.id === id);
   if (!card) return null;
   return createSupplyConsumableDef(card, aura);
 }
 
 /** Get a trail guide def by id */
 export function getTrailGuideDefById(id: string, aura?: ItemAura | null): ConsumableDef | null {
-  const tg = TRAIL_GUIDES.find(t => t.id === id);
+  const tg = TRAIL_GUIDES.find((t) => t.id === id);
   if (!tg) return null;
   return createTrailGuideConsumableDef(tg, aura);
 }
@@ -221,7 +253,7 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
   // ─── Supply cards that create other consumables ───
   switch (def.id) {
     case 'doctor': {
-      // Creates 2 medicine consumables (medicine doesn't exist yet — stub as supply cards)
+      // Creates 2 medicine consumables
       const medicineDef = getSupplyDefById('medicine');
       if (!medicineDef) return { success: true, consumablesCreated: 0 };
       let created = 0;
@@ -249,8 +281,8 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
       return { success: true, consumablesCreated: created };
     }
     case 'second_helpings': {
-      // Creates last used consumable
-      if (!player.lastUsedConsumable) {
+      // Creates last used consumable (excludes itself)
+      if (!player.lastUsedConsumable || player.lastUsedConsumable.id === 'second_helpings') {
         return { success: false, failReason: 'No previous consumable used!' };
       }
       if (player.addConsumable(player.lastUsedConsumable)) {

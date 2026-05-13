@@ -12,9 +12,9 @@ import diceAurasData from '../../data/dice_auras.json';
 import stickerData from '../../data/pip_enhancements.json';
 
 // Lookup maps for descriptions
-const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map(e => [e.id, e]));
-const AURA_INFO = new Map(diceAurasData.map(a => [a.id, a]));
-const STICKER_INFO = new Map(stickerData.map(s => [s.id, s]));
+const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
+const AURA_INFO = new Map(diceAurasData.map((a) => [a.id, a]));
+const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
 const BG_COLOR = DICE.BG_COLOR;
@@ -28,30 +28,36 @@ const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
 
 // Dodecahedron geometry constants
-const D12_INNER_RADIUS = 19;   // Front face pentagon circumradius
+const D12_INNER_RADIUS = 19; // Front face pentagon circumradius
 const D12_SHOULDER_RADIUS = 26; // Shoulder points (same angles as inner verts)
-const D12_TIP_RADIUS = 30;     // Tip points (between inner verts)
-const D12_ROTATION = -90;      // Starting angle so vertex points up
+const D12_TIP_RADIUS = 30; // Tip points (between inner verts)
+const D12_ROTATION = -90; // Starting angle so vertex points up
 
 /** Compute vertices of a regular pentagon */
 function pentagonVerts(cx: number, cy: number, radius: number, startAngleDeg: number): [number, number][] {
   const verts: [number, number][] = [];
   for (let i = 0; i < 5; i++) {
-    const angle = (startAngleDeg + i * 72) * Math.PI / 180;
+    const angle = ((startAngleDeg + i * 72) * Math.PI) / 180;
     verts.push([cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)]);
   }
   return verts;
 }
 
 /** Get the 10-point outer boundary (decagon) alternating tip and shoulder points */
-function dodecahedronOuterVerts(cx: number, cy: number, rShoulder: number, rTip: number, startAngleDeg: number): [number, number][] {
+function dodecahedronOuterVerts(
+  cx: number,
+  cy: number,
+  rShoulder: number,
+  rTip: number,
+  startAngleDeg: number,
+): [number, number][] {
   const verts: [number, number][] = [];
   for (let i = 0; i < 5; i++) {
     // Shoulder point (same angle as inner vertex)
-    const sAngle = (startAngleDeg + i * 72) * Math.PI / 180;
+    const sAngle = ((startAngleDeg + i * 72) * Math.PI) / 180;
     verts.push([cx + rShoulder * Math.cos(sAngle), cy + rShoulder * Math.sin(sAngle)]);
     // Tip point (midpoint angle between inner vertices)
-    const tAngle = (startAngleDeg + 36 + i * 72) * Math.PI / 180;
+    const tAngle = ((startAngleDeg + 36 + i * 72) * Math.PI) / 180;
     verts.push([cx + rTip * Math.cos(tAngle), cy + rTip * Math.sin(tAngle)]);
   }
   return verts;
@@ -81,20 +87,19 @@ export class DiceSprite extends GameObjects.Container {
 
     this.auraGfx = scene.add.graphics();
     this.bg = scene.add.graphics();
-    this.valueText = scene.add.text(0, 0, '', {
-      fontFamily: 'Arial Black',
-      fontSize: '18px',
-      color: '#222222',
-      stroke: '#00000033',
-      strokeThickness: 1,
-    }).setOrigin(0.5, 0.5);
+    this.valueText = scene.add
+      .text(0, 0, '', {
+        fontFamily: 'Arial Black',
+        fontSize: '18px',
+        color: '#222222',
+        stroke: '#00000033',
+        strokeThickness: 1,
+      })
+      .setOrigin(0.5, 0.5);
     this.add([this.auraGfx, this.bg, this.valueText]);
 
     this.setSize(DICE_SIZE, DICE_SIZE);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, DICE_SIZE, DICE_SIZE),
-      Phaser.Geom.Rectangle.Contains
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(0, 0, DICE_SIZE, DICE_SIZE), Phaser.Geom.Rectangle.Contains);
 
     this.redraw();
     this.drawAuraFX();
@@ -148,12 +153,20 @@ export class DiceSprite extends GameObjects.Container {
 
     const isGrimy = this._dieData.isGrimy;
     const hasEnhancement = !!this._dieData.enhancement;
-    const bgColor = isGrimy ? GRIMY_COLOR : (hasEnhancement ? getEnhancementBgColor(this._dieData.enhancement!) : BG_COLOR);
-    const strokeColor = this._forced ? FORCED_STROKE : (this._selected ? SELECTED_STROKE : DEFAULT_STROKE);
-    const strokeWidth = (this._selected || this._forced) ? 3 : 1;
+    const bgColor = isGrimy
+      ? GRIMY_COLOR
+      : hasEnhancement
+        ? getEnhancementBgColor(this._dieData.enhancement!)
+        : BG_COLOR;
+    const strokeColor = this._forced ? FORCED_STROKE : this._selected ? SELECTED_STROKE : DEFAULT_STROKE;
+    const strokeWidth = this._selected || this._forced ? 3 : 1;
 
     // Darker shade for side faces (angling away from viewer)
-    const sideColor = isGrimy ? darkenColor(GRIMY_COLOR, 0.75) : (hasEnhancement ? darkenColor(getEnhancementBgColor(this._dieData.enhancement!), 0.8) : darkenColor(BG_COLOR, 0.82));
+    const sideColor = isGrimy
+      ? darkenColor(GRIMY_COLOR, 0.75)
+      : hasEnhancement
+        ? darkenColor(getEnhancementBgColor(this._dieData.enhancement!), 0.8)
+        : darkenColor(BG_COLOR, 0.82);
     const edgeColor = isGrimy ? darkenColor(GRIMY_COLOR, 0.5) : darkenColor(bgColor, 0.6);
 
     // Compute geometry
@@ -263,11 +276,13 @@ export class DiceSprite extends GameObjects.Container {
     if (!isGrimy && this._dieData.sticker) {
       const stickerIcon = getStickerIcon(this._dieData.sticker);
       const stickerColor = getStickerColor(this._dieData.sticker);
-      this.stickerText = this.scene.add.text(10, 8, stickerIcon, {
-        fontFamily: 'Arial',
-        fontSize: '11px',
-        color: '#' + stickerColor.toString(16).padStart(6, '0'),
-      }).setOrigin(0.5, 0.5);
+      this.stickerText = this.scene.add
+        .text(10, 8, stickerIcon, {
+          fontFamily: 'Arial',
+          fontSize: '11px',
+          color: '#' + stickerColor.toString(16).padStart(6, '0'),
+        })
+        .setOrigin(0.5, 0.5);
       this.add(this.stickerText);
     }
   }
@@ -314,12 +329,14 @@ export class DiceSprite extends GameObjects.Container {
 
     // Aura label below indicators (only in grab bag / booster pack)
     if (info && this._showAuraLabel) {
-      this.auraLabel = this.scene.add.text(0, half + 16, info.name, {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        color: '#' + color.toString(16).padStart(6, '0'),
-        align: 'center',
-      }).setOrigin(0.5, 0);
+      this.auraLabel = this.scene.add
+        .text(0, half + 16, info.name, {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          color: '#' + color.toString(16).padStart(6, '0'),
+          align: 'center',
+        })
+        .setOrigin(0.5, 0);
       this.add(this.auraLabel);
     }
   }
@@ -367,13 +384,15 @@ export class DiceSprite extends GameObjects.Container {
       lines.push(`${getStickerIcon(this._dieData.sticker)} ${stickerName}${stickerDesc}`);
     }
 
-    const infoText = this.scene.add.text(0, 0, lines.join('\n'), {
-      fontFamily: 'Arial',
-      fontSize: '13px',
-      color: '#dddddd',
-      lineSpacing: 4,
-      wordWrap: { width: 280 },
-    }).setOrigin(0, 0);
+    const infoText = this.scene.add
+      .text(0, 0, lines.join('\n'), {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        color: '#dddddd',
+        lineSpacing: 4,
+        wordWrap: { width: 280 },
+      })
+      .setOrigin(0, 0);
 
     const tooltipWidth = infoText.width + TOOLTIP_PAD * 2;
     const tooltipHeight = infoText.height + TOOLTIP_PAD * 2;
@@ -428,14 +447,14 @@ export class DiceSprite extends GameObjects.Container {
 
 function getEnhancementColor(e: string): number {
   const colors: Record<string, number> = {
-    bone: 0xd4c9a8, 
-    lucky: 0x4caf50, 
+    bone: 0xd4c9a8,
+    lucky: 0x4caf50,
     wooden: 0x8b6914,
-    steel: 0x808080, 
-    gold: 0xcaab02, 
+    steel: 0x808080,
+    gold: 0xcaab02,
     loaded: 0xcc3333,
-    diamond: 0x00bcd4, 
-    stone: 0x666666, 
+    diamond: 0x00bcd4,
+    stone: 0x666666,
     blurry: 0xaa88ff,
   };
   return colors[e] ?? 0xffffff;
@@ -444,15 +463,15 @@ function getEnhancementColor(e: string): number {
 /** Full background color for enhanced dice — tinted but visible */
 function getEnhancementBgColor(e: string): number {
   const colors: Record<string, number> = {
-    bone:    0xe8dcc8,  // warm cream/bone
-    lucky:   0xc8f0c8,  // light green
-    wooden:  0xc4a055,  // wood brown
-    steel:    0xa8a8b0,  // steel grey
-    gold:    0xffe870,  // bright gold
-    loaded:  0xf0a0a0,  // soft red
-    diamond: 0xa0e8f0,  // light cyan
-    stone:   0x888888,  // dark grey
-    blurry:  0xd0c0f0,  // light purple
+    bone: 0xe8dcc8, // warm cream/bone
+    lucky: 0xc8f0c8, // light green
+    wooden: 0xc4a055, // wood brown
+    steel: 0xa8a8b0, // steel grey
+    gold: 0xffe870, // bright gold
+    loaded: 0xf0a0a0, // soft red
+    diamond: 0xa0e8f0, // light cyan
+    stone: 0x888888, // dark grey
+    blurry: 0xd0c0f0, // light purple
   };
   return colors[e] ?? BG_COLOR;
 }
@@ -460,15 +479,15 @@ function getEnhancementBgColor(e: string): number {
 /** Pip color that contrasts with the enhancement background */
 function getEnhancementPipColor(e: string): number {
   const colors: Record<string, number> = {
-    bone:    0x5a4a2a,  // dark brown
-    lucky:   0x1a5a1a,  // dark green
-    wooden:  0x3a2a00,  // dark brown
-    steel:    0x2a2a3a,  // dark blue-grey
-    gold:    0x8a6a00,  // dark gold
-    loaded:  0x6a0000,  // dark red
-    diamond: 0x004a5a,  // dark teal
-    stone:   0x333333,  // very dark grey
-    blurry:  0x4a2a8a,  // dark purple
+    bone: 0x5a4a2a, // dark brown
+    lucky: 0x1a5a1a, // dark green
+    wooden: 0x3a2a00, // dark brown
+    steel: 0x2a2a3a, // dark blue-grey
+    gold: 0x8a6a00, // dark gold
+    loaded: 0x6a0000, // dark red
+    diamond: 0x004a5a, // dark teal
+    stone: 0x333333, // very dark grey
+    blurry: 0x4a2a8a, // dark purple
   };
   return colors[e] ?? PIP_COLOR;
 }
@@ -490,9 +509,9 @@ function getStickerColor(s: string): number {
 
 function getStickerIcon(s: string): string {
   const icons: Record<string, string> = {
-    purple_flower: '✿',
+    purple_flower: '❁',
     red_bullet: '•',
-    golden_dollar: '$',
+    golden_dollar: '🪙',
     blue_moon: '☽',
   };
   return icons[s] ?? '?';

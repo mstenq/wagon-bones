@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { die, diceFromValues, diceWithValue, item, itemWithAura, calculateTestScore, setupGame, resetDieIds } from './testHelpers';
+import {
+  die,
+  diceFromValues,
+  diceWithValue,
+  item,
+  itemWithAura,
+  calculateTestScore,
+  setupGame,
+  resetDieIds,
+} from './testHelpers';
 import { HandType } from '../types';
 
 beforeEach(() => {
@@ -61,17 +70,6 @@ describe('basic scoring (no equipment)', () => {
     // miles = (50 + 60) * 6 = 660
     expect(result.handResult.type).toBe(HandType.FIVE_OF_A_KIND);
     expect(result.miles).toBe(660);
-  });
-
-  test('three straight', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceFromValues([3, 4, 5]),
-    });
-    // THREE_STRAIGHT: baseMiles=15, baseMult=1
-    // totalValue = 12
-    // miles = (15 + 12) * 1 = 27
-    expect(result.handResult.type).toBe(HandType.THREE_STRAIGHT);
-    expect(result.miles).toBe(27);
   });
 
   test('five straight', () => {
@@ -174,10 +172,7 @@ describe('equipment: HAND_MULT', () => {
 describe('dice enhancements', () => {
   test('bone dice add +4 mult per die', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 5, enhancement: 'bone' }),
-        die({ value: 5, enhancement: 'bone' }),
-      ],
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'bone' })],
     });
     // PAIR: baseMult=1
     // 2 bone dice: +4 * 2 = +8 → mult = 9
@@ -189,10 +184,7 @@ describe('dice enhancements', () => {
 
   test('wooden dice add +10 miles per die', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 3, enhancement: 'wooden' }),
-        die({ value: 3, enhancement: 'wooden' }),
-      ],
+      scoredDice: [die({ value: 3, enhancement: 'wooden' }), die({ value: 3, enhancement: 'wooden' })],
     });
     // PAIR: baseMiles=10, baseMult=1
     // totalValue = 3 + 3 + 10 + 10 = 26 (each wooden adds +10 value)
@@ -203,10 +195,7 @@ describe('dice enhancements', () => {
 
   test('diamond dice apply x2 mult', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 6, enhancement: 'diamond' }),
-        die({ value: 6 }),
-      ],
+      scoredDice: [die({ value: 6, enhancement: 'diamond' }), die({ value: 6 })],
     });
     // PAIR: baseMult=1
     // 1 diamond → xMult = 2
@@ -216,9 +205,7 @@ describe('dice enhancements', () => {
 
   test('stone dice contribute 50 miles instead of face value', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 0, enhancement: 'stone' }),
-      ],
+      scoredDice: [die({ value: 0, enhancement: 'stone' })],
     });
     // HIGH_VALUE: baseMiles=5, baseMult=1
     // stone: +50 miles instead of value
@@ -233,10 +220,7 @@ describe('dice enhancements', () => {
 describe('dice auras', () => {
   test('fire aura adds +10 mult per die', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 5, aura: 'fire' }),
-        die({ value: 5 }),
-      ],
+      scoredDice: [die({ value: 5, aura: 'fire' }), die({ value: 5 })],
     });
     // PAIR: baseMult=1
     // fire aura on 1 die: +10 → mult = 11
@@ -245,10 +229,7 @@ describe('dice auras', () => {
 
   test('icy aura adds +50 to totalValue', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 5, aura: 'icy' }),
-        die({ value: 5 }),
-      ],
+      scoredDice: [die({ value: 5, aura: 'icy' }), die({ value: 5 })],
     });
     // PAIR: baseMiles=10, baseMult=1
     // totalValue = 5 + 5 + 50 = 60
@@ -258,10 +239,7 @@ describe('dice auras', () => {
 
   test('holy aura applies x1.5 mult', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 5, aura: 'holy' }),
-        die({ value: 5 }),
-      ],
+      scoredDice: [die({ value: 5, aura: 'holy' }), die({ value: 5 })],
     });
     // PAIR: baseMult=1
     // holy: xMult * 1.5 → mult = 1.5
@@ -365,9 +343,7 @@ describe('held-in-hand effects', () => {
   test('steel dice held in hand apply x1.5 mult each', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      heldDice: [
-        die({ value: 3, enhancement: 'steel' }),
-      ],
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
     });
     // PAIR: baseMult=1
     // held steel: xMult=1.5
@@ -378,10 +354,7 @@ describe('held-in-hand effects', () => {
   test('two steel dice held multiply together', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      heldDice: [
-        die({ value: 3, enhancement: 'steel' }),
-        die({ value: 4, enhancement: 'steel' }),
-      ],
+      heldDice: [die({ value: 3, enhancement: 'steel' }), die({ value: 4, enhancement: 'steel' })],
     });
     // xMult = 1.5 * 1.5 = 2.25
     expect(result.mult).toBe(2.25);
@@ -444,13 +417,8 @@ describe('combined scenarios', () => {
 
   test('steel held + equipment + scored bone dice', () => {
     const { result } = calculateTestScore({
-      scoredDice: [
-        die({ value: 5, enhancement: 'bone' }),
-        die({ value: 5 }),
-      ],
-      heldDice: [
-        die({ value: 2, enhancement: 'steel' }),
-      ],
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
+      heldDice: [die({ value: 2, enhancement: 'steel' })],
       equipment: [item('horseshoe')],
     });
     // PAIR: baseMiles=10, baseMult=1

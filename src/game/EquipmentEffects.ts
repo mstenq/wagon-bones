@@ -7,12 +7,12 @@ import { EquipmentInstance } from './ItemsSystem';
 export interface ScoringContext {
   handResult: HandResult;
   scoringDice: Die[];
-  heldDice: Die[];           // dice rolled but not scored (held in hand)
+  heldDice: Die[]; // dice rolled but not scored (held in hand)
   rerollsRemaining: number;
   equipmentCount: number;
-  playerBalance: number;     // current money
-  currentDay: number;        // current day in the round (1-based)
-  maxDays: number;           // max days this round
+  playerBalance: number; // current money
+  currentDay: number; // current day in the round (1-based)
+  maxDays: number; // max days this round
 }
 
 /**
@@ -22,7 +22,7 @@ export interface ScoringContext {
 export function applyEquipmentEffects(
   baseResult: ScoreResult,
   equipment: EquipmentInstance[],
-  context: ScoringContext
+  context: ScoringContext,
 ): ScoreResult {
   let bonusMiles = 0;
   let bonusMult = 0;
@@ -81,7 +81,9 @@ export function applyEquipmentEffects(
       case 'MILES_PER_DOLLAR': {
         const milesGain = (p.value as number) * context.playerBalance;
         bonusMiles += milesGain;
-        console.log(`  [equip] ${equip.def.name}: +${milesGain} miles ($${context.playerBalance} × ${p.value}) (bonusMiles: ${bonusMiles})`);
+        console.log(
+          `  [equip] ${equip.def.name}: +${milesGain} miles ($${context.playerBalance} × ${p.value}) (bonusMiles: ${bonusMiles})`,
+        );
         break;
       }
 
@@ -111,19 +113,25 @@ export function applyEquipmentEffects(
       case 'HAND_MULT_GAIN':
         // Card Counter: uses accumulated state.mult
         bonusMult += equip.state.mult ?? 0;
-        console.log(`  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (accumulated) (bonusMult: ${bonusMult})`);
+        console.log(
+          `  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (accumulated) (bonusMult: ${bonusMult})`,
+        );
         break;
 
       case 'SHOP_REROLL_MULT_GAIN':
         // Bargain Bin: uses accumulated state.mult
         bonusMult += equip.state.mult ?? 0;
-        console.log(`  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (reroll gains) (bonusMult: ${bonusMult})`);
+        console.log(
+          `  [equip] ${equip.def.name}: +${equip.state.mult ?? 0} mult (reroll gains) (bonusMult: ${bonusMult})`,
+        );
         break;
 
       case 'ENHANCED_SPENT_MILES_GAIN':
         // Bone Collector: uses accumulated state.miles
         bonusMiles += equip.state.miles ?? 0;
-        console.log(`  [equip] ${equip.def.name}: +${equip.state.miles ?? 0} miles (accumulated) (bonusMiles: ${bonusMiles})`);
+        console.log(
+          `  [equip] ${equip.def.name}: +${equip.state.miles ?? 0} miles (accumulated) (bonusMiles: ${bonusMiles})`,
+        );
         break;
 
       case 'LUCKY_TRIGGER_XMULT':
@@ -173,7 +181,7 @@ export function applyEquipmentEffects(
     switch (effectType) {
       case 'UNCOMMON_EQUIP_XMULT': {
         // x1.5 per uncommon equipment
-        const uncommonCount = equipment.filter(e => e.def.rarity === 'uncommon').length;
+        const uncommonCount = equipment.filter((e) => e.def.rarity === 'uncommon').length;
         for (let i = 0; i < uncommonCount; i++) {
           finalMult *= 1.5;
         }
@@ -187,7 +195,9 @@ export function applyEquipmentEffects(
         const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
         if (context.currentDay >= context.maxDays) {
           finalMult *= xVal;
-          console.log(`  [equip] ${equip.def.name}: x${xVal} (final day ${context.currentDay}/${context.maxDays}) (finalMult: ${finalMult})`);
+          console.log(
+            `  [equip] ${equip.def.name}: x${xVal} (final day ${context.currentDay}/${context.maxDays}) (finalMult: ${finalMult})`,
+          );
         } else {
           console.log(`  [equip] ${equip.def.name}: inactive (day ${context.currentDay}/${context.maxDays})`);
         }
@@ -221,7 +231,9 @@ export function applyEquipmentEffects(
   }
 
   const finalMiles = (baseMiles + totalValue + bonusMiles) * finalMult;
-  console.log(`  [equip] Final: (${baseMiles} base + ${totalValue} value + ${bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`);
+  console.log(
+    `  [equip] Final: (${baseMiles} base + ${totalValue} value + ${bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`,
+  );
 
   return {
     handResult: baseResult.handResult,
@@ -287,14 +299,15 @@ export interface HeldAnimStep {
   dieId: string;
   type: 'mult' | 'xmult' | 'money';
   value: number;
-  source: string;        // e.g. 'STEEL', equipment name
-  equipIndex?: number;   // index in equipment array (for wiggle)
+  source: string; // e.g. 'STEEL', equipment name
+  equipIndex?: number; // index in equipment array (for wiggle)
 }
 
 interface HeldInHandResult {
   bonusMult: number;
   xMult: number;
   moneyEarned: number;
+  trailGuidesForHand: number; // blue_moon sticker: how many trail guides to grant for scored hand
   animSteps: HeldAnimStep[];
 }
 
@@ -303,25 +316,23 @@ interface HeldInHandResult {
  * Sequence per die (left to right): steel enhancement → equipment triggers → retriggers.
  * Retriggers: red_bullet sticker first, then Double Down equipment.
  */
-export function processHeldInHand(
-  heldDice: Die[],
-  equipment: EquipmentInstance[],
-): HeldInHandResult {
+export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[]): HeldInHandResult {
   let bonusMult = 0;
   let xMult = 1;
   let moneyEarned = 0;
+  let trailGuidesForHand = 0;
   const animSteps: HeldAnimStep[] = [];
 
   // Count retriggers from Double Down equipment
-  const doubleDownCount = equipment.filter(e => e.def.effectType === 'HELD_RETRIGGER').length;
+  const doubleDownCount = equipment.filter((e) => e.def.effectType === 'HELD_RETRIGGER').length;
 
   // Find the lowest held die value for Bottom Dollar
-  const lowestValue = heldDice.length > 0
-    ? Math.min(...heldDice.map(d => d.value))
-    : 0;
+  const lowestValue = heldDice.length > 0 ? Math.min(...heldDice.map((d) => d.value)) : 0;
 
   console.log('[SCORE] Step 4: Held-in-hand abilities');
-  console.log(`  [held] Held dice: ${heldDice.map(d => `${d.id}(value:${d.value}, enh:${d.enhancement}, sticker:${d.sticker})`).join(', ') || 'none'}`);
+  console.log(
+    `  [held] Held dice: ${heldDice.map((d) => `${d.id}(value:${d.value}, enh:${d.enhancement}, sticker:${d.sticker})`).join(', ') || 'none'}`,
+  );
 
   for (const die of heldDice) {
     // Calculate how many times this die triggers:
@@ -339,6 +350,17 @@ export function processHeldInHand(
         console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${xMult})`);
       }
 
+      // Sticker effects on held dice
+      // if (die.sticker === 'golden_dollar') {
+      //   moneyEarned += 3;
+      //   animSteps.push({ dieId: die.id, type: 'money', value: 3, source: 'Golden Dollar' });
+      //   console.log(`  [held] Die ${die.id}${triggerLabel}: GOLDEN_DOLLAR +$3 (total: $${moneyEarned})`);
+      // }
+      if (die.sticker === 'blue_moon') {
+        trailGuidesForHand++;
+        console.log(`  [held] Die ${die.id}${triggerLabel}: BLUE_MOON +1 trail guide for scored hand`);
+      }
+
       // Equipment triggers on held dice
       for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
         const equip = equipment[eIdx];
@@ -350,8 +372,16 @@ export function processHeldInHand(
             // Bottom Dollar: adds double the rank of the lowest held die to mult
             if (die.value === lowestValue) {
               bonusMult += lowestValue * 2;
-              animSteps.push({ dieId: die.id, type: 'mult', value: lowestValue * 2, source: equip.def.name, equipIndex: eIdx });
-              console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${lowestValue * 2} mult (bonusMult: ${bonusMult})`);
+              animSteps.push({
+                dieId: die.id,
+                type: 'mult',
+                value: lowestValue * 2,
+                source: equip.def.name,
+                equipIndex: eIdx,
+              });
+              console.log(
+                `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${lowestValue * 2} mult (bonusMult: ${bonusMult})`,
+              );
             }
             break;
 
@@ -359,8 +389,16 @@ export function processHeldInHand(
             // Ace in the Hole: each matching pip gives xMult
             if (die.value === (p.pip as number)) {
               xMult *= p.value as number;
-              animSteps.push({ dieId: die.id, type: 'xmult', value: p.value as number, source: equip.def.name, equipIndex: eIdx });
-              console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value} mult (xMult: ${xMult})`);
+              animSteps.push({
+                dieId: die.id,
+                type: 'xmult',
+                value: p.value as number,
+                source: equip.def.name,
+                equipIndex: eIdx,
+              });
+              console.log(
+                `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value} mult (xMult: ${xMult})`,
+              );
             }
             break;
 
@@ -368,8 +406,16 @@ export function processHeldInHand(
             // The Eleventh Crossing: each matching pip gives +mult
             if (die.value === (p.pip as number)) {
               bonusMult += p.value as number;
-              animSteps.push({ dieId: die.id, type: 'mult', value: p.value as number, source: equip.def.name, equipIndex: eIdx });
-              console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
+              animSteps.push({
+                dieId: die.id,
+                type: 'mult',
+                value: p.value as number,
+                source: equip.def.name,
+                equipIndex: eIdx,
+              });
+              console.log(
+                `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`,
+              );
             }
             break;
 
@@ -379,8 +425,16 @@ export function processHeldInHand(
               const [num, den] = p.chance as [number, number];
               if (Math.random() < num / den) {
                 moneyEarned += p.value as number;
-                animSteps.push({ dieId: die.id, type: 'money', value: p.value as number, source: equip.def.name, equipIndex: eIdx });
-                console.log(`  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value} (total: $${moneyEarned})`);
+                animSteps.push({
+                  dieId: die.id,
+                  type: 'money',
+                  value: p.value as number,
+                  source: equip.def.name,
+                  equipIndex: eIdx,
+                });
+                console.log(
+                  `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value} (total: $${moneyEarned})`,
+                );
               }
             }
             break;
@@ -389,8 +443,10 @@ export function processHeldInHand(
     }
   }
 
-  console.log(`  [held] Totals: bonusMult: ${bonusMult}, xMult: ${xMult}, money: $${moneyEarned}`);
-  return { bonusMult, xMult, moneyEarned, animSteps };
+  console.log(
+    `  [held] Totals: bonusMult: ${bonusMult}, xMult: ${xMult}, money: $${moneyEarned}, trailGuides: ${trailGuidesForHand}`,
+  );
+  return { bonusMult, xMult, moneyEarned, trailGuidesForHand, animSteps };
 }
 
 // ─── Helpers ───
@@ -402,7 +458,8 @@ function handTypeMatches(played: HandType, required: string): boolean {
 
   // A full house contains pair, three of a kind, and two pair
   if (played === HandType.FULL_HOUSE) {
-    if (required === HandType.PAIR || required === HandType.THREE_OF_A_KIND || required === HandType.TWO_PAIR) return true;
+    if (required === HandType.PAIR || required === HandType.THREE_OF_A_KIND || required === HandType.TWO_PAIR)
+      return true;
   }
   // Two pair contains pair
   if (played === HandType.TWO_PAIR && required === HandType.PAIR) return true;
@@ -414,14 +471,19 @@ function handTypeMatches(played: HandType, required: string): boolean {
   }
   // Five of a kind contains four, three, pair, two pair, full house
   if (played === HandType.FIVE_OF_A_KIND) {
-    if (required === HandType.FOUR_OF_A_KIND || required === HandType.THREE_OF_A_KIND || required === HandType.PAIR || required === HandType.TWO_PAIR || required === HandType.FULL_HOUSE) return true;
+    if (
+      required === HandType.FOUR_OF_A_KIND ||
+      required === HandType.THREE_OF_A_KIND ||
+      required === HandType.PAIR ||
+      required === HandType.TWO_PAIR ||
+      required === HandType.FULL_HOUSE
+    )
+      return true;
   }
   // Five straight contains four straight and three straight
   if (played === HandType.FIVE_STRAIGHT) {
-    if (required === HandType.FOUR_STRAIGHT || required === HandType.THREE_STRAIGHT) return true;
+    if (required === HandType.FOUR_STRAIGHT) return true;
   }
-  // Four straight contains three straight
-  if (played === HandType.FOUR_STRAIGHT && required === HandType.THREE_STRAIGHT) return true;
 
   return false;
 }
@@ -448,7 +510,10 @@ export function processEquipmentOnReroll(equipment: EquipmentInstance[], diceCou
     switch (equip.def.effectType) {
       case 'DECAYING_XMULT':
         // Worn Deck: loses xMult per die rerolled
-        equip.state.xMult = Math.max(0, (equip.state.xMult ?? 1) - (equip.def.effectParams.decayPerDie as number) * diceCount);
+        equip.state.xMult = Math.max(
+          0,
+          (equip.state.xMult ?? 1) - (equip.def.effectParams.decayPerDie as number) * diceCount,
+        );
         break;
     }
   }
@@ -492,7 +557,7 @@ export function processEquipmentOnBossDefeat(equipment: EquipmentInstance[]): vo
 
 /** Called when enhanced dice are spent. Updates Bone Collector. */
 export function processEquipmentOnDiceSpent(equipment: EquipmentInstance[], spentDice: Die[]): void {
-  const enhancedCount = spentDice.filter(d => d.enhancement !== null).length;
+  const enhancedCount = spentDice.filter((d) => d.enhancement !== null).length;
   if (enhancedCount === 0) return;
   for (const equip of equipment) {
     switch (equip.def.effectType) {

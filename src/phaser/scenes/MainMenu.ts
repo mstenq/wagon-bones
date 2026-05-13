@@ -26,29 +26,32 @@ export class MainMenu extends Scene {
     bg.fillRect(0, 0, width, height);
 
     // Title
-    this.add.text(width / 2, height * 0.31, 'WAGON BONES', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '64px',
-      color: TEXT_COLORS.GOLD,
-      stroke: '#000000',
-      strokeThickness: 6,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * 0.31, 'WAGON BONES', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '64px',
+        color: TEXT_COLORS.GOLD,
+        stroke: '#000000',
+        strokeThickness: 6,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     // Subtitle
-    this.add.text(width / 2, height * 0.42, 'A Dice Rolling Journey', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '22px',
-      color: TEXT_COLORS.SECONDARY,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.add
+      .text(width / 2, height * 0.42, 'A Dice Rolling Journey', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '22px',
+        color: TEXT_COLORS.SECONDARY,
+        align: 'center',
+      })
+      .setOrigin(0.5);
 
     // Start button
-    new Button(this, width / 2, height * 0.57, 'Start Journey', 220, 52)
-      .onClick(() => {
-        resetPlayerState();
-        this.scene.start('ProfessionSelect');
-      });
+    new Button(this, width / 2, height * 0.57, 'Start Journey', 220, 52).onClick(() => {
+      resetPlayerState();
+      this.scene.start('ProfessionSelect');
+    });
 
     EventBus.emit(Events.SCENE_READY, this);
   }
