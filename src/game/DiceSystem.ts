@@ -237,7 +237,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           }
           break;
         }
-        // loaded, blurry, stone — no additional scoring effect
+      
       }
 
       // Dice aura effects

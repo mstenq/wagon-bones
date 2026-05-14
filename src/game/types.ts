@@ -30,7 +30,6 @@ export type DiceEnhancement =
   | 'loaded'
   | 'diamond'
   | 'stone'
-  | 'blurry'
   | null;
 
 export type DiceSticker = 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon' | null;

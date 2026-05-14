@@ -9,7 +9,6 @@ This is like Balatro's tarot cards. But one major difference is that we don't en
 - loaded - create one loaded dice (Select a number 1-6)
 - pick axe - create one diamond dice
 - pan for gold - create 1 golden dice
-- whisky goggles - create one blurry dice 
 - treasure map - double your money (max of $20)
 - shallow grave - select 5 random dice from your active dice collection and choose 2 to destory (Does not target spent dice)
 - trade - get money equal to value of equipment (Max of $50)

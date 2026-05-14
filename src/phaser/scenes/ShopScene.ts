@@ -56,7 +56,7 @@ type ShopItem =
 
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
 const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
-const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'blurry'];
+const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'];
 const ALL_STICKERS: Die['sticker'][] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
 const DICE_SHOP_COST = 5;
 

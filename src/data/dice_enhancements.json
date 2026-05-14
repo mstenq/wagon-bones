@@ -46,11 +46,5 @@
     "name": "Stone",
     "description": "No dice values, counts as 50 base miles and is always scored",
     "color": "0x888888"
-  },
-  {
-    "id": "blurry",
-    "name": "Blurry",
-    "description": "Counts as any number in a straight",
-    "color": "0xd0c0f0"
   }
 ]

@@ -380,7 +380,7 @@ export class DiceSprite extends GameObjects.Container {
       const info = STICKER_INFO.get(this._dieData.sticker);
       const stickerName = info ? info.name : this._dieData.sticker.replace(/_/g, ' ');
       const stickerDesc = info ? ` - ${info.description}` : '';
-      lines.push(`${getStickerIcon(this._dieData.sticker)} ${stickerName}${stickerDesc}`);
+      lines.push(`${stickerName}${stickerDesc}`);
     }
 
     const infoText = this.scene.add
@@ -454,7 +454,6 @@ function getEnhancementColor(e: string): number {
     loaded: 0xcc3333,
     diamond: 0x00bcd4,
     stone: 0x666666,
-    blurry: 0xaa88ff,
   };
   return colors[e] ?? 0xffffff;
 }
@@ -470,7 +469,6 @@ function getEnhancementBgColor(e: string): number {
     loaded: 0xf0a0a0, // soft red
     diamond: 0xa0e8f0, // light cyan
     stone: 0x888888, // dark grey
-    blurry: 0xd0c0f0, // light purple
   };
   return colors[e] ?? BG_COLOR;
 }
@@ -486,7 +484,6 @@ function getEnhancementPipColor(e: string): number {
     loaded: 0x6a0000, // dark red
     diamond: 0x004a5a, // dark teal
     stone: 0x333333, // very dark grey
-    blurry: 0x4a2a8a, // dark purple
   };
   return colors[e] ?? PIP_COLOR;
 }
@@ -494,16 +491,6 @@ function getEnhancementPipColor(e: string): number {
 /** Accent bar color (slightly darker than bg) */
 function getEnhancementLabelColor(e: string): number {
   return getEnhancementColor(e);
-}
-
-function getStickerIcon(s: string): string {
-  const icons: Record<string, string> = {
-    purple_flower: '❁',
-    red_bullet: '•',
-    golden_dollar: '🪙',
-    blue_moon: '☽',
-  };
-  return icons[s] ?? '?';
 }
 
 /** Darken a hex color by a factor (0=black, 1=unchanged) */
