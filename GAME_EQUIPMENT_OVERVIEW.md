@@ -84,7 +84,6 @@ Golden Spike - $7 - all scored dice have a 1 in 4 chance to turn into a gold dic
 Sheriff’s Badge - $5 - sell this item to disable the current boss effect
 Double Barrel - $5 - first played 2 pip dice gives x2 mult when scored
 Company Store - $6 - at the end of each leg add $1 of sell value to each piece of equipment
-Covered Wagon - $6 - when scoring 4 random dice will not be spent and will stay in available pool, reduces by 1 each round
 Ghost Town - $6 - +10 mult for each dice below the collections starting size
 Savings Account - $5 - earn an extra $1 of interest for every $5 you have at end of round
 Supply Crate - $4 - 1 in 2 chance to gain a supply card when opening a booster pack
@@ -115,6 +114,7 @@ Stagecoach - $6 - dice are automatically refreshed when supply reaches %50 or be
 Mystery Crate - $6 - add a dice at the start of each round with a random sticker
 
 ## Phase 3
+Covered Wagon - $6 - Gain +5 miles for every Wood die scored. Includes dice combos made from wood.
 Moonshine - $6 - retrigger all enhanced dice - enhanced dice have 1 in 6 chance of being destroyed, diamond dice a 1 in 3 chance
 Mercy Shot - $6 - if first re-roll of the day is only 1 dice, destroy it and earn $3
 Bounty Contract - $6 - sell this item to gain a free double tag 

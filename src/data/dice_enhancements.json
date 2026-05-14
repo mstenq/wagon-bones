@@ -26,7 +26,7 @@
   {
     "id": "gold",
     "name": "Gold",
-    "description": "Earn $3 when dice is not scored",
+    "description": "Earn $3 when dice is not scored at end of round",
     "color": "0xffe870"
   },
   {
