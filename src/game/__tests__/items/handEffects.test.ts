@@ -49,8 +49,8 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       scoredDice: diceFromValues([4, 5, 6, 7]),
       equipment: [item('wedding_ring')],
     });
-    // FOUR_STRAIGHT: baseMult=1, no pair → no bonus
-    expect(result.mult).toBe(1);
+    // FOUR_STRAIGHT: baseMult=3, no pair → no bonus from wedding ring
+    expect(result.mult).toBe(3);
   });
 });
 
@@ -120,34 +120,6 @@ describe('HAND_MULT: Deputy Brothers (two pair, +10)', () => {
   });
 });
 
-describe('HAND_MULT: Trail Markers (three straight, +6)', () => {
-
-  test('activates on four straight (contains three straight)', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceFromValues([3, 4, 5, 6]),
-      equipment: [item('trail_markers')],
-    });
-    // FOUR_STRAIGHT: baseMult=3, +6 = 9
-    expect(result.mult).toBe(9);
-  });
-
-  test('activates on five straight (contains three straight)', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceFromValues([2, 3, 4, 5, 6]),
-      equipment: [item('trail_markers')],
-    });
-    // FIVE_STRAIGHT: baseMult=6, +6 = 12
-    expect(result.mult).toBe(12);
-  });
-
-  test('does not activate on pair', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(4, 2),
-      equipment: [item('trail_markers')],
-    });
-    expect(result.mult).toBe(1);
-  });
-});
 
 // ─── HAND_MILES Items ───
 

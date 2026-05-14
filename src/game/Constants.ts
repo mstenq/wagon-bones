@@ -13,7 +13,7 @@ export const GAME = {
 // ─── Gameplay Defaults ───
 export const GAMEPLAY = {
   MAX_DAYS: 4,
-  MAX_REROLLS: 2,
+  MAX_REROLLS: 6,
   ROLL_SIZE: 8,
   SCORE_SIZE: 5,
   TARGET_MILES: 600,

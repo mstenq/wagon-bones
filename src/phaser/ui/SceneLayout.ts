@@ -68,10 +68,10 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
       roundScore: 0,
       milesBase: 0,
       mult: 0,
-      daysRemaining: GAMEPLAY.MAX_DAYS,
-      maxDays: GAMEPLAY.MAX_DAYS,
-      rerolls: GAMEPLAY.MAX_REROLLS,
-      maxRerolls: GAMEPLAY.MAX_REROLLS,
+      daysRemaining: GAMEPLAY.MAX_DAYS + player.permitDayBonus - player.permitDayPenalty,
+      maxDays: GAMEPLAY.MAX_DAYS + player.permitDayBonus - player.permitDayPenalty,
+      rerolls: GAMEPLAY.MAX_REROLLS + player.permitRerollBonus - player.permitRerollPenalty,
+      maxRerolls: GAMEPLAY.MAX_REROLLS + player.permitRerollBonus - player.permitRerollPenalty,
       leg: player.leg,
       totalLegs: GAMEPLAY.LEGS,
       round: player.round,
@@ -115,7 +115,10 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     height - UI.POUCH_MARGIN - UI.POUCH_SIZE,
   );
   dicePouch.setClickCallback(() => {
-    new DicePouchModal(scene, sidebarW, width - sidebarW, height);
+    new DicePouchModal(scene, sidebarW, width - sidebarW, height).onRefresh(() => {
+      dicePouch.refresh();
+      dicePouch.emit('dice-refreshed');
+    });
   });
 
   return { sidebar, equipBar, consumableBar, dicePouch, contentX, contentW, contentCX, sidebarW };

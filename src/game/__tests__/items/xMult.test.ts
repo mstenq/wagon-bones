@@ -161,6 +161,16 @@ describe('SELL_XMULT_GAIN: Snake Oil Ledger', () => {
     processEquipmentOnBossDefeat([inst]);
     expect(inst.state.xMult).toBe(1);
   });
+
+  test('gains x0.25 when selling consumables', () => {
+    const inst = item('snake_oil_ledger');
+    // Selling consumables also triggers the sell hook
+    processEquipmentOnSell([inst]);
+    expect(inst.state.xMult).toBeCloseTo(1.25, 5);
+
+    processEquipmentOnSell([inst]);
+    expect(inst.state.xMult).toBeCloseTo(1.5, 5);
+  });
 });
 
 // ─── FINAL_DAY_XMULT: High Noon ───

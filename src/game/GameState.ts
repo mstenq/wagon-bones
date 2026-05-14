@@ -97,6 +97,10 @@ export class GameState {
       if (typeof m.days === 'number') dayBonus += m.days;
     }
 
+    // Apply permit bonuses/penalties
+    rerollBonus += player.permitRerollBonus - player.permitRerollPenalty;
+    dayBonus += player.permitDayBonus - player.permitDayPenalty;
+
     this.config = {
       ...this.config,
       maxRerolls: DEFAULT_CONFIG.maxRerolls + rerollBonus,
@@ -137,11 +141,19 @@ export class GameState {
 
   /** Player confirms hand selection and moves to ROLL. Selects which dice to roll. */
   selectForRoll(diceIds: string[]): boolean {
-    if (this.state.phase !== 'SELECT') return false;
-    if (diceIds.length < 1 || diceIds.length > this.config.rollSize) return false;
+    if (this.state.phase !== 'SELECT') { console.log('[DEBUG selectForRoll] BLOCKED: phase is', this.state.phase); return false; }
+    if (diceIds.length < 1 || diceIds.length > this.config.rollSize) { console.log('[DEBUG selectForRoll] BLOCKED: diceIds.length', diceIds.length, 'rollSize', this.config.rollSize); return false; }
 
     const selected = this.state.hand.filter((d) => diceIds.includes(d.id));
-    if (selected.length !== diceIds.length) return false;
+    if (selected.length !== diceIds.length) {
+      const handIds = this.state.hand.map(d => d.id);
+      const missing = diceIds.filter(id => !handIds.includes(id));
+      const dupes = handIds.filter((id, i) => handIds.indexOf(id) !== i);
+      console.log('[DEBUG selectForRoll] BLOCKED: selected', selected.length, 'vs diceIds', diceIds.length);
+      console.log('[DEBUG selectForRoll] missing from hand:', missing);
+      console.log('[DEBUG selectForRoll] duplicate IDs in hand:', [...new Set(dupes)]);
+      return false;
+    }
 
     this.state.selectedForRoll = selected;
     this.state.phase = 'ROLL';
@@ -385,8 +397,7 @@ export class GameState {
     this.state.selectedForScore = [];
     this.state.currentHandType = null;
 
-    // Reset re-rolls for the new day
-    this.state.rerollsRemaining = this.config.maxRerolls;
+    // Rerolls are per-round (not per-day) — do NOT reset here
 
     this.state.phase = 'SELECT';
     this.emit('day-ended', { day: this.state.day });

@@ -33,9 +33,9 @@ describe('MODIFY_REROLLS: Spare Holster (+1 reroll)', () => {
       equipment: [item('spare_holster')],
     });
     game.startRound();
-    // Default maxRerolls=2, +1 from spare_holster = 3
-    expect(game.config.maxRerolls).toBe(3);
-    expect(game.state.rerollsRemaining).toBe(3);
+    // Default maxRerolls=6, +1 from spare_holster = 7
+    expect(game.config.maxRerolls).toBe(7);
+    expect(game.state.rerollsRemaining).toBe(7);
   });
 });
 

@@ -8,6 +8,7 @@ import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
+import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
 import bossesData from '../data/bosses.json';
@@ -52,11 +53,21 @@ export class PlayerState {
   profession: ProfessionDef | null = null; // selected profession
   handSize: number = GAMEPLAY.ROLL_SIZE; // dice selected for rolling
   shopRerollCount: number = 0; // number of rerolls this shop visit (resets each visit)
+  purchasedPermits: string[] = []; // IDs of purchased permits
+  currentLegPermit: PermitDef | null = null; // the permit offered this leg (persists across shop visits)
+  permitPurchasedThisLeg: boolean = false; // whether a permit was already bought this leg
+  permitDayBonus: number = 0; // extra days per round from permits
+  permitRerollBonus: number = 0; // extra rerolls per round from permits
+  permitDayPenalty: number = 0; // day penalty from Shortcut Trail
+  permitRerollPenalty: number = 0; // reroll penalty from Hidden Pass
+  permitScoreReduction: number = 0; // leg-equivalent score reduction from shortcuts
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
+  private nextDieId: number = 0; // monotonic counter for unique die IDs
 
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
     this.dice = createPouch(DEFAULT_STARTING_DICE);
+    this.nextDieId = this.dice.length; // start counter after initial dice
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.consumables = [];
@@ -186,11 +197,12 @@ export class PlayerState {
   }
 
   addDie(die: Die): void {
-    this.dice.push({ ...die, id: `die_player_${this.dice.length}` });
+    this.dice.push({ ...die, id: `die_player_${this.nextDieId++}` });
   }
 
   get shopRerollCost(): number {
-    return SHOP_REROLL_COST + this.shopRerollCount;
+    const discount = getPermitShopRerollDiscount(this.purchasedPermits);
+    return Math.max(0, SHOP_REROLL_COST + this.shopRerollCount - discount);
   }
 
   canRerollShop(): boolean {
@@ -280,6 +292,8 @@ export class PlayerState {
     const item = this.consumables[index];
     this.economy.earn(item.sellValue);
     this.consumables.splice(index, 1);
+    // Update stateful equipment on sell (Snake Oil Ledger)
+    processEquipmentOnSell(this.equipment);
     return true;
   }
 
@@ -330,9 +344,11 @@ export class PlayerState {
     return (this.leg - 1) * GAMEPLAY.ROUNDS_PER_LEG + this.round;
   }
 
-  /** Target miles for the current round (base × round multiplier) */
+  /** Target miles for the current round (base × round multiplier, reduced by permit shortcuts) */
   get targetMiles(): number {
-    const base = GAMEPLAY.TARGET_MILES_BY_LEG[this.leg - 1] ?? GAMEPLAY.TARGET_MILES;
+    // Use a lower leg index if player has score reduction permits
+    const effectiveLegIndex = Math.max(0, this.leg - 1 - this.permitScoreReduction);
+    const base = GAMEPLAY.TARGET_MILES_BY_LEG[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
     const multiplier = GAMEPLAY.ROUND_MULTIPLIERS[this.round - 1] ?? 1;
     return Math.ceil(base * multiplier);
   }
@@ -374,10 +390,31 @@ export class PlayerState {
     if (this.round > GAMEPLAY.ROUNDS_PER_LEG) {
       this.round = 1;
       this.leg++;
+      // New leg — clear the current permit so a new one generates
+      this.currentLegPermit = null;
+      this.permitPurchasedThisLeg = false;
     }
-    // Refresh spent dice between rounds
-    this.spentDiceIds.clear();
+    // Spent dice persist across rounds — only refreshed by paying or auto-refresh
     return this.journeyComplete;
+  }
+
+  // ─── Permits ───
+
+  /** Whether the player has purchased a specific permit */
+  hasPermit(id: string): boolean {
+    return this.purchasedPermits.includes(id);
+  }
+
+  /** Purchase a permit. Deducts cost, records purchase, applies effect. */
+  buyPermit(def: PermitDef): boolean {
+    if (this.purchasedPermits.includes(def.id)) return false;
+    if (this.economy.balance < def.cost) return false;
+    this.economy.spend(def.cost);
+    this.purchasedPermits.push(def.id);
+    applyPermitEffect(def, this);
+    this.currentLegPermit = null; // purchased — no more permit this leg
+    this.permitPurchasedThisLeg = true;
+    return true;
   }
 
   /** Reset for a new run */
@@ -394,6 +431,14 @@ export class PlayerState {
     this.handStats = PlayerState.createDefaultHandStats();
     this.profession = null;
     this.handSize = GAMEPLAY.ROLL_SIZE;
+    this.purchasedPermits = [];
+    this.currentLegPermit = null;
+    this.permitPurchasedThisLeg = false;
+    this.permitDayBonus = 0;
+    this.permitRerollBonus = 0;
+    this.permitDayPenalty = 0;
+    this.permitRerollPenalty = 0;
+    this.permitScoreReduction = 0;
     this.assignBosses();
   }
 }

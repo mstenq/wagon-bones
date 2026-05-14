@@ -110,6 +110,9 @@ export class GameScene extends Scene {
       const player = getPlayerState();
       this.gameState = new GameState({ targetMiles: player.targetMiles });
       this.gameState.startRound();
+      // Clear forced/selected state from previous round (scene instance is reused)
+      this.forcedDiceIds = new Set();
+      this.selectedHandIds = new Set();
     }
 
     this.scale.on('resize', this.onResize, this);
@@ -143,6 +146,20 @@ export class GameScene extends Scene {
     this.consumableBar.on('consumable-changed', () => {
       this.sidebar.refreshMoney();
       this.dicePouch.refresh();
+    });
+
+    // Rebuild hand when dice are refreshed from the pouch modal
+    this.dicePouch.on('dice-refreshed', () => {
+      this.sidebar.refreshMoney();
+      if (this.gameState.state.phase === 'SELECT') {
+        // Rebuild hand from freshly available dice
+        const player = getPlayerState();
+        this.gameState.state.hand = [...player.availableDice].sort(() => Math.random() - 0.5);
+        this.gameState.state.spent = [...player.spentDice];
+        this.forcedDiceIds.clear();
+        this.selectedHandIds.clear();
+        this.enterDrawPhase();
+      }
     });
 
     // Execute consumable effect when used
@@ -452,6 +469,7 @@ export class GameScene extends Scene {
       result,
       sidebar: this.sidebar,
       equipBar: this.equipBar,
+      consumableBar: this.consumableBar,
       equipment: player.equipment,
       lockedDiceIds: new Set(this.lockedDiceIds),
       contentCX: this.contentCX,
@@ -471,16 +489,20 @@ export class GameScene extends Scene {
   // ─── Player Actions ───
 
   private onReadyToRoll(): void {
-    if (this.animating) return;
+    console.log('[DEBUG] onReadyToRoll called, animating:', this.animating);
+    if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
     const ids = [...this.selectedHandIds];
     const required = Math.min(MAX_SELECT_FOR_ROLL, this.gameState.state.hand.length);
+    console.log('[DEBUG] selectedHandIds:', ids.length, 'required:', required, 'ids:', ids);
 
     if (ids.length !== required) {
+      console.log('[DEBUG] BLOCKED: ids.length !== required');
       this.instructionText.setText(`Select exactly ${required} dice to roll`);
       return;
     }
 
     const success = this.gameState.selectForRoll(ids);
+    console.log('[DEBUG] selectForRoll result:', success);
     if (success) {
       this.enterRollPhase();
     }
@@ -630,6 +652,7 @@ export class GameScene extends Scene {
   private updateDrawButtons(): void {
     const selCount = this.selectedHandIds.size;
     const required = Math.min(MAX_SELECT_FOR_ROLL, this.gameState.state.hand.length);
+    console.log('[DEBUG] updateDrawButtons: selCount:', selCount, 'required:', required, 'handLength:', this.gameState.state.hand.length, 'animating:', this.animating);
 
     if (selCount === required) {
       this.readyBtn.setText(`Roll ${selCount} Dice`);
@@ -1020,8 +1043,9 @@ export class GameScene extends Scene {
 
   /** Handle clicking a stack to send a die to the play area */
   private onStackDiceClick(stack: DiceStackData): void {
-    if (this.animating) return;
-    if (this.selectedHandIds.size >= MAX_SELECT_FOR_ROLL) return;
+    console.log('[DEBUG] onStackDiceClick: animating:', this.animating, 'selectedCount:', this.selectedHandIds.size, 'stackKey:', stack.key, 'stackDice:', stack.dice.length);
+    if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
+    if (this.selectedHandIds.size >= MAX_SELECT_FOR_ROLL) { console.log('[DEBUG] BLOCKED: max selected'); return; }
 
     // Sound
     this.sound.play('sfx_card_slide1', { volume: 0.4 });
@@ -1175,7 +1199,8 @@ export class GameScene extends Scene {
 
   /** Handle clicking a die in the play area to send it back to a stack */
   private onPlayAreaDiceClick(sprite: DiceSprite): void {
-    if (this.animating) return;
+    console.log('[DEBUG] onPlayAreaDiceClick: animating:', this.animating, 'dieId:', sprite.dieData.id);
+    if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
     const die = sprite.dieData;
 
     // Can't remove forced dice
@@ -1426,6 +1451,8 @@ export class GameScene extends Scene {
 
       if (list === this.rollSprites) {
         this.repositionLockIcons(positions);
+        // Sync game state order to match visual drag order so held-in-hand scoring respects it
+        this.gameState.state.rolledDice = this.rollSprites.map((s) => s.dieData);
       }
     });
   }
@@ -1637,6 +1664,9 @@ export class GameScene extends Scene {
     // Apply the effect
     const resultMsg = applyDiceSelectionEffect(this.consumableTargeting, selectedDice);
 
+    // Save affected IDs before exit clears them
+    const affectedIds = new Set(this.consumableTargetIds);
+
     // Show result feedback
     const text = this.add
       .text(this.contentCX, this.scale.height * UI.ROLL_Y_RATIO - 60, resultMsg, {
@@ -1659,8 +1689,8 @@ export class GameScene extends Scene {
 
     this.exitConsumableTargeting();
 
-    // Refresh dice visuals — update the sprites to reflect changes
-    this.refreshDiceSpritesAfterEffect();
+    // Refresh dice visuals — update only affected sprites to reflect changes
+    this.refreshDiceSpritesAfterEffect(affectedIds);
   }
 
   private cancelConsumableTargeting(): void {
@@ -1719,31 +1749,35 @@ export class GameScene extends Scene {
   }
 
   /** Refresh dice sprites in-place after a consumable effect changes dice data */
-  private refreshDiceSpritesAfterEffect(): void {
+  private refreshDiceSpritesAfterEffect(affectedIds: Set<string>): void {
     const player = getPlayerState();
 
-    // Update roll sprites if in ROLL phase
+    // Update roll sprites if in ROLL phase — only update affected dice
     for (const sprite of this.rollSprites) {
+      if (!affectedIds.has(sprite.dieData.id)) continue;
       const updated = player.dice.find((d) => d.id === sprite.dieData.id);
       if (updated) {
-        sprite.setDieData(updated);
+        // Preserve rolled value for non-value effects; for BUMP_VALUE, use the new value from player.dice
+        sprite.setDieData({ ...sprite.dieData, ...updated, value: updated.value });
       }
     }
 
-    // Update rolledDice in game state to match
+    // Update rolledDice in game state to match — only affected dice
     for (let i = 0; i < this.gameState.state.rolledDice.length; i++) {
       const rd = this.gameState.state.rolledDice[i];
+      if (!affectedIds.has(rd.id)) continue;
       const updated = player.dice.find((d) => d.id === rd.id);
       if (updated) {
-        this.gameState.state.rolledDice[i] = updated;
+        this.gameState.state.rolledDice[i] = { ...rd, ...updated, value: updated.value };
       }
     }
 
     // Update play area sprites if in SELECT phase
     for (const sprite of this.playAreaSprites) {
+      if (!affectedIds.has(sprite.dieData.id)) continue;
       const updated = player.dice.find((d) => d.id === sprite.dieData.id);
       if (updated) {
-        sprite.setDieData(updated);
+        sprite.setDieData({ ...sprite.dieData, ...updated, value: updated.value });
       }
     }
 

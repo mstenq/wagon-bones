@@ -75,7 +75,7 @@ describe('CONDITIONAL_MULT: Stubborn Mule (no rerolls, +15 mult)', () => {
     expect(result.mult).toBe(1);
   });
 
-  test('does NOT activate with default rerolls (2)', () => {
+  test('does NOT activate with default rerolls (6)', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [item('stubborn_mule')],

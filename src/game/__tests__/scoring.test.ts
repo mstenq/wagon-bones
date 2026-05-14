@@ -287,7 +287,7 @@ describe('item auras', () => {
   test('ghost aura on equipment does not take an inventory slot', () => {
     const { player } = setupGame({ maxEquipmentSlots: 2 });
     // Fill both slots with normal items
-    player.equipment = [item('horseshoe'), item('trail_markers')];
+    player.equipment = [item('horseshoe'), item('dynamite')];
     expect(player.equipmentSlotsFree).toBe(0);
     expect(player.usedEquipmentSlots).toBe(2);
 
@@ -297,7 +297,7 @@ describe('item auras', () => {
     expect(player.canBuy(normalDef)).toBe(false);
 
     // Replace one with a ghost-aura item — frees a slot
-    player.equipment = [item('horseshoe'), itemWithAura('trail_markers', 'ghost')];
+    player.equipment = [item('horseshoe'), itemWithAura('dynamite', 'ghost')];
     expect(player.usedEquipmentSlots).toBe(1);
     expect(player.equipmentSlotsFree).toBe(1);
     expect(player.canBuy(normalDef)).toBe(true);
@@ -305,7 +305,7 @@ describe('item auras', () => {
 
   test('ghost aura item can be added even when slots are full', () => {
     const { player } = setupGame({ maxEquipmentSlots: 2 });
-    player.equipment = [item('horseshoe'), item('trail_markers')];
+    player.equipment = [item('horseshoe'), item('dynamite')];
     player.economy.setBalance(100);
 
     // Can't buy normal item

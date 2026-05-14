@@ -34,6 +34,10 @@ export interface ItemCardOptions {
   cardScale?: number;
   /** Texture key prefix (default 'item_'). The texture key is `${prefix}${id}` */
   texturePrefix?: string;
+  /** If true, no card background is drawn and image is displayed as-is (contain-fit) */
+  transparentBg?: boolean;
+  /** Override x-anchor for action tabs (default: card half-width). Useful for narrow images. */
+  tabAnchorX?: number;
 }
 
 const CARD_W = UI.CARD_W;
@@ -153,6 +157,8 @@ export class ItemCard extends GameObjects.Container {
   // ─── Drawing ───
 
   private drawCard(): void {
+    if (this._options.transparentBg) return;
+
     const g = this.cardBg;
     g.clear();
 
@@ -220,6 +226,15 @@ export class ItemCard extends GameObjects.Container {
     const prefix = this._options.texturePrefix ?? 'item_';
     const srcKey = `${prefix}${this._def.id}`;
     if (this.scene.textures.exists(srcKey)) {
+      if (this._options.transparentBg) {
+        // Transparent mode: display image as-is, contain-fit within card bounds
+        const img = this.scene.add.image(0, 0, srcKey);
+        const srcImg = this.scene.textures.get(srcKey).getSourceImage() as HTMLImageElement;
+        const containScale = Math.min(w / srcImg.width, h / srcImg.height) * 0.85;
+        img.setScale(containScale);
+        this.cardImage = img;
+        this.add(img);
+      } else {
       const roundedKey = `${srcKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
 
       if (!this.scene.textures.exists(roundedKey)) {
@@ -258,6 +273,7 @@ export class ItemCard extends GameObjects.Container {
       const img = this.scene.add.image(0, 0, roundedKey);
       this.cardImage = img;
       this.add(img);
+      }
     }
 
     // Price tag floating above the card (shop mode)
@@ -437,7 +453,7 @@ export class ItemCard extends GameObjects.Container {
     const tabGap = Math.round(4 * scale);
     const tabRadius = Math.round(6 * scale);
     const fontSize = Math.round(16 * scale);
-    const hw = this._cardW / 2;
+    const hw = this._options.tabAnchorX ?? this._cardW / 2;
     const hh = this._cardH / 2;
 
     // Stack tabs from the bottom of the card upward
@@ -448,7 +464,7 @@ export class ItemCard extends GameObjects.Container {
       tabContainer.setDepth(-1); // render behind card content
 
       // Position: bottom-aligned, stacking upward
-      const tabY = hh - tabH - (tabH + tabGap) * i - 20;
+      const tabY = hh - tabH - (tabH + tabGap) * i - 30;
 
       const bg = this.scene.add.graphics();
       bg.fillStyle(cfg.color, 0.95);

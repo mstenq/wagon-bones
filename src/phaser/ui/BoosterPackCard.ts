@@ -116,6 +116,10 @@ export class BoosterPackCard extends GameObjects.Container {
     this.costText.setColor(canAfford ? '#ffd700' : '#ff4444');
   }
 
+  setCostDisplay(cost: number): void {
+    if (!this._sold) this.costText.setText(`$${cost}`);
+  }
+
   // ─── Tooltip ───
 
   private showTooltip(): void {

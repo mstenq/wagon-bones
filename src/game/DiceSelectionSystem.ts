@@ -180,10 +180,11 @@ function applyBumpValue(
   const original = player.dice.find((d) => d.id === die.id);
   if (!original) return 'Die not found';
 
+  // Use the visible value (from the passed-in die, which may be a rolled copy)
+  const currentValue = die.value;
   const delta = direction === 'up' ? 1 : -1;
-  const newValue = Math.min(6, Math.max(1, original.value + delta));
-  if (newValue === original.value) return `Already at ${original.value}`;
-  const oldValue = original.value;
+  const newValue = Math.min(12, Math.max(1, currentValue + delta));
+  if (newValue === currentValue) return `Already at ${currentValue}`;
   original.value = newValue;
-  return `Bumped die from ${oldValue} to ${newValue}`;
+  return `Bumped die from ${currentValue} to ${newValue}`;
 }

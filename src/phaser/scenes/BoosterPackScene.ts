@@ -758,7 +758,9 @@ export class BoosterPackScene extends Scene {
 
   private clearLineupSelections(): void {
     for (let i = 0; i < this.lineupSprites.length; i++) {
-      this.lineupSprites[i].setSelected(false);
+      if (this.lineupSprites[i].scene) {
+        this.lineupSprites[i].setSelected(false);
+      }
       this.lineupLockIcons[i]?.setVisible(false);
     }
   }

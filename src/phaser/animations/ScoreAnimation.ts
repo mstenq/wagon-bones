@@ -8,6 +8,7 @@ import { DiceSprite } from '../ui/DiceSprite';
 import { Die, ScoreResult } from '../../game/types';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
+import { ConsumableBar } from '../ui/ConsumableBar';
 import { EquipmentInstance } from '../../game/ItemsSystem';
 import { HeldAnimStep } from '../../game/EquipmentEffects';
 import { ANIM } from '../../game/Constants';
@@ -18,6 +19,7 @@ const POPUP_MILES_COLOR = '#4488ff';
 const POPUP_MULT_COLOR = '#ff4444';
 const POPUP_XMULT_COLOR = '#ff4444';
 const POPUP_MONEY_COLOR = '#ffd700';
+const POPUP_SUPPLY_COLOR = '#9c27b0';
 
 /**
  * Spawn a short-lived text popup that scales up, shakes, and fades out.
@@ -95,7 +97,7 @@ function floatingText(
 function popupForDie(
   scene: Scene,
   sprite: DiceSprite,
-  type: 'miles' | 'mult' | 'xmult' | 'money',
+  type: 'miles' | 'mult' | 'xmult' | 'money' | 'supply',
   value: number,
 ): void {
   if (type === 'miles') {
@@ -106,6 +108,8 @@ function popupForDie(
     floatingText(scene, sprite.x, sprite.y, `x${value} mult`, POPUP_XMULT_COLOR, 'up');
   } else if (type === 'money') {
     floatingText(scene, sprite.x, sprite.y, `+$${value}`, POPUP_MONEY_COLOR, 'up');
+  } else if (type === 'supply') {
+    floatingText(scene, sprite.x, sprite.y, `+Supply Card`, POPUP_SUPPLY_COLOR, 'up');
   }
 }
 
@@ -139,6 +143,7 @@ export interface ScoreAnimationConfig {
   result: ScoreResult;
   sidebar: Sidebar;
   equipBar: EquipmentBar;
+  consumableBar: ConsumableBar;
   equipment: EquipmentInstance[];
   lockedDiceIds: Set<string>;
   contentCX: number;
@@ -345,7 +350,7 @@ function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, index: number): v
 }
 
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
-  const { scene, diceSprites, result, sidebar, equipBar, equipment, lockedDiceIds, contentCX, onComplete } = config;
+  const { scene, diceSprites, result, sidebar, equipBar, consumableBar, equipment, lockedDiceIds, contentCX, onComplete } = config;
   const scoringIds = new Set(result.handResult.scoringDice.map((d) => d.id));
   const scoringSprites = diceSprites.filter((s) => scoringIds.has(s.dieData.id));
   const playedNonScoringSprites = diceSprites.filter(
@@ -549,6 +554,17 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             action: () => {
               scene.sound.play('sfx_coin', { volume: 0.5 });
               popupForDie(scene, sprite, 'money', 3);
+            },
+          });
+        }
+
+        // Sub-step: purple_flower sticker — granted supply card (already in player state)
+        if (die.sticker === 'purple_flower') {
+          subSteps.push({
+            action: () => {
+              scene.sound.play('sfx_tarot1', { volume: 0.5 });
+              popupForDie(scene, sprite, 'supply', 0);
+              consumableBar.refresh();
             },
           });
         }

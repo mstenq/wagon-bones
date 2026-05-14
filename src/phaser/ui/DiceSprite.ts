@@ -67,7 +67,7 @@ export class DiceSprite extends GameObjects.Container {
   static suppressTooltips = false;
   private bg: GameObjects.Graphics;
   private valueText: GameObjects.Text;
-  private stickerText: GameObjects.Text | null = null;
+  private stickerImage: GameObjects.Image | null = null;
   private auraGfx: GameObjects.Graphics;
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
@@ -269,21 +269,20 @@ export class DiceSprite extends GameObjects.Container {
     }
 
     // Sticker icon (small colored symbol in bottom-right of front face)
-    if (this.stickerText) {
-      this.stickerText.destroy();
-      this.stickerText = null;
+    if (this.stickerImage) {
+      this.stickerImage.destroy();
+      this.stickerImage = null;
     }
     if (!isGrimy && this._dieData.sticker) {
-      const stickerIcon = getStickerIcon(this._dieData.sticker);
-      const stickerColor = getStickerColor(this._dieData.sticker);
-      this.stickerText = this.scene.add
-        .text(10, 8, stickerIcon, {
-          fontFamily: 'Arial',
-          fontSize: '11px',
-          color: '#' + stickerColor.toString(16).padStart(6, '0'),
-        })
-        .setOrigin(0.5, 0.5);
-      this.add(this.stickerText);
+      const textureKey = `sticker_${this._dieData.sticker}`;
+      if (this.scene.textures.exists(textureKey)) {
+        this.stickerImage = this.scene.add.image(10, 10, textureKey).setOrigin(0.5, 0.5);
+        // Scale down to fit on the die face (~18px target)
+        const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
+        const targetSize = 18;
+        this.stickerImage.setScale(targetSize / maxDim);
+        this.add(this.stickerImage);
+      }
     }
   }
 
@@ -495,16 +494,6 @@ function getEnhancementPipColor(e: string): number {
 /** Accent bar color (slightly darker than bg) */
 function getEnhancementLabelColor(e: string): number {
   return getEnhancementColor(e);
-}
-
-function getStickerColor(s: string): number {
-  const colors: Record<string, number> = {
-    purple_flower: 0x9c27b0,
-    red_bullet: 0xf44336,
-    golden_dollar: 0xffd700,
-    blue_moon: 0x2196f3,
-  };
-  return colors[s] ?? 0xffffff;
 }
 
 function getStickerIcon(s: string): string {

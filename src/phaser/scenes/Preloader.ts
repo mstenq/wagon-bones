@@ -4,8 +4,15 @@ import allTrailGuides from '../../data/trail_guides.json';
 import allSupplyCards from '../../data/supply_cards.json';
 import allFrontierEncounters from '../../data/frontier_encounters.json';
 import packsData from '../../data/packs.json';
+import permitsData from '../../data/permits.json';
 import professionsData from '../../data/professions.json';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
+import stickerData from '../../data/pip_enhancements.json';
+
+// Map sticker IDs to their PNG filenames (when they differ)
+const STICKER_FILE_MAP: Record<string, string> = {
+  golden_dollar: 'gold_dollar',
+};
 
 export class Preloader extends Scene {
   constructor() {
@@ -16,6 +23,12 @@ export class Preloader extends Scene {
     // Load backgrounds
     this.load.image('bg_1', 'assets/backgrounds/1.png');
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
+
+    // Load sticker images
+    for (const sticker of stickerData) {
+      const filename = STICKER_FILE_MAP[sticker.id] ?? sticker.id;
+      this.load.image(`sticker_${sticker.id}`, `assets/stickers/${filename}.png`);
+    }
 
     // Load pack images
     for (const pack of packsData) {
@@ -43,6 +56,11 @@ export class Preloader extends Scene {
     const fePrefix = getConsumableTexturePrefix('frontier');
     for (const fe of allFrontierEncounters) {
       this.load.image(`${fePrefix}${fe.id}`, `assets/trail-encounters/${fe.id}.png`);
+    }
+
+    // Load permit images
+    for (const permit of permitsData) {
+      this.load.image(`permit_${permit.id}`, `assets/permits/${permit.id}.png`);
     }
 
     // Load profession images

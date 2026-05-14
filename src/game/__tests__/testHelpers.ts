@@ -191,8 +191,8 @@ export function calculateTestScore(options: ScoreTestOptions) {
     handLevels: options.handLevels,
   });
 
-  // Set rerolls
-  const rerolls = options.rerollsRemaining ?? 2;
+  // Set rerolls (default matches GAMEPLAY.MAX_REROLLS = 6)
+  const rerolls = options.rerollsRemaining ?? 6;
 
   // Start round
   game.startRound();
