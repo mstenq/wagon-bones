@@ -23,7 +23,6 @@ import { playRollAnimation } from '../animations/RollAnimation';
 import { playScoreAnimation } from '../animations/ScoreAnimation';
 
 const DICE_SPACING = UI.DICE_SPACING;
-const MAX_SELECT_FOR_ROLL = GAMEPLAY.ROLL_SIZE;
 
 interface DiceStackData {
   key: string;
@@ -40,6 +39,11 @@ export class GameScene extends Scene {
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
+
+  /** Dynamic roll size that respects permits and trail event penalties */
+  private get maxSelectForRoll(): number {
+    return this.gameState.config.rollSize;
+  }
 
   // Layout helpers
   private contentCX: number = 0;
@@ -328,7 +332,7 @@ export class GameScene extends Scene {
 
     const remaining = hand.length;
     const spent = this.gameState.state.spent.length;
-    const required = Math.min(MAX_SELECT_FOR_ROLL, remaining);
+    const required = Math.min(this.maxSelectForRoll, remaining);
     this.instructionText.setText(`Select ${required} dice to roll (${spent} dice spent, ${remaining} available)`);
 
     this.updateHUD();
@@ -492,7 +496,7 @@ export class GameScene extends Scene {
     console.log('[DEBUG] onReadyToRoll called, animating:', this.animating);
     if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
     const ids = [...this.selectedHandIds];
-    const required = Math.min(MAX_SELECT_FOR_ROLL, this.gameState.state.hand.length);
+    const required = Math.min(this.maxSelectForRoll, this.gameState.state.hand.length);
     console.log('[DEBUG] selectedHandIds:', ids.length, 'required:', required, 'ids:', ids);
 
     if (ids.length !== required) {
@@ -580,10 +584,12 @@ export class GameScene extends Scene {
       const player = getPlayerState();
       if (goldHeldCount > 0) player.economy.earn(goldHeldCount * 3);
       const daysRemaining = this.gameState.config.maxDays - this.gameState.state.day;
+      const rerollsRemaining = this.gameState.state.rerollsRemaining;
       this.scene.start('Payout', {
         totalMiles: this.gameState.state.totalMiles,
         targetMiles: this.gameState.config.targetMiles,
         daysRemaining,
+        rerollsRemaining,
         leg: player.leg,
         round: player.round,
         isVictory: player.isBossRound && player.leg === GAMEPLAY.LEGS,
@@ -651,7 +657,7 @@ export class GameScene extends Scene {
 
   private updateDrawButtons(): void {
     const selCount = this.selectedHandIds.size;
-    const required = Math.min(MAX_SELECT_FOR_ROLL, this.gameState.state.hand.length);
+    const required = Math.min(this.maxSelectForRoll, this.gameState.state.hand.length);
     console.log('[DEBUG] updateDrawButtons: selCount:', selCount, 'required:', required, 'handLength:', this.gameState.state.hand.length, 'animating:', this.animating);
 
     if (selCount === required) {
@@ -963,7 +969,7 @@ export class GameScene extends Scene {
       stack.addBtn.destroy();
       stack.addBtn = null;
     }
-    const remaining = MAX_SELECT_FOR_ROLL - this.selectedHandIds.size;
+    const remaining = this.maxSelectForRoll - this.selectedHandIds.size;
     if (remaining > 0 && stack.dice.length > 0) {
       const addCount = Math.min(remaining, stack.dice.length);
       stack.addBtn = new Button(
@@ -1045,7 +1051,7 @@ export class GameScene extends Scene {
   private onStackDiceClick(stack: DiceStackData): void {
     console.log('[DEBUG] onStackDiceClick: animating:', this.animating, 'selectedCount:', this.selectedHandIds.size, 'stackKey:', stack.key, 'stackDice:', stack.dice.length);
     if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
-    if (this.selectedHandIds.size >= MAX_SELECT_FOR_ROLL) { console.log('[DEBUG] BLOCKED: max selected'); return; }
+    if (this.selectedHandIds.size >= this.maxSelectForRoll) { console.log('[DEBUG] BLOCKED: max selected'); return; }
 
     // Sound
     this.sound.play('sfx_card_slide1', { volume: 0.4 });
@@ -1112,7 +1118,7 @@ export class GameScene extends Scene {
   /** Handle clicking "Add X" to send multiple dice from a stack to the play area */
   private onAddAllClick(stack: DiceStackData): void {
     if (this.animating) return;
-    const remaining = MAX_SELECT_FOR_ROLL - this.selectedHandIds.size;
+    const remaining = this.maxSelectForRoll - this.selectedHandIds.size;
     if (remaining <= 0) return;
 
     const addCount = Math.min(remaining, stack.dice.length);
@@ -1180,7 +1186,7 @@ export class GameScene extends Scene {
         stack.addBtn.destroy();
         stack.addBtn = null;
       }
-      const remaining = MAX_SELECT_FOR_ROLL - this.selectedHandIds.size;
+      const remaining = this.maxSelectForRoll - this.selectedHandIds.size;
       if (remaining > 0 && stack.dice.length > 0) {
         const addCount = Math.min(remaining, stack.dice.length);
         stack.addBtn = new Button(

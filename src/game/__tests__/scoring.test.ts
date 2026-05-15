@@ -11,6 +11,7 @@ import {
   resetDieIds,
 } from './testHelpers';
 import { HandType } from '../types';
+import { resetPlayerState } from '../PlayerState';
 
 beforeEach(() => {
   resetDieIds();
@@ -444,5 +445,58 @@ describe('combined scenarios', () => {
 
     expect(result.mult).toBe(11.5);
     expect(result.miles).toBe(230);
+  });
+});
+
+// ─── Payout / Interest ───
+
+describe('calculatePayout', () => {
+  test('normal profession earns interest', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(25);
+    const payout = player.calculatePayout(2, 0);
+    // $25 / $5 = $5 interest
+    expect(payout.interest).toBe(5);
+    expect(payout.dayBonus).toBe(2);
+    expect(payout.rerollBonus).toBe(0);
+  });
+
+  test('outlaw earns no interest', () => {
+    const player = resetPlayerState();
+    player.applyProfession('outlaw');
+    player.economy.setBalance(25);
+    const payout = player.calculatePayout(2, 3);
+    expect(payout.interest).toBe(0);
+  });
+
+  test('outlaw earns $1 per unused reroll', () => {
+    const player = resetPlayerState();
+    player.applyProfession('outlaw');
+    player.economy.setBalance(0);
+    const payout = player.calculatePayout(0, 5);
+    expect(payout.rerollBonus).toBe(5);
+    expect(payout.interest).toBe(0);
+  });
+
+  test('outlaw total includes days + rerolls', () => {
+    const player = resetPlayerState();
+    player.applyProfession('outlaw');
+    player.economy.setBalance(0);
+    // round 1 reward = $3, 2 days remaining, 3 rerolls remaining
+    const payout = player.calculatePayout(2, 3);
+    expect(payout.roundReward).toBe(3);
+    expect(payout.dayBonus).toBe(2);
+    expect(payout.rerollBonus).toBe(3);
+    expect(payout.interest).toBe(0);
+    expect(payout.total).toBe(3 + 2 + 3);
+  });
+
+  test('non-outlaw has 0 rerollBonus even with rerolls remaining', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(10);
+    const payout = player.calculatePayout(1, 4);
+    expect(payout.rerollBonus).toBe(0);
+    // interest: $10 / $5 = $2
+    expect(payout.interest).toBe(2);
   });
 });

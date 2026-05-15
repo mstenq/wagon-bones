@@ -9,6 +9,7 @@ import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyD
 import { processEquipmentOnSell, processEquipmentOnShopReroll } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
+import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
 import bossesData from '../data/bosses.json';
@@ -26,6 +27,7 @@ export interface PayoutBreakdown {
   dayBonus: number; // $1 per remaining day
   interest: number; // $1 per $5 held, capped at interestCap
   equipmentMoney: number; // END_ROUND_MONEY items like Payday (not in interest)
+  rerollBonus: number; // outlaw: $1 per unused reroll
   total: number;
 }
 
@@ -61,6 +63,8 @@ export class PlayerState {
   permitDayPenalty: number = 0; // day penalty from Shortcut Trail
   permitRerollPenalty: number = 0; // reroll penalty from Hidden Pass
   permitScoreReduction: number = 0; // leg-equivalent score reduction from shortcuts
+  trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
+  skipNextShop: boolean = false; // set by trail events (Native Guide)
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
 
@@ -354,13 +358,23 @@ export class PlayerState {
   }
 
   /** Calculate the payout breakdown for winning the current round */
-  calculatePayout(daysRemaining: number): PayoutBreakdown {
+  calculatePayout(daysRemaining: number, rerollsRemaining: number = 0): PayoutBreakdown {
     const roundReward = GAMEPLAY.ROUND_REWARDS[this.round - 1] ?? 3;
     const dayBonus = daysRemaining;
 
+    // Outlaw: no interest, gets reroll bonus instead
+    const noInterest = !!(this.profession?.modifiers as Record<string, unknown>)?.noInterest;
+    const perRemaining = ((this.profession?.modifiers as Record<string, unknown>)?.endOfRoundBonusPerRemaining as number) ?? 0;
+
     // Interest: based on current balance (gold dice money already earned before payout)
-    const cappedMoney = Math.min(this.economy.balance, this.interestCap);
-    const interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
+    let interest = 0;
+    if (!noInterest) {
+      const cappedMoney = Math.min(this.economy.balance, this.interestCap);
+      interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
+    }
+
+    // Outlaw reroll bonus
+    const rerollBonus = perRemaining > 0 ? rerollsRemaining * perRemaining : 0;
 
     // Equipment end-of-round money (e.g. Payday) — NOT included in interest
     let equipmentMoney = 0;
@@ -375,7 +389,8 @@ export class PlayerState {
       dayBonus,
       interest,
       equipmentMoney,
-      total: roundReward + dayBonus + interest + equipmentMoney,
+      rerollBonus,
+      total: roundReward + dayBonus + interest + equipmentMoney + rerollBonus,
     };
   }
 

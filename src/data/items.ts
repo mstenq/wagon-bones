@@ -672,6 +672,36 @@ const items: ItemDef[] = [
     effectParams: {},
     hintDisplay: () => [[active('+1 die'), condition('round start')]],
   },
+  {
+    id: 'spare_wagon_parts',
+    name: 'Spare Wagon Parts',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Negates one wagon-damage trail event, then destroys itself. +4 mult.',
+    effectType: 'ADD_MULT',
+    effectParams: { value: 4 },
+    hintDisplay: () => [[mult('+4'), text(' mult')], [text('Negates wagon damage')]],
+  },
+  {
+    id: 'scouts_spyglass',
+    name: "Scout's Spyglass",
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'See the next trail event before it happens. Skip it for $3. +25 miles.',
+    effectType: 'NONE',
+    effectParams: {},
+    hintDisplay: () => [[miles('+25'), text(' miles')], [text('Preview trail events')]],
+  },
+  {
+    id: 'providence',
+    name: 'Providence',
+    cost: 20,
+    rarity: 'legendary',
+    description: 'All negative effects from trail events are prevented. Divine favor intervenes.',
+    effectType: 'NONE',
+    effectParams: {},
+    hintDisplay: () => [[active('Negates'), text(' all negative trail events')]],
+  },
 ];
 
 export default items;

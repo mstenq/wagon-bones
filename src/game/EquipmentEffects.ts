@@ -369,8 +369,8 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
 
         switch (effectType) {
           case 'HELD_LOWEST_MULT':
-            // Bottom Dollar: adds double the rank of the lowest held die to mult
-            if (die.value === lowestValue) {
+            // Bottom Dollar: adds double the rank of the lowest held die to mult (leftmost only)
+            if (die.value === lowestValue && die === heldDice.find((d) => d.value === lowestValue)) {
               bonusMult += lowestValue * 2;
               animSteps.push({
                 dieId: die.id,

@@ -281,7 +281,7 @@ describe('Permit effects: DAY_BONUS', () => {
     const player = resetPlayerState();
     player.economy.setBalance(30);
     player.buyPermit(getPermitById('extra_rations')!);
-    player.buyPermit(getPermitById('supply_cache_permit')!);
+    player.buyPermit(getPermitById('supply_cache')!);
     expect(player.permitDayBonus).toBe(2);
   });
 });

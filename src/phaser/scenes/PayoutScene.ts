@@ -13,6 +13,7 @@ export interface PayoutData {
   totalMiles: number;
   targetMiles: number;
   daysRemaining: number;
+  rerollsRemaining: number;
   leg: number;
   round: number;
   isVictory: boolean;
@@ -72,7 +73,7 @@ export class PayoutScene extends Scene {
       .setOrigin(0.5);
 
     // Calculate payout
-    const payout = player.calculatePayout(data.daysRemaining);
+    const payout = player.calculatePayout(data.daysRemaining, data.rerollsRemaining);
 
     // ─── Payout Panel ───
     const panelW = 420;
@@ -149,7 +150,7 @@ export class PayoutScene extends Scene {
           round: GAMEPLAY.ROUNDS_PER_LEG,
         });
       } else {
-        this.scene.start('Shop');
+        this.scene.start('TrailEvent');
       }
     });
 
@@ -180,16 +181,27 @@ export class PayoutScene extends Scene {
       });
     }
 
-    // Interest
-    if (payout.interest > 0) {
+    // Interest (hidden for outlaw / noInterest professions)
+    const noInterest = !!(player.profession?.modifiers as Record<string, unknown>)?.noInterest;
+    if (!noInterest) {
+      if (payout.interest > 0) {
+        rows.push({
+          label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${player.interestCap / 5} max)`,
+          amount: `$${payout.interest}`,
+        });
+      } else {
+        rows.push({
+          label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER})`,
+          amount: '$0',
+        });
+      }
+    }
+
+    // Outlaw reroll bonus
+    if (payout.rerollBonus > 0) {
       rows.push({
-        label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${player.interestCap / 5} max)`,
-        amount: `$${payout.interest}`,
-      });
-    } else {
-      rows.push({
-        label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER})`,
-        amount: '$0',
+        label: `Unused Rerolls ($1 each)`,
+        amount: `$${payout.rerollBonus}`,
       });
     }
 

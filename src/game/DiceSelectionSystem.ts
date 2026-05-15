@@ -121,8 +121,7 @@ function applyClone(player: ReturnType<typeof getPlayerState>, selectedDice: Die
   const right = player.dice.find((d) => d.id === selectedDice[1].id);
   if (!left || !right) return 'Dice not found';
 
-  // Left becomes a copy of right (keep left's id)
-  left.value = right.value;
+  // Left becomes a copy of right (keep left's id and current value)
   left.enhancement = right.enhancement;
   left.sticker = right.sticker;
   left.aura = right.aura;

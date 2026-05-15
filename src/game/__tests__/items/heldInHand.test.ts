@@ -60,15 +60,15 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     expect(result.mult).toBe(7);
   });
 
-  test('triggers for each die that ties for lowest', () => {
+  test('only triggers on leftmost die when multiple tie for lowest', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 2 }), die({ value: 2 }), die({ value: 9 })],
       equipment: [item('bottom_dollar')],
     });
-    // Lowest = 2, two dice match → +4 + +4 = +8
-    // heldMult = (1 + 8) * 1 = 9
-    expect(result.mult).toBe(9);
+    // Lowest = 2, but only leftmost die triggers → +4
+    // heldMult = (1 + 4) * 1 = 5
+    expect(result.mult).toBe(5);
   });
 
   test('single held die is always the lowest', () => {

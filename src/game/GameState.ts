@@ -29,6 +29,7 @@ import {
   getDayModifiers,
 } from './EquipmentEffects';
 import { getRandomTrailGuideDef } from './ConsumablesSystem';
+import { createEmptyModifiers } from './TrailEventsSystem';
 
 export class GameState {
   config: GameConfig;
@@ -101,12 +102,35 @@ export class GameState {
     rerollBonus += player.permitRerollBonus - player.permitRerollPenalty;
     dayBonus += player.permitDayBonus - player.permitDayPenalty;
 
+    // Apply trail event modifiers (from previous round's trail event)
+    const trailMods = player.trailEventModifiers;
+    dayBonus -= trailMods.dayPenalty;
+    rerollBonus -= trailMods.rerollPenalty;
+
     this.config = {
       ...this.config,
       maxRerolls: DEFAULT_CONFIG.maxRerolls + rerollBonus,
       maxDays: DEFAULT_CONFIG.maxDays + dayBonus,
-      rollSize: player.handSize,
+      rollSize: player.handSize - trailMods.handSizePenalty,
     };
+
+    // Apply trail event: lose all rerolls override
+    if (trailMods.loseAllRerolls) {
+      this.config.maxRerolls = 0;
+    }
+
+    // Apply trail event: target miles multiplier (score multiplier means harder target)
+    if (trailMods.scoreMultiplier !== 1.0) {
+      this.config.targetMiles = Math.ceil(this.config.targetMiles * trailMods.scoreMultiplier);
+    }
+
+    // Apply trail event: boss upgrade multiplier
+    if (trailMods.bossUpgradeMultiplier !== 1.0) {
+      this.config.targetMiles = Math.ceil(this.config.targetMiles * trailMods.bossUpgradeMultiplier);
+    }
+
+    // Clear trail event modifiers after consumption
+    player.trailEventModifiers = createEmptyModifiers();
 
     // Apply day penalties (e.g. Stagecoach: -1 day)
     const dayMods = getDayModifiers(player.equipment);

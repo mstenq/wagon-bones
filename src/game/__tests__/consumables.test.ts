@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame } from './testHelpers';
+import { resetDieIds, setupGame, die } from './testHelpers';
 import { resetPlayerState } from '../PlayerState';
 import {
   createSupplyConsumableDef,
@@ -8,6 +8,7 @@ import {
   createConsumableInstance,
   getSupplyDefById,
 } from '../ConsumablesSystem';
+import { applyDiceSelectionEffect, DiceSelectionConfig } from '../DiceSelectionSystem';
 import supplyCardsData from '../../data/supply_cards.json';
 import trailGuidesData from '../../data/trail_guides.json';
 
@@ -200,5 +201,79 @@ describe('profession starting consumables', () => {
   test('scout has -1 consumable slot', () => {
     const { player } = setupGame({ profession: 'scout' });
     expect(player.maxConsumableSlots).toBe(1);
+  });
+});
+
+// ─── Mirage (CLONE) ───
+
+describe('Mirage CLONE effect', () => {
+  test('left die copies enhancement, sticker, aura from right die', () => {
+    const player = resetPlayerState();
+    const leftDie = die({ enhancement: 'wooden', aura: null, sticker: null, value: 3 });
+    const rightDie = die({ enhancement: 'gold', aura: 'holy', sticker: 'red_bullet', value: 10 });
+    player.dice = [leftDie, rightDie];
+
+    const config: DiceSelectionConfig = {
+      drawCount: 2,
+      pickCount: 2,
+      effectType: 'CLONE',
+      effectParams: {},
+      cardName: 'Mirage',
+      description: '',
+      skippable: false,
+    };
+
+    applyDiceSelectionEffect(config, [leftDie, rightDie]);
+
+    const updated = player.dice.find((d) => d.id === leftDie.id)!;
+    expect(updated.enhancement).toBe('gold');
+    expect(updated.aura).toBe('holy');
+    expect(updated.sticker).toBe('red_bullet');
+  });
+
+  test('left die keeps its own value (not copied from right)', () => {
+    const player = resetPlayerState();
+    const leftDie = die({ enhancement: 'wooden', value: 3 });
+    const rightDie = die({ enhancement: 'gold', value: 10 });
+    player.dice = [leftDie, rightDie];
+
+    const config: DiceSelectionConfig = {
+      drawCount: 2,
+      pickCount: 2,
+      effectType: 'CLONE',
+      effectParams: {},
+      cardName: 'Mirage',
+      description: '',
+      skippable: false,
+    };
+
+    applyDiceSelectionEffect(config, [leftDie, rightDie]);
+
+    const updated = player.dice.find((d) => d.id === leftDie.id)!;
+    expect(updated.value).toBe(3); // value should NOT change
+    expect(updated.enhancement).toBe('gold');
+  });
+
+  test('right die is unchanged after clone', () => {
+    const player = resetPlayerState();
+    const leftDie = die({ enhancement: 'wooden', aura: 'fire' });
+    const rightDie = die({ enhancement: 'gold', aura: 'holy' });
+    player.dice = [leftDie, rightDie];
+
+    const config: DiceSelectionConfig = {
+      drawCount: 2,
+      pickCount: 2,
+      effectType: 'CLONE',
+      effectParams: {},
+      cardName: 'Mirage',
+      description: '',
+      skippable: false,
+    };
+
+    applyDiceSelectionEffect(config, [leftDie, rightDie]);
+
+    const right = player.dice.find((d) => d.id === rightDie.id)!;
+    expect(right.enhancement).toBe('gold');
+    expect(right.aura).toBe('holy');
   });
 });
