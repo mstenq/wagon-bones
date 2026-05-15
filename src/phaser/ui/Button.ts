@@ -18,6 +18,8 @@ export class Button extends GameObjects.Container {
   private _width: number;
   private _height: number;
   private onClickCallback: (() => void) | null = null;
+  private _bgColor: number = DEFAULT_BG;
+  private _hoverColor: number = HOVER_BG;
 
   constructor(scene: Scene, x: number, y: number, text: string, width = 160, height = 44) {
     super(scene, x, y);
@@ -39,10 +41,10 @@ export class Button extends GameObjects.Container {
     this.setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
 
     this.on('pointerover', () => {
-      if (this._enabled) this.drawBg(HOVER_BG);
+      if (this._enabled) this.drawBg(this._hoverColor);
     });
     this.on('pointerout', () => {
-      if (this._enabled) this.drawBg(DEFAULT_BG);
+      if (this._enabled) this.drawBg(this._bgColor);
     });
     this.on('pointerdown', () => {
       if (this._enabled && this.onClickCallback) {
@@ -64,8 +66,15 @@ export class Button extends GameObjects.Container {
 
   setEnabled(enabled: boolean): this {
     this._enabled = enabled;
-    this.drawBg(enabled ? DEFAULT_BG : DISABLED_BG);
+    this.drawBg(enabled ? this._bgColor : DISABLED_BG);
     this.label.setColor(enabled ? TEXT_COLOR : DISABLED_TEXT);
+    return this;
+  }
+
+  setColor(bg: number, hover: number): this {
+    this._bgColor = bg;
+    this._hoverColor = hover;
+    if (this._enabled) this.drawBg(bg);
     return this;
   }
 

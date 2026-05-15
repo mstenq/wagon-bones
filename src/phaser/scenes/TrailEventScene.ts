@@ -6,7 +6,7 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
 import { createLayout } from '../ui/SceneLayout';
@@ -356,16 +356,9 @@ export class TrailEventScene extends Scene {
     this.dicePouch.refresh();
 
     // Update sidebar to reflect pending modifiers (days/rerolls penalties)
-    const mods = player.trailEventModifiers;
-    const effectiveDays = GAMEPLAY.MAX_DAYS + player.permitDayBonus - player.permitDayPenalty - mods.dayPenalty;
-    const effectiveRerolls = mods.loseAllRerolls
-      ? 0
-      : GAMEPLAY.MAX_REROLLS + player.permitRerollBonus - player.permitRerollPenalty - mods.rerollPenalty;
     this.sidebar.updateData({
-      daysRemaining: effectiveDays,
-      maxDays: effectiveDays,
-      rerolls: effectiveRerolls,
-      maxRerolls: effectiveRerolls,
+      daysRemaining: player.effectiveDays,
+      rerolls: player.effectiveRerolls,
     });
   }
 

@@ -188,10 +188,10 @@ export class GameScene extends Scene {
       this.onReadyToRoll(),
     );
     this.rollBtn = new Button(this, this.contentCX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
-    this.rerollBtn = new Button(this, this.contentCX - 110, btnY, 'Re-roll All', 200, 40).onClick(() =>
+    this.scoreBtn = new Button(this, this.contentCX - 110, btnY, 'Score Hand', 160, 40).onClick(() => this.onScore());
+    this.rerollBtn = new Button(this, this.contentCX + 110, btnY, 'Re-roll All', 200, 40).onClick(() =>
       this.onReroll(),
     );
-    this.scoreBtn = new Button(this, this.contentCX + 110, btnY, 'Score Hand', 160, 40).onClick(() => this.onScore());
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
 
     // Sort buttons (small, positioned above the main buttons)
@@ -696,10 +696,12 @@ export class GameScene extends Scene {
 
   /** Sort roll sprites by die value and reposition them with lock icons */
   private sortAndRepositionDice(): void {
+    // Stone dice sort as highest (above 12s)
+    const sortValue = (d: Die) => (d.enhancement === 'stone' ? 13 : d.value);
     const cmp =
       this.sortOrder === 'asc'
-        ? (a: DiceSprite, b: DiceSprite) => a.dieData.value - b.dieData.value
-        : (a: DiceSprite, b: DiceSprite) => b.dieData.value - a.dieData.value;
+        ? (a: DiceSprite, b: DiceSprite) => sortValue(a.dieData) - sortValue(b.dieData)
+        : (a: DiceSprite, b: DiceSprite) => sortValue(b.dieData) - sortValue(a.dieData);
     this.rollSprites.sort(cmp);
 
     const rollY = this.scale.height * UI.ROLL_Y_RATIO;
@@ -771,9 +773,7 @@ export class GameScene extends Scene {
       milesBase: 0,
       mult: 0,
       daysRemaining: this.gameState.config.maxDays - s.day + 1,
-      maxDays: this.gameState.config.maxDays,
       rerolls: s.rerollsRemaining,
-      maxRerolls: this.gameState.config.maxRerolls,
       leg: player.leg,
       totalLegs: GAMEPLAY.LEGS,
       round: player.round,

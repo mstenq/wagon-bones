@@ -84,6 +84,21 @@ export class PlayerState {
     this.assignBosses();
   }
 
+  /** Effective days for the next round (base + permits + profession - trail penalties) */
+  get effectiveDays(): number {
+    const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
+    const profDays = typeof profMods?.days === 'number' ? profMods.days : 0;
+    return GAMEPLAY.MAX_DAYS + this.permitDayBonus - this.permitDayPenalty + profDays - this.trailEventModifiers.dayPenalty;
+  }
+
+  /** Effective rerolls for the next round (base + permits + profession - trail penalties) */
+  get effectiveRerolls(): number {
+    if (this.trailEventModifiers.loseAllRerolls) return 0;
+    const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
+    const profRerolls = typeof profMods?.rerolls === 'number' ? profMods.rerolls : 0;
+    return GAMEPLAY.MAX_REROLLS + this.permitRerollBonus - this.permitRerollPenalty + profRerolls - this.trailEventModifiers.rerollPenalty;
+  }
+
   /** Apply profession modifiers after selection */
   applyProfession(professionId: string): void {
     const prof = professionsData.find((p) => p.id === professionId);

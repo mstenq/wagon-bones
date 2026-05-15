@@ -19,12 +19,8 @@ export interface SidebarData {
   mult: number;
   /** Travel days remaining */
   daysRemaining: number;
-  /** Max travel days */
-  maxDays: number;
   /** Re-rolls remaining */
   rerolls: number;
-  /** Max re-rolls */
-  maxRerolls: number;
   /** Current leg number */
   leg: number;
   /** Total legs */
@@ -489,9 +485,7 @@ export class Sidebar extends GameObjects.Container {
         this.handLevelText.setVisible(false);
       }
     }
-    if (data.daysRemaining !== undefined && data.maxDays !== undefined) {
-      this.daysText.setText(`${data.daysRemaining}`);
-    } else if (data.daysRemaining !== undefined) {
+    if (data.daysRemaining !== undefined) {
       this.daysText.setText(`${data.daysRemaining}`);
     }
     if (data.rerolls !== undefined) {

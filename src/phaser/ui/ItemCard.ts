@@ -56,6 +56,8 @@ export interface CardActionTabConfig {
   color: number;
   textColor?: string;
   callback: () => void;
+  /** Tab position: 'right' slides out from right side, 'bottom' appears below card */
+  position?: 'right' | 'bottom';
 }
 
 interface ActionTabInstance {
@@ -94,6 +96,7 @@ export class ItemCard extends GameObjects.Container {
   private hintObjects: GameObjects.GameObject[] = [];
   private actionTabs: ActionTabInstance[] = [];
   private _tabsVisible: boolean = false;
+  private _tabLiftAmount: number = 0;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -442,28 +445,114 @@ export class ItemCard extends GameObjects.Container {
     return this._cardH;
   }
 
-  /** Show action tabs on the right side of the card. Call hideActionTabs() first to replace. */
+  /** Show action tabs. Bottom tabs slide the card up; right tabs slide out from the side. */
   showActionTabs(tabs: CardActionTabConfig[]): void {
     this.hideActionTabs();
     this._tabsVisible = true;
 
     const scale = this._options.cardScale ?? 1;
-    const tabW = Math.round(50 * scale);
-    const tabH = Math.round(45 * scale);
-    const tabGap = Math.round(4 * scale);
     const tabRadius = Math.round(6 * scale);
     const fontSize = Math.round(16 * scale);
     const hw = this._options.tabAnchorX ?? this._cardW / 2;
     const hh = this._cardH / 2;
 
-    // Stack tabs from the bottom of the card upward
-    for (let i = 0; i < tabs.length; i++) {
-      const cfg = tabs[i];
-      // Tab starts behind the card edge and slides out
-      const tabContainer = this.scene.add.container(hw, 0);
-      tabContainer.setDepth(-1); // render behind card content
+    const bottomTabs = tabs.filter((t) => t.position === 'bottom');
+    const rightTabs = tabs.filter((t) => t.position !== 'bottom');
 
-      // Position: bottom-aligned, stacking upward
+    // ─── Bottom tabs (card slides up to reveal) ───
+    if (bottomTabs.length > 0) {
+      const btabH = Math.round(30 * scale);
+      const btabW = Math.round(this._cardW * 0.8);
+
+      for (let i = 0; i < bottomTabs.length; i++) {
+        const cfg = bottomTabs[i];
+        const tabContainer = this.scene.add.container(0, 0);
+        tabContainer.setDepth(-1);
+
+        const tabY = hh + (btabH * i);
+
+        const bg = this.scene.add.graphics();
+        bg.fillStyle(cfg.color, 0.95);
+        bg.fillRoundedRect(-btabW / 2, tabY, btabW, btabH, {
+          tl: 0,
+          tr: 0,
+          bl: tabRadius,
+          br: tabRadius,
+        });
+        bg.lineStyle(1, 0xffffff, 0.2);
+        bg.strokeRoundedRect(-btabW / 2, tabY, btabW, btabH, {
+          tl: 0,
+          tr: 0,
+          bl: tabRadius,
+          br: tabRadius,
+        });
+        tabContainer.add(bg);
+
+        const label = this.scene.add
+          .text(0, tabY + btabH / 2, cfg.label, {
+            fontFamily: 'sans-serif',
+            fontSize: `${fontSize}px`,
+            fontStyle: 'bold',
+            color: cfg.textColor ?? '#ffffff',
+            align: 'center',
+          })
+          .setOrigin(0.5);
+        tabContainer.add(label);
+
+        // Make tab interactive
+        tabContainer.setSize(btabW, btabH);
+        tabContainer.setInteractive(
+          new Phaser.Geom.Rectangle(0, tabY + btabH / 2, btabW, btabH),
+          Phaser.Geom.Rectangle.Contains,
+        );
+
+        tabContainer.on('pointerover', () => {
+          bg.clear();
+          bg.fillStyle(Phaser.Display.Color.ValueToColor(cfg.color).lighten(20).color, 0.95);
+          bg.fillRoundedRect(-btabW / 2, tabY, btabW, btabH, { tl: 0, tr: 0, bl: tabRadius, br: tabRadius });
+          bg.lineStyle(1, 0xffffff, 0.4);
+          bg.strokeRoundedRect(-btabW / 2, tabY, btabW, btabH, { tl: 0, tr: 0, bl: tabRadius, br: tabRadius });
+        });
+
+        tabContainer.on('pointerout', () => {
+          bg.clear();
+          bg.fillStyle(cfg.color, 0.95);
+          bg.fillRoundedRect(-btabW / 2, tabY, btabW, btabH, { tl: 0, tr: 0, bl: tabRadius, br: tabRadius });
+          bg.lineStyle(1, 0xffffff, 0.2);
+          bg.strokeRoundedRect(-btabW / 2, tabY, btabW, btabH, { tl: 0, tr: 0, bl: tabRadius, br: tabRadius });
+        });
+
+        tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          pointer.event?.stopPropagation();
+          cfg.callback();
+        });
+
+        this.add(tabContainer);
+        this.sendToBack(tabContainer);
+        this.actionTabs.push({ container: tabContainer, config: cfg });
+      }
+
+      // Slide card up to reveal bottom tabs
+      const liftAmount = bottomTabs.length * Math.round(30 * scale);
+      this._tabLiftAmount = liftAmount;
+      this.scene.tweens.add({
+        targets: this,
+        y: this.y - liftAmount,
+        duration: 200,
+        ease: 'Back.easeOut',
+      });
+    }
+
+    // ─── Right-side tabs (slide out from card edge) ───
+    const tabW = Math.round(50 * scale);
+    const tabH = Math.round(45 * scale);
+    const tabGap = Math.round(4 * scale);
+
+    for (let i = 0; i < rightTabs.length; i++) {
+      const cfg = rightTabs[i];
+      const tabContainer = this.scene.add.container(hw, 0);
+      tabContainer.setDepth(-1);
+
       const tabY = hh - tabH - (tabH + tabGap) * i - 30;
 
       const bg = this.scene.add.graphics();
@@ -494,7 +583,6 @@ export class ItemCard extends GameObjects.Container {
         .setOrigin(0.5);
       tabContainer.add(label);
 
-      // Make tab interactive
       tabContainer.setSize(tabW, tabH);
       tabContainer.setInteractive(
         new Phaser.Geom.Rectangle(tabW / 2, tabY + tabH / 2, tabW, tabH),
@@ -522,11 +610,10 @@ export class ItemCard extends GameObjects.Container {
         cfg.callback();
       });
 
-      // Slide-out from behind the card: start at x offset 0 (hidden), tween to hw (visible)
       const finalX = hw;
-      tabContainer.x = hw - tabW; // start hidden behind card edge
+      tabContainer.x = hw - tabW;
       this.add(tabContainer);
-      this.sendToBack(tabContainer); // ensure it's behind card visuals
+      this.sendToBack(tabContainer);
 
       this.scene.tweens.add({
         targets: tabContainer,
@@ -548,6 +635,21 @@ export class ItemCard extends GameObjects.Container {
     if (!this._tabsVisible) return;
     this._tabsVisible = false;
 
+    // Slide card back down if it was lifted for bottom tabs
+    if (this._tabLiftAmount > 0 && this.scene) {
+      if (animate) {
+        this.scene.tweens.add({
+          targets: this,
+          y: this.y + this._tabLiftAmount,
+          duration: 150,
+          ease: 'Power2',
+        });
+      } else {
+        this.y += this._tabLiftAmount;
+      }
+      this._tabLiftAmount = 0;
+    }
+
     if (animate && this.actionTabs.length > 0 && this.scene) {
       // Play whoosh on close
       this.scene.sound.play('sfx_whoosh2', { volume: 0.3 });
@@ -556,13 +658,18 @@ export class ItemCard extends GameObjects.Container {
       const tabW = Math.round(50 * scale);
       for (const tab of this.actionTabs) {
         const container = tab.container;
-        this.scene.tweens.add({
-          targets: container,
-          x: hw - tabW,
-          duration: 150,
-          ease: 'Power2',
-          onComplete: () => container.destroy(),
-        });
+        // Only animate right-side tabs (bottom tabs just get destroyed with the card drop)
+        if (tab.config.position !== 'bottom') {
+          this.scene.tweens.add({
+            targets: container,
+            x: hw - tabW,
+            duration: 150,
+            ease: 'Power2',
+            onComplete: () => container.destroy(),
+          });
+        } else {
+          container.destroy();
+        }
       }
     } else {
       for (const tab of this.actionTabs) {
@@ -580,7 +687,6 @@ export class ItemCard extends GameObjects.Container {
     const matrix = this.getWorldTransformMatrix();
     const worldX = matrix.tx;
     const worldY = matrix.ty;
-    const hh = this._cardH / 2;
 
     this.tooltip = this.scene.add.container(0, 0).setDepth(1000);
 
@@ -676,19 +782,20 @@ export class ItemCard extends GameObjects.Container {
     bg.strokeRoundedRect(0, 0, tooltipW, tooltipH, 8);
     this.tooltip.add([bg, ...tooltipChildren]);
 
-    // Position above the card (account for price tag if present)
-    const hasTag = this.costText !== null;
-    const tagOffset = hasTag ? (PRICE_TAG_H + PRICE_TAG_GAP) * (this._options.cardScale ?? 1) : 0;
-    let tx = worldX - tooltipW / 2;
-    let ty = worldY - hh - tagOffset - tooltipH - 10;
+    // Position to the left of the card
+    const hw = this._cardW / 2;
+    let tx = worldX - hw - tooltipW - 10;
+    let ty = worldY - tooltipH / 2;
 
     // Clamp to screen bounds
-    const { width: sw } = this.scene.scale;
-    if (tx < 8) tx = 8;
-    if (tx + tooltipW > sw - 8) tx = sw - 8 - tooltipW;
-    if (ty < 8) {
-      ty = worldY + hh + 12;
+    const { width: sw, height: sh } = this.scene.scale;
+    if (tx < 8) {
+      // Not enough room on left — fall back to right side
+      tx = worldX + hw + 10;
     }
+    if (tx + tooltipW > sw - 8) tx = sw - 8 - tooltipW;
+    if (ty < 8) ty = 8;
+    if (ty + tooltipH > sh - 8) ty = sh - 8 - tooltipH;
 
     this.tooltip.setPosition(tx, ty);
   }

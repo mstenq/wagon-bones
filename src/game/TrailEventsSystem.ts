@@ -419,10 +419,11 @@ export function applyEffect(
     case 'GAIN_DICE': {
       const count = effect.count ?? 1;
       for (let i = 0; i < count; i++) {
+        const enhancement = (effect.enhancement as DiceEnhancement) ?? null;
         player.addDie({
           id: '', // PlayerState.addDie assigns a proper id
-          value: 0,
-          enhancement: (effect.enhancement as DiceEnhancement) ?? null,
+          value: enhancement === 'stone' ? 0 : Math.ceil(Math.random() * 12),
+          enhancement,
           sticker: (effect.sticker as DiceSticker) ?? null,
           aura: (effect.aura as DiceAura) ?? null,
           isGrimy: false,

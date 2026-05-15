@@ -195,13 +195,16 @@ export class ShopScene extends Scene {
     const btnW = BTN_COL_W - 16;
     const btnH = 52;
 
-    new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH).onClick(() => {
-      this.stockItems = null!;
-      this.packs = null!;
-      this.scene.start('Game');
-    });
+    new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
+      .setColor(0x8b2020, 0xb03030)
+      .onClick(() => {
+        this.stockItems = null!;
+        this.packs = null!;
+        this.scene.start('Game');
+      });
 
     this.rerollBtn = new Button(this, btnColX, cardCY1 + btnH / 2 + 8, `Reroll\n$${player.shopRerollCost}`, btnW, btnH);
+    this.rerollBtn.setColor(0x2d6b2d, 0x3d8b3d);
     this.rerollBtn.setEnabled(player.canRerollShop());
     this.rerollBtn.onClick(() => this.onRerollShop());
 
@@ -569,6 +572,7 @@ export class ShopScene extends Scene {
         tabs.push({
           label: 'BUY',
           color: 0x2255aa,
+          position: 'bottom',
           callback: () => {
             this.dismissActiveTab();
             this.onBuyEquipment(card, shopItem.def);
@@ -578,6 +582,7 @@ export class ShopScene extends Scene {
         tabs.push({
           label: 'BUY',
           color: 0x2255aa,
+          position: 'bottom',
           callback: () => {
             this.dismissActiveTab();
             this.onBuyDie(card, shopItem);
@@ -588,6 +593,7 @@ export class ShopScene extends Scene {
         tabs.push({
           label: 'BUY',
           color: 0x2255aa,
+          position: 'bottom',
           callback: () => {
             this.dismissActiveTab();
             this.onBuyConsumable(card, shopItem.def);
@@ -598,6 +604,7 @@ export class ShopScene extends Scene {
           tabs.push({
             label: 'BUY\n& USE',
             color: 0x338833,
+            position: 'right',
             callback: () => {
               this.dismissActiveTab();
               this.onBuyAndUseConsumable(card, shopItem.def);
@@ -929,6 +936,7 @@ export class ShopScene extends Scene {
         {
           label: 'BUY',
           color: 0x7722aa,
+          position: 'bottom',
           callback: () => {
             this.dismissActiveTab();
             this.onBuyPermit(card, permit);

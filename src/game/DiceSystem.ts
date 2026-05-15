@@ -33,6 +33,8 @@ export function createPouch(count: number): Die[] {
 // ─── Rolling ───
 
 export function rollDie(die: Die): Die {
+  // Stone dice never get a numeric value
+  if (die.enhancement === 'stone') return { ...die, value: 0 };
   return { ...die, value: Math.ceil(Math.random() * 12) };
 }
 
@@ -92,9 +94,30 @@ function buildResult(type: HandType, scoringDice: Die[]): HandResult {
 
 /**
  * Detect the best hand from 1-5 dice.
- * Returns the highest-ranking hand that matches.
+ * Stone dice are excluded from hand pattern detection but always scored.
  */
 export function detectBestHand(dice: Die[]): HandResult {
+  // Separate stone dice — they don't participate in hand detection
+  const stoneDice = dice.filter((d) => d.enhancement === 'stone');
+  const normalDice = dice.filter((d) => d.enhancement !== 'stone');
+
+  if (normalDice.length === 0) {
+    // Only stone dice — no hand pattern, just score them all
+    return buildResult(HandType.HIGH_VALUE, [...stoneDice]);
+  }
+
+  const result = detectBestHandFromDice(normalDice);
+  // Append stone dice to scoring — they're always scored
+  if (stoneDice.length > 0) {
+    result.scoringDice = [...result.scoringDice, ...stoneDice];
+  }
+  return result;
+}
+
+/**
+ * Internal: detect best hand from non-stone dice only.
+ */
+function detectBestHandFromDice(dice: Die[]): HandResult {
   if (dice.length === 0) {
     return buildResult(HandType.HIGH_VALUE, []);
   }

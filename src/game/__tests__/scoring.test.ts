@@ -12,6 +12,7 @@ import {
 } from './testHelpers';
 import { HandType } from '../types';
 import { resetPlayerState } from '../PlayerState';
+import { detectBestHand, rollDie } from '../DiceSystem';
 
 beforeEach(() => {
   resetDieIds();
@@ -498,5 +499,138 @@ describe('calculatePayout', () => {
     expect(payout.rerollBonus).toBe(0);
     // interest: $10 / $5 = $2
     expect(payout.interest).toBe(2);
+  });
+});
+
+// ─── Effective Days / Rerolls ───
+
+describe('effectiveDays / effectiveRerolls', () => {
+  test('base values with no modifiers', () => {
+    const player = resetPlayerState();
+    expect(player.effectiveDays).toBe(4);
+    expect(player.effectiveRerolls).toBe(6);
+  });
+
+  test('farmer profession adds +1 reroll', () => {
+    const player = resetPlayerState();
+    player.applyProfession('farmer');
+    expect(player.effectiveRerolls).toBe(7);
+    expect(player.effectiveDays).toBe(4);
+  });
+
+  test('surveyor profession adds +1 day', () => {
+    const player = resetPlayerState();
+    player.applyProfession('surveyor');
+    expect(player.effectiveDays).toBe(5);
+    expect(player.effectiveRerolls).toBe(6);
+  });
+
+  test('permit day bonus increases effectiveDays', () => {
+    const player = resetPlayerState();
+    player.permitDayBonus = 2;
+    expect(player.effectiveDays).toBe(6);
+  });
+
+  test('permit reroll bonus increases effectiveRerolls', () => {
+    const player = resetPlayerState();
+    player.permitRerollBonus = 3;
+    expect(player.effectiveRerolls).toBe(9);
+  });
+
+  test('permit penalties reduce values', () => {
+    const player = resetPlayerState();
+    player.permitDayPenalty = 1;
+    player.permitRerollPenalty = 2;
+    expect(player.effectiveDays).toBe(3);
+    expect(player.effectiveRerolls).toBe(4);
+  });
+
+  test('trail event day penalty reduces effectiveDays', () => {
+    const player = resetPlayerState();
+    player.trailEventModifiers.dayPenalty = 2;
+    expect(player.effectiveDays).toBe(2);
+  });
+
+  test('trail event reroll penalty reduces effectiveRerolls', () => {
+    const player = resetPlayerState();
+    player.trailEventModifiers.rerollPenalty = 3;
+    expect(player.effectiveRerolls).toBe(3);
+  });
+
+  test('trail event loseAllRerolls overrides to 0', () => {
+    const player = resetPlayerState();
+    player.applyProfession('farmer');
+    player.permitRerollBonus = 5;
+    player.trailEventModifiers.loseAllRerolls = true;
+    expect(player.effectiveRerolls).toBe(0);
+  });
+
+  test('combined: profession + permits + trail penalties', () => {
+    const player = resetPlayerState();
+    player.applyProfession('surveyor'); // +1 day
+    player.permitDayBonus = 1;
+    player.permitRerollPenalty = 1;
+    player.trailEventModifiers.dayPenalty = 1;
+    // days: 4 + 1(prof) + 1(permit) - 1(trail) = 5
+    expect(player.effectiveDays).toBe(5);
+    // rerolls: 6 - 1(permit penalty) = 5
+    expect(player.effectiveRerolls).toBe(5);
+  });
+});
+
+// ─── Stone Dice ───
+
+describe('Stone dice', () => {
+  test('stone dice are excluded from hand detection', () => {
+    // A pair of 6s + a stone die should still detect as a pair, not affected by stone
+    const dice = [die({ value: 6 }), die({ value: 6 }), die({ enhancement: 'stone', value: 0 })];
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.PAIR);
+  });
+
+  test('stone dice are always included in scoringDice', () => {
+    const dice = [die({ value: 6 }), die({ value: 6 }), die({ enhancement: 'stone', value: 0 })];
+    const result = detectBestHand(dice);
+    // Pair scoring has 2 dice + 1 stone = 3
+    expect(result.scoringDice.length).toBe(3);
+    expect(result.scoringDice.some((d) => d.enhancement === 'stone')).toBe(true);
+  });
+
+  test('stone dice do not form pairs with each other', () => {
+    // Two stone dice should not create a pair (both have value 0)
+    const dice = [die({ enhancement: 'stone', value: 0 }), die({ enhancement: 'stone', value: 0 }), die({ value: 3 })];
+    const result = detectBestHand(dice);
+    // Should be HIGH_VALUE (just the 3), not a pair
+    expect(result.type).toBe(HandType.HIGH_VALUE);
+  });
+
+  test('only stone dice scores as HIGH_VALUE with all as scoring', () => {
+    const dice = [die({ enhancement: 'stone', value: 0 }), die({ enhancement: 'stone', value: 0 })];
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.HIGH_VALUE);
+    expect(result.scoringDice.length).toBe(2);
+  });
+
+  test('stone dice contribute +50 miles each when scored', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 6 }), die({ value: 6 }), die({ enhancement: 'stone', value: 0 })],
+    });
+    // Pair: baseMiles=10, baseMult=1, values=6+6+50(stone)=62
+    // miles = (10 + 62) * 1 = 72
+    expect(result.miles).toBe(72);
+  });
+
+  test('rollDie does not assign value to stone dice', () => {
+    const stone = die({ enhancement: 'stone', value: 0 });
+    const rolled = rollDie(stone);
+    expect(rolled.value).toBe(0);
+    expect(rolled.enhancement).toBe('stone');
+  });
+
+  test('rollDie assigns value to non-stone dice', () => {
+    const normal = die({ value: 0 });
+    const rolled = rollDie(normal);
+    expect(rolled.value).toBeGreaterThan(0);
+    expect(rolled.value).toBeLessThanOrEqual(12);
   });
 });

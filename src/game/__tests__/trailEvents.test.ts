@@ -348,32 +348,43 @@ describe('Effect application', () => {
     expect(player.economy.balance).toBe(15);
   });
 
-  test('LOSE_DAYS adds to dayPenalty modifier', () => {
-    const player = resetPlayerState();
+  test('LOSE_DAYS reduces maxDays in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_DAYS', amount: 2 }, player, mods);
-    expect(mods.dayPenalty).toBe(2);
+    player.trailEventModifiers = mods;
+    game.startRound();
+    // base 4 - 2 = 2
+    expect(game.config.maxDays).toBe(2);
   });
 
-  test('LOSE_REROLLS adds to rerollPenalty modifier', () => {
-    const player = resetPlayerState();
+  test('LOSE_REROLLS reduces maxRerolls in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_REROLLS', amount: 3 }, player, mods);
-    expect(mods.rerollPenalty).toBe(3);
+    player.trailEventModifiers = mods;
+    game.startRound();
+    // base 6 - 3 = 3
+    expect(game.config.maxRerolls).toBe(3);
   });
 
-  test('LOSE_ALL_REROLLS sets flag', () => {
-    const player = resetPlayerState();
+  test('LOSE_ALL_REROLLS sets maxRerolls to 0 in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_ALL_REROLLS' }, player, mods);
-    expect(mods.loseAllRerolls).toBe(true);
+    player.trailEventModifiers = mods;
+    game.startRound();
+    expect(game.config.maxRerolls).toBe(0);
   });
 
-  test('LOSE_HAND_SIZE adds to handSizePenalty', () => {
-    const player = resetPlayerState();
+  test('LOSE_HAND_SIZE reduces rollSize in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_HAND_SIZE', amount: 1 }, player, mods);
-    expect(mods.handSizePenalty).toBe(1);
+    applyEffect({ type: 'LOSE_HAND_SIZE', amount: 2 }, player, mods);
+    player.trailEventModifiers = mods;
+    game.startRound();
+    // base handSize 8 - 2 = 6
+    expect(game.config.rollSize).toBe(6);
   });
 
   test('LOSE_RANDOM_DICE removes only enhanced dice from player', () => {
@@ -466,7 +477,7 @@ describe('Effect application', () => {
     expect(player.consumables.length).toBe(1);
   });
 
-  test('LOSE_MONEY_PER_DAY adds to modifier', () => {
+  test('LOSE_MONEY_PER_DAY adds to modifier (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_MONEY_PER_DAY', amount: 3 }, player, mods);
@@ -562,74 +573,83 @@ describe('Effect application', () => {
     expect(fireDice.length).toBe(3);
   });
 
-  test('BOSS_UPGRADE sets modifier multiplier', () => {
-    const player = resetPlayerState();
+  test('BOSS_UPGRADE increases target miles in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
     applyEffect({ type: 'BOSS_UPGRADE', multiplier: 1.5 }, player, mods);
-    expect(mods.bossUpgradeMultiplier).toBe(1.5);
+    player.trailEventModifiers = mods;
+    game.startRound({ targetMiles: 1000 });
+    expect(game.config.targetMiles).toBe(1500);
   });
 
-  test('SCORE_MULTIPLIER sets modifier', () => {
-    const player = resetPlayerState();
+  test('SCORE_MULTIPLIER increases target miles in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
     applyEffect({ type: 'SCORE_MULTIPLIER', multiplier: 1.5 }, player, mods);
-    expect(mods.scoreMultiplier).toBe(1.5);
+    player.trailEventModifiers = mods;
+    game.startRound({ targetMiles: 1000 });
+    expect(game.config.targetMiles).toBe(1500);
   });
 
-  test('FLAT_MILES_PENALTY adds to modifier', () => {
+  test('FLAT_MILES_PENALTY sets modifier (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'FLAT_MILES_PENALTY', amount: 10 }, player, mods);
     expect(mods.flatMilesPenalty).toBe(10);
   });
 
-  test('SKIP_NEXT_SHOP sets flag', () => {
+  test('SKIP_NEXT_SHOP sets flag on modifiers (consumed by UI layer)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'SKIP_NEXT_SHOP' }, player, mods);
     expect(mods.skipNextShop).toBe(true);
   });
 
-  test('DISABLE_REROLL_DAY1 sets flag', () => {
+  test('DISABLE_REROLL_DAY1 sets flag (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'DISABLE_REROLL_DAY1' }, player, mods);
     expect(mods.disableRerollDay1).toBe(true);
   });
 
-  test('STANDARD_DICE_DAY1 sets flag', () => {
+  test('STANDARD_DICE_DAY1 sets flag (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'STANDARD_DICE_DAY1' }, player, mods);
     expect(mods.standardDiceDay1).toBe(true);
   });
 
-  test('DIAMOND_CRACK_DOUBLED sets flag', () => {
+  test('DIAMOND_CRACK_DOUBLED sets flag (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'DIAMOND_CRACK_DOUBLED' }, player, mods);
     expect(mods.diamondCrackDoubled).toBe(true);
   });
 
-  test('LUCKY_ODDS_HALVED sets flag', () => {
+  test('LUCKY_ODDS_HALVED sets flag (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LUCKY_ODDS_HALVED' }, player, mods);
     expect(mods.luckyOddsHalved).toBe(true);
   });
 
-  test('SCORED_DICE_DESTROY_CHANCE sets chance', () => {
+  test('SCORED_DICE_DESTROY_CHANCE sets chance (UI-only, not consumed in game logic)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'SCORED_DICE_DESTROY_CHANCE', chance: 0.25 }, player, mods);
     expect(mods.scoredDiceDestroyChance).toBe(0.25);
   });
 
-  test('LOSE_REROLLS_PER_DAY multiplies by approx days', () => {
-    const player = resetPlayerState();
+  test('LOSE_REROLLS_PER_DAY reduces rerolls in next round', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_REROLLS_PER_DAY', amount: 1 }, player, mods);
-    expect(mods.rerollPenalty).toBe(4); // 1 * 4 days
+    // 1 reroll/day * 4 days = 4 reroll penalty
+    expect(mods.rerollPenalty).toBe(4);
+    player.trailEventModifiers = mods;
+    game.startRound();
+    // base 6 - 4 = 2 rerolls
+    expect(game.config.maxRerolls).toBe(2);
   });
 });
 
@@ -746,74 +766,23 @@ describe('Spare Wagon Parts interaction', () => {
 // ─── Round Modifier Integration ───
 
 describe('Round modifier integration', () => {
-  test('day penalty reduces maxDays in next round', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
-
-    // Set trail event modifiers
-    player.trailEventModifiers.dayPenalty = 2;
-    game.startRound();
-
-    // Max days should be reduced (base 4 - 2 = 2)
-    expect(game.config.maxDays).toBe(2);
-  });
-
-  test('reroll penalty reduces maxRerolls in next round', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
-
-    player.trailEventModifiers.rerollPenalty = 3;
-    game.startRound();
-
-    // Max rerolls should be reduced (base 6 - 3 = 3)
-    expect(game.config.maxRerolls).toBe(3);
-  });
-
-  test('hand size penalty reduces rollSize', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
-
-    player.trailEventModifiers.handSizePenalty = 1;
-    game.startRound();
-
-    // Roll size should be reduced (base 8 - 1 = 7)
-    expect(game.config.rollSize).toBe(7);
-  });
-
-  test('score multiplier increases target miles', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
-
-    player.trailEventModifiers.scoreMultiplier = 1.5;
-    game.startRound({ targetMiles: 1000 });
-
-    expect(game.config.targetMiles).toBe(1500);
-  });
-
-  test('boss upgrade multiplier increases target miles', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
-
-    player.trailEventModifiers.bossUpgradeMultiplier = 2.0;
-    game.startRound({ targetMiles: 1000 });
-
-    expect(game.config.targetMiles).toBe(2000);
-  });
-
-  test('loseAllRerolls sets rerolls to 0', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
-
-    player.trailEventModifiers.loseAllRerolls = true;
-    game.startRound();
-
-    expect(game.config.maxRerolls).toBe(0);
-  });
-
-  test('modifiers are cleared after consumption', () => {
+  test('modifiers are cleared after round starts', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
 
     player.trailEventModifiers.dayPenalty = 2;
     player.trailEventModifiers.rerollPenalty = 1;
-    game.startRound();
+    player.trailEventModifiers.scoreMultiplier = 1.5;
+    game.startRound({ targetMiles: 1000 });
 
-    // Check modifiers are cleared
+    // Verify effects were applied
+    expect(game.config.maxDays).toBe(2);
+    expect(game.config.maxRerolls).toBe(5);
+    expect(game.config.targetMiles).toBe(1500);
+
+    // Verify modifiers are cleared after consumption
     expect(player.trailEventModifiers.dayPenalty).toBe(0);
     expect(player.trailEventModifiers.rerollPenalty).toBe(0);
+    expect(player.trailEventModifiers.scoreMultiplier).toBe(1.0);
   });
 
   test('skipNextShop flag propagated via resolveChoice', () => {

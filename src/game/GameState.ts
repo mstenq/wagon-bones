@@ -88,36 +88,14 @@ export class GameState {
     // Apply equipment config modifiers (rerolls)
     const player = getPlayerState();
     const mods = getConfigModifiers(player.equipment);
-    let rerollBonus = mods.rerollsBonus;
-    let dayBonus = 0;
-
-    // Apply profession modifiers
-    if (player.profession) {
-      const m = player.profession.modifiers as Record<string, unknown>;
-      if (typeof m.rerolls === 'number') rerollBonus += m.rerolls;
-      if (typeof m.days === 'number') dayBonus += m.days;
-    }
-
-    // Apply permit bonuses/penalties
-    rerollBonus += player.permitRerollBonus - player.permitRerollPenalty;
-    dayBonus += player.permitDayBonus - player.permitDayPenalty;
-
-    // Apply trail event modifiers (from previous round's trail event)
     const trailMods = player.trailEventModifiers;
-    dayBonus -= trailMods.dayPenalty;
-    rerollBonus -= trailMods.rerollPenalty;
 
     this.config = {
       ...this.config,
-      maxRerolls: DEFAULT_CONFIG.maxRerolls + rerollBonus,
-      maxDays: DEFAULT_CONFIG.maxDays + dayBonus,
+      maxRerolls: player.effectiveRerolls + mods.rerollsBonus,
+      maxDays: player.effectiveDays,
       rollSize: player.handSize - trailMods.handSizePenalty,
     };
-
-    // Apply trail event: lose all rerolls override
-    if (trailMods.loseAllRerolls) {
-      this.config.maxRerolls = 0;
-    }
 
     // Apply trail event: target miles multiplier (score multiplier means harder target)
     if (trailMods.scoreMultiplier !== 1.0) {

@@ -114,9 +114,9 @@ Stagecoach - $6 - dice are automatically refreshed when supply reaches %50 or be
 Mystery Crate - $6 - add a dice at the start of each round with a random sticker
 
 ## Phase 3
-Covered Wagon - $6 - Gain +5 miles for every Wood die scored. Includes dice combos made from wood.
+Covered Wagon - $6 - Gain +5 miles for every Wood die scored. 
 Moonshine - $6 - retrigger all enhanced dice - enhanced dice have 1 in 6 chance of being destroyed, diamond dice a 1 in 3 chance
-Mercy Shot - $6 - if first re-roll of the day is only 1 dice, destroy it and earn $3
+Burn Barrel - $6 - at the start of each leg automatically destroy one standard non-enhanced dice if available, if dice is destroyed earn $3
 Bounty Contract - $6 - sell this item to gain a free double tag 
 Shortcut Trail - $6 - x0.25 mult for each leg of journey skipped
 Quick Draw - $4 - retrigger first played dice 2 additional times
@@ -126,7 +126,7 @@ Bone Charm - $7 - played bone dice have 1 in 2 chance to give x1.5 mult
 Wood Axe - $7 - played wooden dice give +50 miles when scored
 Iron Spurs - $7 - played iron dice give +7 mult when scored
 Diamond Coffin - $6 - item gains x0.75 mult for every diamond dice that is destroyed
-General Store - $5 - allows for items/trail guides/supplies/frontier encounter cards to appear multiple times
+Counterfeit Goods - $5 - allows for items/trail guides/supplies/frontier encounter cards to appear multiple times
 Rainbow Trail - $5 - x2 if 2 different enhanced cards score, x3 if 3 different, x4 if 4, x5 if 5 different score
 Mirror Lake - $10 - copies ability of item to the right
 Mile Marker - $8 - gains +6 miles each time a 1 pip is scored

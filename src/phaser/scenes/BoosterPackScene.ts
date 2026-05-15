@@ -910,7 +910,6 @@ export class BoosterPackScene extends Scene {
     this.updatePicksText();
 
     // Refresh all UI
-    this.refreshDiceLineup();
     this.equipBar.refresh();
     this.consumableBar.refresh();
     this.updateEquipHints();
@@ -919,9 +918,12 @@ export class BoosterPackScene extends Scene {
 
     // Auto-return to shop when picks exhausted
     if (this.picksRemaining <= 0) {
+      this.clearDiceLineup();
       this.time.delayedCall(800, () => {
         this.scene.start('Shop');
       });
+    } else {
+      this.refreshDiceLineup();
     }
   }
 
