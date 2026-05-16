@@ -43,6 +43,7 @@ export interface Die {
   sticker: DiceSticker; // whole-die effect (like Balatro seals)
   aura: DiceAura;
   isGrimy: boolean; // face hidden until selected
+  bonusMiles: number; // permanent miles bonus (e.g. from Cowboy Boots)
 }
 
 export interface HandDefinition {
@@ -74,8 +75,6 @@ export type ScoreAnimTarget =
 export type ScoreAnimPopupType = 'miles' | 'mult' | 'xmult' | 'money' | 'supply';
 
 export interface ScoreAnimEvent {
-  /** What phase this event belongs to (for grouping/timing) */
-  phase: 'per-die' | 'held' | 'independent';
   /** Target to animate (die, equip card, or both) */
   target: ScoreAnimTarget;
   /** Type of popup to show */
@@ -86,6 +85,17 @@ export interface ScoreAnimEvent {
   dieId?: string;
 }
 
+export interface HandUpgradeInfo {
+  handType: HandType;
+  handName: string;
+  oldLevel: number;
+  newLevel: number;
+  oldBaseMiles: number;
+  newBaseMiles: number;
+  oldBaseMult: number;
+  newBaseMult: number;
+}
+
 export interface ScoreResult {
   handResult: HandResult;
   totalValue: number; // sum of scoring dice values (base miles from dice)
@@ -94,6 +104,8 @@ export interface ScoreResult {
   // Animation event stack — populated by game logic during scoring
   animEvents: ScoreAnimEvent[];
   roundScoreBefore?: number;
+  /** Hand upgrades that occurred during scoring (e.g. Surveyor's Transit) */
+  handUpgrades?: HandUpgradeInfo[];
 }
 
 export interface GameConfig {

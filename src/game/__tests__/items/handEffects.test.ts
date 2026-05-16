@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, resetDieIds } from '../testHelpers';
-import { processEquipmentOnHandPlayed } from '../../EquipmentEffects';
+import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
+import { processEquipmentOnHandPlayed, processEquipmentOnLegStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -291,5 +291,95 @@ describe('HAND_MILES: Long Haul (FIVE_STRAIGHT, +100 miles)', () => {
     // FIVE_STRAIGHT: baseMiles=40, +100 = 140, baseMult=6
     // totalValue = 20, miles = (140 + 20) * 6 = 960
     expect(result.miles).toBe(960);
+  });
+});
+
+// ─── HAND_TIMES_PLAYED_MULT: Trail Journal ───
+
+describe('HAND_TIMES_PLAYED_MULT: Trail Journal', () => {
+  test('adds 0 mult if hand has never been played', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('trail_journal')],
+    });
+    // PAIR: baseMult=1, +0 from trail journal = 1
+    expect(result.mult).toBe(1);
+  });
+
+  test('adds timesPlayed as mult after hand has been played', () => {
+    const { game, player } = setupGame({ equipment: [item('trail_journal')] });
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.PAIR);
+
+    const dice = diceWithValue(5, 2);
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = dice;
+    game.state.selectedForRoll = dice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(dice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1, +3 from trail journal = 4
+    expect(result.mult).toBe(4);
+  });
+
+  test('uses correct hand type count', () => {
+    const { game, player } = setupGame({ equipment: [item('trail_journal')] });
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.THREE_OF_A_KIND);
+    player.recordHandPlayed(HandType.PAIR);
+
+    const dice = diceWithValue(5, 2);
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = dice;
+    game.state.selectedForRoll = dice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(dice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR played 2 times → +2 mult
+    expect(result.mult).toBe(3);
+  });
+});
+
+// ─── WANTED_HAND_MONEY: Wanted Poster ───
+
+describe('WANTED_HAND_MONEY: Wanted Poster', () => {
+  test('earns $4 when hand matches target', () => {
+    const inst = item('wanted_poster');
+    const handTypes = Object.values(HandType);
+    const pairIdx = handTypes.indexOf(HandType.PAIR);
+    inst.state.targetHand = pairIdx;
+
+    const { player } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(14);
+  });
+
+  test('does not earn when hand does not match', () => {
+    const inst = item('wanted_poster');
+    const handTypes = Object.values(HandType);
+    const threeIdx = handTypes.indexOf(HandType.THREE_OF_A_KIND);
+    inst.state.targetHand = threeIdx;
+
+    const { player } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(10);
+  });
+
+  test('randomizes target hand on leg start', () => {
+    const inst = item('wanted_poster');
+    inst.state.targetHand = 0;
+    processEquipmentOnLegStart([inst]);
+    const handTypes = Object.values(HandType);
+    expect(inst.state.targetHand).toBeGreaterThanOrEqual(0);
+    expect(inst.state.targetHand).toBeLessThan(handTypes.length);
   });
 });

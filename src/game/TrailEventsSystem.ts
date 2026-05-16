@@ -234,8 +234,8 @@ export function resolveChoice(
     throw new Error(`Invalid choice "${choiceId}" for event "${event.id}"`);
   }
 
-  // Check if Providence equipment negates all negative effects
-  const hasProvidence = player.equipment.some((e) => e.def.id === 'providence');
+  // Check if saint_elmos_shield equipment negates all negative effects
+  const hassaint_elmos_shield = player.equipment.some((e) => e.def.id === 'saint_elmos_shield');
 
   // Roll for outcome
   const outcomeIndex = rollOutcome(choice.outcomes, rng);
@@ -244,8 +244,8 @@ export function resolveChoice(
 
   // Apply effects
   for (const effect of outcome.effects) {
-    if (hasProvidence && isNegativeEffect(effect)) {
-      continue; // Providence negates negative effects
+    if (hassaint_elmos_shield && isNegativeEffect(effect)) {
+      continue; // saint_elmos_shield negates negative effects
     }
     applyEffect(effect, player, modifiers);
   }
@@ -272,7 +272,7 @@ function rollOutcome(outcomes: TrailEventOutcome[], rng: () => number): number {
   return outcomes.length - 1;
 }
 
-/** Determine if an effect is negative (for Providence check) */
+/** Determine if an effect is negative (for saint_elmos_shield check) */
 export function isNegativeEffect(effect: TrailEventEffect): boolean {
   const negativeTypes = [
     'LOSE_MONEY',
@@ -433,6 +433,7 @@ export function applyEffect(
           sticker: (effect.sticker as DiceSticker) ?? null,
           aura: (effect.aura as DiceAura) ?? null,
           isGrimy: false,
+          bonusMiles: 0,
         });
       }
       break;

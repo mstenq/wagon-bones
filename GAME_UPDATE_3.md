@@ -25,7 +25,7 @@ This mirrors the Oregon Trail feel where the trail is *hard* but punctuated by m
 **New mitigation equipment:**
 - **"Spare Wagon Parts"** ($5) — +4 mult. Automatically negates one wagon-damage event per run (broken wheel/axle/tongue), then destroys itself
 - **"Scout's Spyglass"** ($6) — +25 miles. See the next trail event before it happens; choose to skip it for $3
-- **"Providence"** (Legendary) — All negative effects from trail events are prevented. You still see the event, but divine favor intervenes on your behalf and you only reap the benefits.
+- **"saint_elmos_shield"** (Legendary) — All negative effects from trail events are prevented. You still see the event, but divine favor intervenes on your behalf and you only reap the benefits.
 
 ---
 

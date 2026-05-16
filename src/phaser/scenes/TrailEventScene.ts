@@ -223,14 +223,14 @@ export class TrailEventScene extends Scene {
     this.resultContainer = this.add.container(0, 0);
     this.resultContainer.setAlpha(0);
 
-    // Check Providence
+    // Check saint_elmos_shield
     const player = getPlayerState();
-    const hasProvidence = player.equipment.some((e) => e.def.id === 'providence');
+    const hassaint_elmos_shield = player.equipment.some((e) => e.def.id === 'saint_elmos_shield');
 
     // Build effect summary lines
     const effectLines: { text: string; color: string; negative: boolean }[] = [];
     for (const effect of result.effects) {
-      const negated = hasProvidence && isNegativeEffect(effect);
+      const negated = hassaint_elmos_shield && isNegativeEffect(effect);
       const line = this.formatEffect(effect, negated, enhancedDiceBeforeCount, equipmentBeforeCount);
       if (line) effectLines.push(line);
     }
@@ -272,7 +272,7 @@ export class TrailEventScene extends Scene {
         })
         .setOrigin(0.5, 0);
 
-      if (line.negative && !hasProvidence) {
+      if (line.negative && !hassaint_elmos_shield) {
         // Shake animation for negative effects
         this.tweens.add({
           targets: txt,
@@ -302,16 +302,16 @@ export class TrailEventScene extends Scene {
     // Play appropriate sound
     const hasNegative = result.effects.some((e) => isNegativeEffect(e));
     const hasPositive = result.effects.some((e) => !isNegativeEffect(e));
-    if (hasNegative && !hasProvidence) {
+    if (hasNegative && !hassaint_elmos_shield) {
       this.safePlaySound('sfx_negative');
     } else if (hasPositive) {
       this.safePlaySound('sfx_coin');
     }
 
-    // Providence message
-    if (hasProvidence && result.effects.some((e) => isNegativeEffect(e))) {
+    // saint_elmos_shield message
+    if (hassaint_elmos_shield && result.effects.some((e) => isNegativeEffect(e))) {
       const provText = this.add
-        .text(contentCX, resultY - 28, '✨ Providence protects you! ✨', {
+        .text(contentCX, resultY - 28, '✨ saint_elmos_shield protects you! ✨', {
           fontFamily: FONTS.HEADING,
           fontSize: '16px',
           color: TEXT_COLORS.GOLD,
@@ -323,7 +323,7 @@ export class TrailEventScene extends Scene {
 
     // Check if player must choose equipment to lose
     const loseEquipEffect = result.effects.find(
-      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(hasProvidence && isNegativeEffect(e)),
+      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(hassaint_elmos_shield && isNegativeEffect(e)),
     );
     const needsEquipChoice = loseEquipEffect && player.equipment.length > 0;
 

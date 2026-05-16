@@ -132,3 +132,39 @@ describe('ENHANCED_SCORE_MONEY: Gold Pan', () => {
     expect(inst.def.effectParams.value).toBe(2);
   });
 });
+
+// ─── PERMANENT_DIE_MILES_GAIN: Cowboy Boots ───
+
+describe('PERMANENT_DIE_MILES_GAIN: Cowboy Boots', () => {
+  test('grants permanent +5 bonusMiles to scored dice', () => {
+    const d = die({ value: 5 });
+    calculateTestScore({
+      scoredDice: [d, die({ value: 5 })],
+      equipment: [item('cowboy_boots')],
+    });
+    expect(d.bonusMiles).toBe(5);
+  });
+
+  test('bonusMiles accumulates across multiple hands', () => {
+    const d = die({ value: 5 });
+    calculateTestScore({
+      scoredDice: [d, die({ value: 5 })],
+      equipment: [item('cowboy_boots')],
+    });
+    calculateTestScore({
+      scoredDice: [d, die({ value: 5 })],
+      equipment: [item('cowboy_boots')],
+    });
+    expect(d.bonusMiles).toBe(10);
+  });
+
+  test('bonusMiles is included in score calculation', () => {
+    const d = die({ value: 5, bonusMiles: 10 });
+    const { result } = calculateTestScore({
+      scoredDice: [d, die({ value: 5 })],
+      equipment: [],
+    });
+    // PAIR baseMiles=10, dice: (5+10) + 5 = 20, total = 30
+    expect(result.miles).toBe(30);
+  });
+});

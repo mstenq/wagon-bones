@@ -1,8 +1,13 @@
 // ─── Equipment Effects (No Phaser imports) ───
 // Applies owned equipment effects to scoring and config.
 
-import { Die, HandType, HandResult, ScoreResult, ScoreAnimEvent } from './types';
+import { Die, HandType, HandResult, HandDefinition, HandUpgradeInfo, ScoreResult, ScoreAnimEvent } from './types';
 import { EquipmentInstance } from './ItemsSystem';
+import { getPlayerState } from './PlayerState';
+import { getRandomSupplyDef } from './ConsumablesSystem';
+import handsData from '../data/hands.json';
+
+const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
 export interface ScoringContext {
   handResult: HandResult;
@@ -14,6 +19,7 @@ export interface ScoringContext {
   currentDay: number; // current day in the round (1-based)
   maxDays: number; // max days this round
   allDice?: Die[]; // all dice in player's collection (for Iron Furnace, etc.)
+  handType?: HandType; // the hand type detected for this play
 }
 
 /**
@@ -37,26 +43,26 @@ export function applyEquipmentEffects(
     switch (effectType) {
       case 'ADD_MULT':
         bonusMult += p.value as number;
-        animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
+        animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
         console.log(`  [equip] ${equip.def.name}: ADD_MULT +${p.value} (bonusMult: ${bonusMult})`);
         break;
 
       case 'ADD_MULT_RISKY':
         bonusMult += p.value as number;
-        animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
+        animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
         break;
 
       case 'HAND_MULT':
         if (handTypeMatches(context.handResult.type, p.handType as string)) {
           bonusMult += p.value as number;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
         }
         break;
 
       case 'HAND_MILES':
         if (handTypeMatches(context.handResult.type, p.handType as string)) {
           bonusMiles += p.value as number;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: p.value as number });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: p.value as number });
         }
         break;
 
@@ -64,7 +70,7 @@ export function applyEquipmentEffects(
         const total = (p.value as number) * context.rerollsRemaining;
         if (total > 0) {
           bonusMiles += total;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: total });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: total });
         }
         break;
       }
@@ -79,7 +85,7 @@ export function applyEquipmentEffects(
         }
         if (met) {
           bonusMult += p.value as number;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
         }
         break;
       }
@@ -88,7 +94,7 @@ export function applyEquipmentEffects(
         const total = (p.value as number) * context.equipmentCount;
         if (total > 0) {
           bonusMult += total;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: total });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: total });
         }
         break;
       }
@@ -97,7 +103,7 @@ export function applyEquipmentEffects(
         const milesGain = (p.value as number) * context.playerBalance;
         if (milesGain > 0) {
           bonusMiles += milesGain;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: milesGain });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: milesGain });
         }
         console.log(
           `  [equip] ${equip.def.name}: +${milesGain} miles ($${context.playerBalance} × ${p.value}) (bonusMiles: ${bonusMiles})`,
@@ -112,7 +118,7 @@ export function applyEquipmentEffects(
         }
         if (totalSellValue > 0) {
           bonusMult += totalSellValue;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: totalSellValue });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: totalSellValue });
         }
         console.log(`  [equip] ${equip.def.name}: +${totalSellValue} mult (sell values) (bonusMult: ${bonusMult})`);
         break;
@@ -122,7 +128,7 @@ export function applyEquipmentEffects(
         const val = equip.state.mult ?? 0;
         if (val > 0) {
           bonusMult += val;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
         }
         console.log(`  [equip] ${equip.def.name}: +${val} mult (stateful) (bonusMult: ${bonusMult})`);
         break;
@@ -132,7 +138,7 @@ export function applyEquipmentEffects(
         const val = equip.state.mult ?? 0;
         if (val > 0) {
           bonusMult += val;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
         }
         console.log(`  [equip] ${equip.def.name}: +${val} mult (decaying) (bonusMult: ${bonusMult})`);
         break;
@@ -142,7 +148,7 @@ export function applyEquipmentEffects(
         const val = equip.state.mult ?? 0;
         if (val > 0) {
           bonusMult += val;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
         }
         console.log(
           `  [equip] ${equip.def.name}: +${val} mult (accumulated) (bonusMult: ${bonusMult})`,
@@ -154,7 +160,7 @@ export function applyEquipmentEffects(
         const val = equip.state.mult ?? 0;
         if (val > 0) {
           bonusMult += val;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
         }
         console.log(
           `  [equip] ${equip.def.name}: +${val} mult (reroll gains) (bonusMult: ${bonusMult})`,
@@ -166,7 +172,7 @@ export function applyEquipmentEffects(
         const val = equip.state.miles ?? 0;
         if (val > 0) {
           bonusMiles += val;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
         }
         console.log(
           `  [equip] ${equip.def.name}: +${val} miles (accumulated) (bonusMiles: ${bonusMiles})`,
@@ -179,7 +185,7 @@ export function applyEquipmentEffects(
         const max = p.max as number;
         const roll = Math.floor(Math.random() * (max - min + 1)) + min;
         bonusMult += roll;
-        animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: roll });
+        animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: roll });
         console.log(`  [equip] ${equip.def.name}: +${roll} mult (random ${min}-${max}) (bonusMult: ${bonusMult})`);
         break;
       }
@@ -188,16 +194,127 @@ export function applyEquipmentEffects(
         const val = equip.state.mult ?? 0;
         if (val > 0) {
           bonusMult += val;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
         }
         console.log(`  [equip] ${equip.def.name}: +${val} mult (accumulated) (bonusMult: ${bonusMult})`);
         break;
       }
 
+      case 'HAND_TIMES_PLAYED_MULT': {
+        // Trail Journal: add times this hand type has been played as mult
+        if (context.handType) {
+          const player = getPlayerState();
+          const stats = player.getHandStats(context.handType);
+          const val = stats.timesPlayed;
+          if (val > 0) {
+            bonusMult += val;
+            animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+          }
+          console.log(`  [equip] ${equip.def.name}: +${val} mult (${context.handType} played ${val} times)`);
+        }
+        break;
+      }
+
+      case 'MARKED_NO_SIX_MULT': {
+        // Marked: accumulated mult (resets when a 6 is scored)
+        const val = equip.state.mult ?? 0;
+        if (val > 0) {
+          bonusMult += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+        }
+        console.log(`  [equip] ${equip.def.name}: +${val} mult (no 6s streak) (bonusMult: ${bonusMult})`);
+        break;
+      }
+
+      case 'STATEFUL_ADD_MILES': {
+        // Steam Engine: add current miles value
+        const val = equip.state.miles ?? 0;
+        if (val > 0) {
+          bonusMiles += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+        }
+        console.log(`  [equip] ${equip.def.name}: +${val} miles (stateful) (bonusMiles: ${bonusMiles})`);
+        break;
+      }
+
+      case 'TRAIL_TAX': {
+        // Trail Tax: accumulated mult from days travelled minus rerolls
+        const val = equip.state.mult ?? 0;
+        if (val > 0) {
+          bonusMult += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+        }
+        console.log(`  [equip] ${equip.def.name}: +${val} mult (trail tax) (bonusMult: ${bonusMult})`);
+        break;
+      }
+
+      case 'WANTED_HAND_MONEY': {
+        // Wanted Poster: earn money if hand matches target
+        const handTypes = Object.values(HandType);
+        const targetIdx = equip.state.targetHand ?? 0;
+        const targetHand = handTypes[targetIdx % handTypes.length];
+        if (context.handType === targetHand) {
+          const val = p.value as number;
+          const player = getPlayerState();
+          player.economy.earn(val);
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'money', value: val });
+          console.log(`  [equip] ${equip.def.name}: +$${val} (hand matched ${targetHand})`);
+        }
+        break;
+      }
+
+      case 'TRAIL_GUIDE_XMULT':
       case 'LUCKY_TRIGGER_XMULT':
       case 'SELL_XMULT_GAIN':
+      case 'XMULT_RISKY':
+      case 'REPEAT_HAND_XMULT':
+      case 'LEG_START_XMULT_DESTROY':
         // These are xMult effects, handled in the xMult pass below
         break;
+
+      case 'EXACT_DICE_COUNT_MILES': {
+        // Square Dance: accumulated miles apply during scoring
+        const val = equip.state.miles ?? 0;
+        if (val > 0) {
+          bonusMiles += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+        }
+        break;
+      }
+
+      case 'SUPPLY_USED_MULT': {
+        // Campfire Stories: accumulated mult applies during scoring
+        const val = equip.state.mult ?? 0;
+        if (val > 0) {
+          bonusMult += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: val });
+        }
+        break;
+      }
+
+      case 'ENHANCEMENT_COUNT_MILES': {
+        // Quarry Mine: +miles per matching enhancement in collection
+        const enhancement = p.enhancement as string;
+        const perValue = p.value as number;
+        const allDice = context.allDice ?? [];
+        const enhCount = allDice.filter((d) => d.enhancement === enhancement).length;
+        if (enhCount > 0) {
+          const total = enhCount * perValue;
+          bonusMiles += total;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: total });
+        }
+        break;
+      }
+
+      case 'HAND_MILES_GAIN': {
+        // Manifest Destiny: accumulated miles apply during scoring
+        const val = equip.state.miles ?? 0;
+        if (val > 0) {
+          bonusMiles += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+        }
+        break;
+      }
     }
 
     // Apply item aura bonuses
@@ -205,12 +322,12 @@ export function applyEquipmentEffects(
       switch (equip.def.aura.id) {
         case 'fire':
           bonusMult += 10;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: 10 });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: 10 });
           console.log(`  [equip] ${equip.def.name} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
           break;
         case 'icy':
           bonusMiles += 50;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: 50 });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: 50 });
           console.log(`  [equip] ${equip.def.name} ICY aura: +50 miles (bonusMiles: ${bonusMiles})`);
           break;
       }
@@ -228,7 +345,7 @@ export function applyEquipmentEffects(
     const equip = equipment[i];
     if (equip.def.aura?.id === 'holy') {
       finalMult = finalMult * 1.5;
-      animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: 1.5 });
+      animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: 1.5 });
       console.log(`  [equip] ${equip.def.name} HOLY aura: x1.5 mult (finalMult: ${finalMult})`);
     }
   }
@@ -244,7 +361,7 @@ export function applyEquipmentEffects(
         if (uncommonCount > 0) {
           const xVal = Math.pow(1.5, uncommonCount);
           finalMult *= xVal;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
           console.log(`  [equip] ${equip.def.name}: x1.5 × ${uncommonCount} uncommon items (finalMult: ${finalMult})`);
         }
         break;
@@ -253,7 +370,7 @@ export function applyEquipmentEffects(
         const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
         if (context.currentDay >= context.maxDays) {
           finalMult *= xVal;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
           console.log(
             `  [equip] ${equip.def.name}: x${xVal} (final day ${context.currentDay}/${context.maxDays}) (finalMult: ${finalMult})`,
           );
@@ -266,7 +383,7 @@ export function applyEquipmentEffects(
         const xm = equip.state.xMult ?? 1;
         if (xm !== 1) {
           finalMult *= xm;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
           console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
         }
         break;
@@ -276,10 +393,19 @@ export function applyEquipmentEffects(
         const xm = equip.state.xMult ?? 1;
         if (xm !== 1) {
           finalMult *= xm;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
           console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
         } else {
           console.log(`  [equip] ${equip.def.name}: x1 (no bonus yet)`);
+        }
+        break;
+      }
+      case 'TRAIL_GUIDE_XMULT': {
+        const xm = equip.state.xMult ?? 1;
+        if (xm > 1) {
+          finalMult *= xm;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
         }
         break;
       }
@@ -287,7 +413,7 @@ export function applyEquipmentEffects(
         const xm = equip.state.xMult ?? 1;
         if (xm > 0 && xm !== 1) {
           finalMult *= xm;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
           console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
         }
         break;
@@ -298,7 +424,7 @@ export function applyEquipmentEffects(
         const hands = equip.state.handsPlayed ?? 0;
         if (hands > 0 && hands % n === 0) {
           finalMult *= xVal;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
           console.log(`  [equip] ${equip.def.name}: x${xVal} (hand #${hands}, every ${n}th) (finalMult: ${finalMult})`);
         }
         break;
@@ -311,8 +437,38 @@ export function applyEquipmentEffects(
         if (enhCount > 0) {
           const xVal = 1 + enhCount * perValue;
           finalMult *= xVal;
-          animEvents.push({ phase: 'independent', target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
           console.log(`  [equip] ${equip.def.name}: x${xVal.toFixed(1)} (${enhCount} ${enhancement} dice) (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'XMULT_RISKY': {
+        // Nitro: flat xMult (destroy chance handled in processEndOfRound)
+        const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
+        finalMult *= xVal;
+        animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+        console.log(`  [equip] ${equip.def.name}: x${xVal} (finalMult: ${finalMult})`);
+        break;
+      }
+      case 'REPEAT_HAND_XMULT': {
+        // Repeat Offender: x3 if hand type was already played this round
+        const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
+        // Check if this hand type has been played before this scoring (state key is the hand type name)
+        const handKey = `round_${context.handType}`;
+        if (context.handType && (equip.state[handKey] ?? 0) > 0) {
+          finalMult *= xVal;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (repeat hand ${context.handType}) (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'LEG_START_XMULT_DESTROY': {
+        // Haunted Totem: accumulated xMult applies
+        const xm = equip.state.xMult ?? 1;
+        if (xm > 1) {
+          finalMult *= xm;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
         }
         break;
       }
@@ -377,7 +533,22 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
       moneyEarned += p.value as number;
     }
 
+    if (effectType === 'END_ROUND_MONEY_SCALING') {
+      // Railroad Bonds: $1 base + $2 per boss defeated while equipped
+      const base = p.base as number;
+      const perBoss = p.perBoss as number;
+      const bossesDefeated = (equip.state.bossesDefeated as number) ?? 0;
+      moneyEarned += base + perBoss * bossesDefeated;
+    }
+
     if (effectType === 'ADD_MULT_RISKY') {
+      const [num, den] = p.destroyChance as [number, number];
+      if (Math.random() < num / den) {
+        destroyedIndices.push(i);
+      }
+    }
+
+    if (effectType === 'XMULT_RISKY') {
       const [num, den] = p.destroyChance as [number, number];
       if (Math.random() < num / den) {
         destroyedIndices.push(i);
@@ -433,7 +604,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
       // Steel enhancement: x1.5 mult per trigger
       if (die.enhancement === 'steel') {
         xMult *= 1.5;
-        animEvents.push({ phase: 'held', target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5 });
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5 });
         console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${xMult})`);
       }
 
@@ -453,7 +624,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
           case 'HELD_LOWEST_MULT':
             if (die.value === lowestValue && die === heldDice.find((d) => d.value === lowestValue)) {
               bonusMult += lowestValue * 2;
-              animEvents.push({ phase: 'held', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: lowestValue * 2 });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: lowestValue * 2 });
               console.log(
                 `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${lowestValue * 2} mult (bonusMult: ${bonusMult})`,
               );
@@ -463,7 +634,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
           case 'HELD_PIP_XMULT':
             if (die.value === (p.pip as number)) {
               xMult *= p.value as number;
-              animEvents.push({ phase: 'held', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number });
               console.log(
                 `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value} mult (xMult: ${xMult})`,
               );
@@ -473,7 +644,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
           case 'HELD_PIP_MULT':
             if (die.value === (p.pip as number)) {
               bonusMult += p.value as number;
-              animEvents.push({ phase: 'held', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number });
               console.log(
                 `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`,
               );
@@ -485,7 +656,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
               const [num, den] = p.chance as [number, number];
               if (Math.random() < num / den) {
                 moneyEarned += p.value as number;
-                animEvents.push({ phase: 'held', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number });
+                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number });
                 console.log(
                   `  [held] Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value} (total: $${moneyEarned})`,
                 );
@@ -544,8 +715,9 @@ function handTypeMatches(played: HandType, required: string): boolean {
 
 // ─── Equipment State Update Functions ───
 
-/** Called after a hand is scored. Updates stateful equipment based on the hand type played. */
-export function processEquipmentOnHandPlayed(equipment: EquipmentInstance[], handType: HandType): void {
+/** Step 2: "On Played" items that activate BEFORE scoring.
+ *  These update equipment state so their bonuses apply to the current hand. */
+export function processEquipmentOnHandPlayed(equipment: EquipmentInstance[], handType: HandType, scoringDice?: Die[]): void {
   for (const equip of equipment) {
     switch (equip.def.effectType) {
       case 'HAND_MULT_GAIN':
@@ -558,8 +730,97 @@ export function processEquipmentOnHandPlayed(equipment: EquipmentInstance[], han
         // Six Shooter: track hands played
         equip.state.handsPlayed = (equip.state.handsPlayed ?? 0) + 1;
         break;
+      case 'MARKED_NO_SIX_MULT': {
+        // Marked: +1 mult per hand without a 6, reset on 6
+        const hasSix = scoringDice ? scoringDice.some((d) => d.value === 6) : false;
+        if (hasSix) {
+          equip.state.mult = 0;
+        } else {
+          equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.multPerHand as number);
+        }
+        break;
+      }
+      case 'EXACT_DICE_COUNT_MILES': {
+        // Square Dance: gains miles if exactly N dice are played
+        const count = equip.def.effectParams.count as number;
+        const diceCount = scoringDice?.length ?? 0;
+        if (diceCount === count) {
+          equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number);
+        }
+        break;
+      }
+      case 'HAND_MILES_GAIN': {
+        // Manifest Destiny: gains miles if hand contains required type
+        if (handTypeMatches(handType, equip.def.effectParams.handType as string)) {
+          equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number);
+        }
+        break;
+      }
     }
   }
+}
+
+/** Called AFTER a hand is scored. Updates equipment that should not affect current hand's score.
+ *  Returns any hand upgrades that occurred (e.g. Surveyor's Transit). */
+export function processEquipmentAfterHandScored(equipment: EquipmentInstance[], handType: HandType, scoringDice?: Die[]): HandUpgradeInfo[] {
+  const upgrades: HandUpgradeInfo[] = [];
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'STATEFUL_ADD_MILES': {
+        // Steam Engine: -5 miles per hand played
+        const decay = equip.def.effectParams.decayPerHand as number;
+        equip.state.miles = Math.max(0, (equip.state.miles ?? 0) - decay);
+        break;
+      }
+      case 'HAND_UPGRADE_CHANCE': {
+        // Surveyor's Transit: chance to upgrade hand knowledge
+        const [num, den] = equip.def.effectParams.chance as [number, number];
+        if (Math.random() < num / den) {
+          const player = getPlayerState();
+          const stats = player.getHandStats(handType);
+          const handDef = HAND_TABLE.find((h) => h.type === handType)!;
+          const oldLevel = stats.level;
+          const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
+          const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
+
+          player.upgradeHandLevel(handType);
+
+          const newLevel = stats.level;
+          const newBaseMiles = handDef.baseMiles + stats.milesPerLevel * (newLevel - 1);
+          const newBaseMult = handDef.baseMult + stats.multPerLevel * (newLevel - 1);
+
+          upgrades.push({
+            handType,
+            handName: handDef.name,
+            oldLevel,
+            newLevel,
+            oldBaseMiles,
+            newBaseMiles,
+            oldBaseMult,
+            newBaseMult,
+          });
+        }
+        break;
+      }
+      case 'REPEAT_HAND_XMULT': {
+        // Repeat Offender: track hands played this round using state keys
+        const handKey = `round_${handType}`;
+        equip.state[handKey] = (equip.state[handKey] ?? 0) + 1;
+        break;
+      }
+      case 'LOW_MONEY_SUPPLY': {
+        // Emergency Supplies: create supply card if balance <= threshold
+        const threshold = equip.def.effectParams.threshold as number;
+        const player = getPlayerState();
+        if (player.economy.balance <= threshold) {
+          const supplyDef = getRandomSupplyDef();
+          player.addConsumable(supplyDef);
+        }
+        break;
+      }
+    }
+  }
+  return upgrades;
 }
 
 /** Called when the player rerolls dice. Updates stateful equipment. */
@@ -573,6 +834,12 @@ export function processEquipmentOnReroll(equipment: EquipmentInstance[], diceCou
           (equip.state.xMult ?? 1) - (equip.def.effectParams.decayPerDie as number) * diceCount,
         );
         break;
+      case 'TRAIL_TAX': {
+        // Trail Tax: -1 mult per re-roll used
+        const loss = (equip.def.effectParams as Record<string, unknown>).multLostPerReroll as number;
+        equip.state.mult = Math.max(0, (equip.state.mult ?? 0) - loss);
+        break;
+      }
     }
   }
 }
@@ -608,6 +875,10 @@ export function processEquipmentOnBossDefeat(equipment: EquipmentInstance[]): vo
       case 'SELL_XMULT_GAIN':
         // Snake Oil Ledger: resets on boss defeat
         equip.state.xMult = 1;
+        break;
+      case 'END_ROUND_MONEY_SCALING':
+        // Railroad Bonds: track bosses defeated while equipped
+        equip.state.bossesDefeated = (equip.state.bossesDefeated ?? 0) + 1;
         break;
     }
   }
@@ -660,6 +931,14 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[]): { 
         // Lucky Number: randomize pip each round
         equip.state.pip = Math.ceil(Math.random() * 12);
         break;
+      case 'REPEAT_HAND_XMULT':
+        // Repeat Offender: reset round history on new round
+        for (const key of Object.keys(equip.state)) {
+          if (key.startsWith('round_')) {
+            delete equip.state[key];
+          }
+        }
+        break;
       case 'SCORED_RETRIGGER_TIMED':
         // War Drums: decrement days remaining
         if (equip.state.daysRemaining !== undefined && equip.state.daysRemaining > 0) {
@@ -671,13 +950,17 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[]): { 
   return { destroyedIndices };
 }
 
-/** Called at the end of each day. Updates War Drums counter. */
+/** Called at the end of each day. Updates War Drums counter and Trail Tax. */
 export function processEquipmentOnDayEnd(equipment: EquipmentInstance[]): void {
   for (const equip of equipment) {
     if (equip.def.effectType === 'SCORED_RETRIGGER_TIMED') {
       if ((equip.state.daysRemaining ?? 0) > 0) {
         equip.state.daysRemaining--;
       }
+    }
+    if (equip.def.effectType === 'TRAIL_TAX') {
+      const multPerDay = (equip.def.effectParams as Record<string, unknown>).multPerDay as number;
+      equip.state.mult = (equip.state.mult ?? 0) + multPerDay;
     }
   }
 }
@@ -725,9 +1008,17 @@ export function getDayModifiers(equipment: EquipmentInstance[]): { daysPenalty: 
 export function processEquipmentOnLegStart(equipment: EquipmentInstance[]): {
   destroyedIndices: number[];
   stoneDiceToAdd: number;
+  equipmentToCreate: number;
+  equipmentCreateRarity: string;
+  daysBonus: number;
+  loseAllRerolls: boolean;
 } {
   const destroyedIndices: number[] = [];
   let stoneDiceToAdd = 0;
+  let equipmentToCreate = 0;
+  let equipmentCreateRarity = 'common';
+  let daysBonus = 0;
+  let loseAllRerolls = false;
 
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
@@ -745,7 +1036,85 @@ export function processEquipmentOnLegStart(equipment: EquipmentInstance[]): {
     if (equip.def.effectType === 'LEG_START_ADD_STONE') {
       stoneDiceToAdd++;
     }
+
+    if (equip.def.effectType === 'WANTED_HAND_MONEY') {
+      // Wanted Poster: randomize target hand each leg
+      const handTypes = Object.values(HandType);
+      equip.state.targetHand = Math.floor(Math.random() * handTypes.length);
+    }
+
+    if (equip.def.effectType === 'LEG_START_XMULT_DESTROY') {
+      // Haunted Totem: gains xMult, will destroy a random other equipment
+      equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
+      // Pick a random OTHER equipment to destroy (not self)
+      const otherIndices = equipment
+        .map((_, idx) => idx)
+        .filter((idx) => idx !== i && !destroyedIndices.includes(idx));
+      if (otherIndices.length > 0) {
+        const victimIdx = otherIndices[Math.floor(Math.random() * otherIndices.length)];
+        destroyedIndices.push(victimIdx);
+      }
+    }
+
+    if (equip.def.effectType === 'LEG_START_CREATE_EQUIPMENT') {
+      // Junk Dealer: create common equipment
+      equipmentToCreate += equip.def.effectParams.count as number;
+      equipmentCreateRarity = equip.def.effectParams.rarity as string;
+    }
+
+    if (equip.def.effectType === 'LEG_START_SELL_VALUE') {
+      // Antique Revolver: gain sell value
+      equip.sellValue += equip.def.effectParams.value as number;
+    }
+
+    if (equip.def.effectType === 'LEG_START_DAYS_NO_REROLLS') {
+      // Hardtack: +days, lose all rerolls
+      daysBonus += equip.def.effectParams.days as number;
+      loseAllRerolls = true;
+    }
+
+    // (Repeat Offender history is reset per round in processEquipmentOnRoundStart)
   }
 
-  return { destroyedIndices, stoneDiceToAdd };
+  return { destroyedIndices, stoneDiceToAdd, equipmentToCreate, equipmentCreateRarity, daysBonus, loseAllRerolls };
+}
+
+/** Called when a new die is added to the collection. Updates New Blood. */
+export function processEquipmentOnDiceAdded(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'STATEFUL_XMULT' && equip.def.effectParams.gainOnDiceAdded) {
+      equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.gainOnDiceAdded as number);
+    }
+  }
+}
+
+/** Called when a supply card is used. Updates Campfire Stories. */
+export function processEquipmentOnSupplyUsed(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'SUPPLY_USED_MULT') {
+      equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.value as number);
+    }
+  }
+}
+
+/** Called when a booster pack is skipped. Updates Tight Fist. */
+export function processEquipmentOnPackSkipped(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'STATEFUL_ADD_MULT' && equip.def.effectParams.gainOnPackSkip) {
+      equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.gainOnPackSkip as number);
+    }
+  }
+}
+
+/** Called when a booster pack is opened. Returns true if a supply card should be granted (Leftovers). */
+export function processEquipmentOnPackOpened(equipment: EquipmentInstance[]): boolean {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'PACK_OPEN_SUPPLY_CHANCE') {
+      const [num, den] = equip.def.effectParams.chance as [number, number];
+      if (Math.random() < num / den) {
+        return true;
+      }
+    }
+  }
+  return false;
 }

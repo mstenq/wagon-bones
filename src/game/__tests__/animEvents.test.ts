@@ -176,9 +176,9 @@ describe('animEvents order: equipment effects per-die', () => {
   });
 });
 
-describe('animEvents: held and independent phases', () => {
-  test('held events come after per-die events', () => {
-    // Steel die in hand triggers held-in-hand mult
+describe('animEvents: ordering', () => {
+  test('held die events come after scored die events', () => {
+    // Steel die in hand triggers held-in-hand xmult
     const scoredDice = [die({ value: 6 })];
     const heldDice = [die({ value: 4, enhancement: 'steel' })];
 
@@ -187,31 +187,33 @@ describe('animEvents: held and independent phases', () => {
       heldDice,
     });
 
-    const phases = result.animEvents.map((e) => e.phase);
-    const lastPerDieIdx = phases.lastIndexOf('per-die');
-    const firstHeldIdx = phases.indexOf('held');
+    // Per-die events target scored dice (dieId set), held events target held dice
+    const scoredDieIds = new Set(scoredDice.map((d) => d.id));
+    const lastScoredIdx = result.animEvents.findLastIndex((e) => e.dieId && scoredDieIds.has(e.dieId));
+    const heldDieIds = new Set(heldDice.map((d) => d.id));
+    const firstHeldIdx = result.animEvents.findIndex((e) => e.target.kind === 'die' && heldDieIds.has(e.target.dieId));
 
     if (firstHeldIdx !== -1) {
-      expect(firstHeldIdx).toBeGreaterThan(lastPerDieIdx);
+      expect(firstHeldIdx).toBeGreaterThan(lastScoredIdx);
     }
   });
 
-  test('independent events come after held events', () => {
+  test('equipment-only events come after held events', () => {
     const scoredDice = [die({ value: 5 }), die({ value: 5 })];
     const heldDice = [die({ value: 4, enhancement: 'steel' })];
-    // Horseshoe is RANDOM_MULT (independent)
+    // Horseshoe is RANDOM_MULT (equipment-only event)
     const { result } = calculateTestScore({
       scoredDice,
       heldDice,
       equipment: [item('horseshoe')],
     });
 
-    const phases = result.animEvents.map((e) => e.phase);
-    const lastHeldIdx = phases.lastIndexOf('held');
-    const firstIndependentIdx = phases.indexOf('independent');
+    const heldDieIds = new Set(heldDice.map((d) => d.id));
+    const lastHeldIdx = result.animEvents.findLastIndex((e) => e.target.kind === 'die' && heldDieIds.has(e.target.dieId));
+    const firstEquipOnlyIdx = result.animEvents.findIndex((e) => e.target.kind === 'equip');
 
-    if (lastHeldIdx !== -1 && firstIndependentIdx !== -1) {
-      expect(firstIndependentIdx).toBeGreaterThan(lastHeldIdx);
+    if (lastHeldIdx !== -1 && firstEquipOnlyIdx !== -1) {
+      expect(firstEquipOnlyIdx).toBeGreaterThan(lastHeldIdx);
     }
   });
 });

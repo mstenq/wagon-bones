@@ -65,6 +65,9 @@ export class Sidebar extends GameObjects.Container {
   private onJourneyInfo: (() => void) | null = null;
   private onOptions: (() => void) | null = null;
 
+  /** Y coordinate of the hand display area (for upgrade animation positioning) */
+  private handDisplayY: number = 0;
+
   constructor(scene: Scene, width: number, height: number) {
     super(scene, 0, 0);
     this.sidebarWidth = width;
@@ -310,6 +313,7 @@ export class Sidebar extends GameObjects.Container {
 
     // ─── Hand Name / Level Display (above miles/mult) ───
     const handDisplayH = 32;
+    this.handDisplayY = y;
     this.handNameText = scene.add
       .text(cx, y + handDisplayH / 2, '', {
         fontFamily: FONTS.HEADING,
@@ -607,6 +611,11 @@ export class Sidebar extends GameObjects.Container {
       yoyo: true,
       ease: 'Sine.easeOut',
     });
+  }
+
+  /** Get the Y coordinate of the hand display area (for upgrade animation positioning) */
+  getHandUpgradeY(): number {
+    return this.handDisplayY;
   }
 
   // ─── Profession Tooltip ───

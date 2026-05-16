@@ -6,7 +6,7 @@ import handsData from '../data/hands.json';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
 import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger } from './EquipmentEffects';
-import { getRandomSupplyDef, createConsumableInstance } from './ConsumablesSystem';
+import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -22,6 +22,7 @@ export function createDie(overrides?: Partial<Die>): Die {
     sticker: null,
     aura: null,
     isGrimy: false,
+    bonusMiles: 0,
     ...overrides,
   };
 }
@@ -83,7 +84,7 @@ function findLongestStraight(dice: Die[]): number[] {
   return best;
 }
 
-function getHandDef(type: HandType): HandDefinition {
+export function getHandDef(type: HandType): HandDefinition {
   return HAND_TABLE.find((h) => h.type === type)!;
 }
 
@@ -251,36 +252,42 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       // Base effect — value as miles (stone dice have 0 value but add 50 miles)
       const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
       totalValue += dieMiles;
-      animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: dieMiles, dieId: die.id });
+      animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: dieMiles, dieId: die.id });
       console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${dieMiles} ${die.enhancement === 'stone' ? 'miles (STONE)' : 'value'} (total: ${totalValue})`);
 
+      // Permanent bonus miles (e.g. from Cowboy Boots)
+      if (die.bonusMiles > 0) {
+        totalValue += die.bonusMiles;
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: die.bonusMiles, dieId: die.id });
+        console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${die.bonusMiles} bonus miles (total: ${totalValue})`);
+      }
       // Dice enhancement effects
       switch (die.enhancement) {
         case 'bone':
           bonusMult += 4;
-          animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 4, dieId: die.id });
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 4, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} BONE: +4 mult (bonusMult: ${bonusMult})`);
           break;
         case 'wooden':
           totalValue += 10;
-          animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 10, dieId: die.id });
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 10, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} WOODEN: +10 miles (totalValue: ${totalValue})`);
           break;
         case 'diamond':
           xMult *= 2;
-          animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 2, dieId: die.id });
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 2, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} DIAMOND: x2 mult (xMult: ${xMult})`);
           break;
         case 'lucky': {
           if (Math.random() < 1 / 5) {
             bonusMult += 20;
-            animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
+            animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
             processEquipmentOnLuckyTrigger(equipment);
           }
           if (Math.random() < 1 / 15) {
             player.economy.earn(20);
-            animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
+            animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit $20!`);
             processEquipmentOnLuckyTrigger(equipment);
           }
@@ -293,17 +300,17 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       switch (die.aura) {
         case 'fire':
           bonusMult += 10;
-          animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 10, dieId: die.id });
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 10, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
           break;
         case 'icy':
           totalValue += 50;
-          animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 50, dieId: die.id });
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 50, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} ICY aura: +50 miles (totalValue: ${totalValue})`);
           break;
         case 'holy':
           xMult *= 1.5;
-          animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5, dieId: die.id });
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} HOLY aura: x1.5 (xMult: ${xMult})`);
           break;
       }
@@ -312,7 +319,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       if (die.sticker === 'purple_flower') {
         const supplyDef = getRandomSupplyDef();
         player.consumables.push(createConsumableInstance(supplyDef));
-        animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'supply', value: 0, dieId: die.id });
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'supply', value: 0, dieId: die.id });
         console.log(
           `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER purple_flower: granted supply card '${supplyDef.name}'`,
         );
@@ -320,7 +327,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       if (die.sticker === 'golden_dollar') {
         player.economy.earn(3);
-        animEvents.push({ phase: 'per-die', target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 3, dieId: die.id });
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 3, dieId: die.id });
         console.log(
           `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER golden_dollar: +$3`,
         );
@@ -336,7 +343,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           case 'PIP_MULT':
             if (die.value === (p.pip as number)) {
               bonusMult += p.value as number;
-              animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
               console.log(
                 `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`,
               );
@@ -345,7 +352,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           case 'PIP_MILES':
             if (die.value === (p.pip as number)) {
               totalValue += p.value as number;
-              animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
               console.log(
                 `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`,
               );
@@ -354,7 +361,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           case 'PARITY_MULT':
             if (matchesParity(die.value, p.parity as string)) {
               bonusMult += p.value as number;
-              animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
               console.log(
                 `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`,
               );
@@ -363,7 +370,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           case 'PARITY_MILES':
             if (matchesParity(die.value, p.parity as string)) {
               totalValue += p.value as number;
-              animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
               console.log(
                 `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`,
               );
@@ -372,14 +379,14 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           case 'GOLD_DICE_MONEY':
             if (die.enhancement === 'gold') {
               player.economy.earn(p.value as number);
-              animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
               console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
             }
             break;
           case 'LUCKY_NUMBER_PIP_XMULT':
             if (die.value === (equip.state.pip ?? 0)) {
               xMult *= p.value as number;
-              animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
               console.log(
                 `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value} (lucky number ${equip.state.pip})`,
               );
@@ -391,7 +398,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
               if (Math.random() < num / den) {
                 const supplyDef = getRandomSupplyDef();
                 player.consumables.push(createConsumableInstance(supplyDef));
-                animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'supply', value: 0, dieId: die.id });
+                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'supply', value: 0, dieId: die.id });
                 console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: granted supply card '${supplyDef.name}'`);
               }
             }
@@ -402,9 +409,17 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
               const [num, den] = p.chance as [number, number];
               if (Math.random() < num / den) {
                 player.economy.earn(p.value as number);
-                animEvents.push({ phase: 'per-die', target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
+                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
                 console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
               }
+            }
+            break;
+          }
+          case 'PERMANENT_DIE_MILES_GAIN': {
+            // Cowboy Boots: permanently add miles to this die (only on first trigger)
+            if (t === 0) {
+              die.bonusMiles = (die.bonusMiles ?? 0) + (p.value as number);
+              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: permanently +${p.value} miles (now ${die.bonusMiles})`);
             }
             break;
           }
@@ -422,6 +437,41 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           const enhancements: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond'];
           target.enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];
           console.log(`  [scoreHand] ${equip.def.name}: enhanced die ${target.id} → ${target.enhancement}`);
+        }
+      }
+      if (equip.def.effectType === 'FIRST_DAY_SOLO_COPY') {
+        // Bloodline: copy the solo die into the collection
+        const target = handResult.scoringDice[0];
+        const copy = createDie({
+          value: target.value,
+          enhancement: target.enhancement,
+          sticker: target.sticker,
+          aura: target.aura,
+          bonusMiles: target.bonusMiles,
+        });
+        player.dice.push(copy);
+        console.log(`  [scoreHand] ${equip.def.name}: copied die ${target.id} → ${copy.id}`);
+      }
+    }
+  }
+
+  // FIRST_HAND_ENHANCED_SIX: Hellfire Round — destroy enhanced 6 on first hand, gain frontier card
+  if (scoreContext && scoreContext.currentDay === 1) {
+    for (const equip of equipment) {
+      if (equip.def.effectType === 'FIRST_HAND_ENHANCED_SIX') {
+        const target = handResult.scoringDice.find((d) => d.value === 6 && d.enhancement !== null);
+        if (target) {
+          // Mark die for destruction by removing from player's collection
+          const idx = player.dice.findIndex((d) => d.id === target.id);
+          if (idx >= 0) {
+            player.dice.splice(idx, 1);
+            console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced 6 (${target.id}), granting frontier card`);
+            // Grant frontier encounter card
+            const frontierDef = getRandomFrontierDef();
+            if (frontierDef) {
+              player.consumables.push(createConsumableInstance(frontierDef));
+            }
+          }
         }
       }
     }

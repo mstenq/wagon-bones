@@ -11,14 +11,15 @@ Equipment can also have Aura with the same affects as the dice aura, except for 
 
 
 ## Deprecated
-Snake Eyes (Now used for giving supply cards on scores 1s) - $5 - scored 1s give +3 mult
-Double Deuces - $5 - scored 2s give +3 mult
-Triad Totem - $5 - scored 3s give +3 mult
-Four Aces Brand - $5 - scored 4s give +3 mult
-High Five - $5 - scored 5s give +3 mult
-Devil’s Dice - $5 - scored 6s give +3 mult
-Trail Boss - $4 - sixes add +30 miles when scored 
-Spare Parts - $5 - +2 miles per each remaining dice in collection
+Snake Eyes (Now used for giving supply cards on scores 1s) - $5 - scored 1s give +3 mult - already enough things trigger on 1
+Double Deuces - $5 - scored 2s give +3 mult - not worth it
+Triad Totem - $5 - scored 3s give +3 mult - not worth it
+Four Aces Brand - $5 - scored 4s give +3 mult - not worth it
+High Five - $5 - scored 5s give +3 mult - not worth it
+Devil’s Dice - $5 - scored 6s give +3 mult - not worth it
+Trail Boss - $4 - sixes add +30 miles when scored - not worth it (Already have odd fellow)
+Spare Parts - $5 - +2 miles per each remaining dice in collection (doesn't work as well without discards)
+Crooked Trail - $7 - allow straights to have a gap of 1 in rank (1,3,4,6,8) - (straights are too easy already)
 
 ## Equipment Basic List
 Horseshoe - $2 - +4 mult
@@ -35,7 +36,7 @@ Dynamite - $5 - +15 mult - 1 in 6 change to be destroyed at end of round
 Even Odds - $4 - +4 when an even pip is scored
 Odd Fellow - $4 - +31 miles when an odd pip is scored
 Extra Saddlebag - $4 - refresh your spent dice for free 1 time a round
-Spare Holster - $4 - +1 re-roll per day
+Spare Holster - $4 - +1 re-roll per leg
 Payday - $6 - Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12
 
 
@@ -93,21 +94,20 @@ Trail Tax - $4 - +2 mult per day travelled, -1 mult per re-roll used
 Wanted Poster - $4 - earn $4 if hand is [hand]. Changes each leg of journey. Nathan Cole (Hunter) gains $8.
 
 ## Phase 5
-Nitro - $4 - x3 mult. 1 in 1000 chance of being destroyed at end of journey. Can only be purchased if the $15 mult baby version has been destroyed (No name yet)
+Nitro - $4 - x3 mult. 1 in 1000 chance of being destroyed at end of round. Can only be purchased if dynamite has been purchased and it has self destructed.
 Repeat Offender - $6 - x3 mult if played hand has already been played this leg
 Tight Fist - $5 - gains +3 mult when any booster pack is skipped
 Haunted Totem - $4 - gains x0.5mult when small/big leg is started (Destroys one random joker)
-Square Dance - $4 - gains +4 miles if played hand has exactly 4 dice
-Junk Dealer - $6 - when leg starts create 2 common pieces of equipment
-Crooked Trail - $7 - allow straights to have a gap of 1 in rank
+Square Dance - $4 - gains +4 miles if played hand has exactly 4 dice (they do not all have to score)
+Junk Dealer - $6 - when leg starts create 2 common pieces of equipment (Random equipment can have auras)
 New Blood - $7 - gains x0.25 mult for every new dice added to collection
 Emergency Supplies - $8 - create a random supply card if hand is played with less than $4 or less. Dr. Eleanor Sykes (Doctor) gets a supply card if hand is played with $8 or less.
 Railroad Bonds - $6 - earn $1 at end of round, increased by $2 for every boss defeated
 Leftovers - $4 - 1 in 2 chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a guaranteed chance.
 Campfire Stories - $6 - +1 mult per supply card used this journey
-Snake Oil - $6 - +1 re-roll per hand played
 Quarry Mine - $6 - +25 miles for each stone dice in collection
 Antique Revolver - $4 - When leg starts gain $3 of sell value to current card
+Hardtack - $6 - When leg starts gain +3 days, and lose all rerolls
 Manifest Destiny - $5 - gains +15 miles if hand contains a 5 straight
 
 ## Phase 6
@@ -161,9 +161,8 @@ the following legendary items must be obtained from pandora's box frontier encou
 Book of the Dead - $? - Gains x1 mult for each destroyed enhanced dice
 The Devil’s Hand - $? - Played 6's give x2 mult when scored
 The 23rd Psalm - $? - Item gains x1 mult for every 23 dice re-rolled
-Saint Elmo’s Shield - $? - Disables all boss round effects
+Saint Elmo’s Shield - $? - Disables all boss round effects and all negative effects from trail events are prevented. Divine favor intervenes.
 Ghost Lantern - $? - Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
-
 
 
  

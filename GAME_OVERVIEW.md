@@ -79,7 +79,7 @@ Instead of decks, we instead choose a character, and the character affects how t
 
 0. The base miles and mult are calculated by played hand type
 1. Boss round effects: Certain boss effects trigger before scoring like the The Trickster and The Bottle.
-2. "On Played" items activate when hand is played before scoring like "Trail Tax", "Phantom Wagon", and "Wanted Poster" 
+2. "On Played" items activate when hand is played before scoring like "Trail Tax", "Card Counter", "Square Dance", and "Wanted Poster" 
 3. Played dice scoring: Dice played and scored activate from left to right. For each dice, its effects activate in the following order:
    - Base effect (Miles): The dice activates its base effect, giving the accorded amount of miles. Bonus miles are included in this value (Items like Cowboy Boots can add these bonus miles).
    - Dice Modifiers: Dice modifiers activate in the following order: enhancements, then gold/purple/blue pip enhancements (red are for retrigger phase), then aura.

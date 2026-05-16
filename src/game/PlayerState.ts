@@ -4,9 +4,9 @@
 import { Die, HandType, HandStats, BossDef } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
-import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { EquipmentDef, EquipmentInstance, generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
-import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnLegStart } from './EquipmentEffects';
+import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnLegStart, processEquipmentOnDiceAdded } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
@@ -65,6 +65,7 @@ export class PlayerState {
   permitScoreReduction: number = 0; // leg-equivalent score reduction from shortcuts
   trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
   skipNextShop: boolean = false; // set by trail events (Native Guide)
+  trailGuidesUsed: number = 0; // count of trail guides consumed this journey (for Guide Lantern)
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
 
@@ -217,6 +218,8 @@ export class PlayerState {
 
   addDie(die: Die): void {
     this.dice.push({ ...die, id: `die_player_${this.nextDieId++}` });
+    // New Blood: gains xMult for every new dice added
+    processEquipmentOnDiceAdded(this.equipment);
   }
 
   get shopRerollCost(): number {
@@ -408,6 +411,12 @@ export class PlayerState {
       if (equip.def.effectType === 'END_ROUND_MONEY_PER_REROLL') {
         equipmentMoney += ((equip.def.effectParams.value as number) ?? 0) * rerollsRemaining;
       }
+      if (equip.def.effectType === 'END_ROUND_MONEY_SCALING') {
+        const base = (equip.def.effectParams.base as number) ?? 1;
+        const perBoss = (equip.def.effectParams.perBoss as number) ?? 2;
+        const bossesDefeated = (equip.state.bossesDefeated as number) ?? 0;
+        equipmentMoney += base + perBoss * bossesDefeated;
+      }
     }
 
     return {
@@ -435,7 +444,7 @@ export class PlayerState {
       this.currentLegPermit = null;
       this.permitPurchasedThisLeg = false;
 
-      // Process leg-start equipment effects (Funeral Pyre, Quarry Stone)
+      // Process leg-start equipment effects (Funeral Pyre, Quarry Stone, Haunted Totem, etc.)
       const legResult = processEquipmentOnLegStart(this.equipment);
 
       // Remove destroyed equipment (indices in reverse order to preserve positions)
@@ -446,6 +455,24 @@ export class PlayerState {
       // Add stone dice from Quarry Stone
       for (let i = 0; i < legResult.stoneDiceToAdd; i++) {
         this.addDie({ id: '', value: 0, enhancement: 'stone', sticker: 'none', aura: 'none', isGrimy: false });
+      }
+
+      // Create equipment from Junk Dealer
+      if (legResult.equipmentToCreate > 0) {
+        for (let i = 0; i < legResult.equipmentToCreate; i++) {
+          if (this.usedEquipmentSlots < this.maxEquipmentSlots) {
+            const def = generateRandomEquipment({ rarity: legResult.equipmentCreateRarity });
+            this.equipment.push(createEquipmentInstance(def));
+          }
+        }
+      }
+
+      // Hardtack: +days bonus, lose all rerolls (applies to next round only via trailEventModifiers)
+      if (legResult.daysBonus > 0) {
+        this.trailEventModifiers.dayPenalty -= legResult.daysBonus; // negative penalty = bonus
+      }
+      if (legResult.loseAllRerolls) {
+        this.trailEventModifiers.loseAllRerolls = true;
       }
     }
     // Spent dice persist across rounds — only refreshed by paying or auto-refresh

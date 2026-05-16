@@ -7,8 +7,14 @@ import {
   processEquipmentOnBossDefeat,
   processEquipmentOnReroll,
   processEquipmentOnHandPlayed,
+  processEquipmentAfterHandScored,
+  processEquipmentOnLegStart,
+  processEquipmentOnRoundStart,
+  processEquipmentOnDiceAdded,
 } from '../../EquipmentEffects';
+import { executeConsumableEffect, createConsumableInstance } from '../../ConsumablesSystem';
 import { HandType } from '../../types';
+import trailGuidesData from '../../../data/trail_guides.json';
 
 beforeEach(() => resetDieIds());
 
@@ -224,22 +230,22 @@ describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {
   });
 
   test('triggers x4 when handsPlayed is multiple of 6', () => {
-    const sixShooter = itemWithState('six_shooter', { handsPlayed: 6 });
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 5 });
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [sixShooter],
     });
-    // PAIR: baseMult=1, x4 because handsPlayed=6, 6%6===0
+    // PAIR: baseMult=1, x4 because handsPlayed increments to 6 before scoring, 6%6===0
     expect(result.mult).toBe(4);
   });
 
   test('triggers x4 at 12 hands played', () => {
-    const sixShooter = itemWithState('six_shooter', { handsPlayed: 12 });
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 11 });
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [sixShooter],
     });
-    // 12%6===0 → x4
+    // increments to 12, 12%6===0 → x4
     expect(result.mult).toBe(4);
   });
 
@@ -313,5 +319,172 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
     // PAIR: baseMult=1
     // 5 steel dice in collection → x(1 + 5*0.2) = x2.0
     expect(result.mult).toBeCloseTo(2.0);
+  });
+});
+
+// ─── TRAIL_GUIDE_XMULT: Guide Lantern ───
+
+describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
+  test('starts at x1 (no bonus)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('guide_lantern')],
+    });
+    expect(result.mult).toBe(1);
+  });
+
+  test('gains x0.1 when a trail guide is used', () => {
+    const { player } = setupGame({ equipment: [item('guide_lantern')] });
+    const tgData = trailGuidesData[0] as { id: string; name: string; handType: string };
+    const tgDef = {
+      id: tgData.id,
+      name: tgData.name,
+      description: '',
+      category: 'trail_guide' as const,
+      handType: tgData.handType,
+      sellValue: 1,
+    };
+    const consumed = createConsumableInstance(tgDef);
+    executeConsumableEffect(consumed, player);
+
+    const lantern = player.equipment.find((e) => e.def.id === 'guide_lantern')!;
+    expect(lantern.state.xMult).toBeCloseTo(1.1, 5);
+  });
+
+  test('accumulated xMult applies during scoring', () => {
+    const inst = item('guide_lantern');
+    inst.state.xMult = 1.3;
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect(result.mult).toBeCloseTo(1.3, 5);
+  });
+});
+
+// ─── XMULT_RISKY: Nitro ───
+
+describe('XMULT_RISKY: Nitro', () => {
+  test('applies x3 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('nitro')],
+    });
+    // PAIR: baseMult=1, x3 from nitro = 3
+    expect(result.mult).toBe(3);
+  });
+
+  test('stacks multiplicatively with other xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('nitro'), item('horseshoe')],
+    });
+    // PAIR: baseMult=1, +4 from horseshoe = 5, x3 from nitro = 15
+    expect(result.mult).toBe(15);
+  });
+});
+
+// ─── REPEAT_HAND_XMULT: Repeat Offender ───
+
+describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
+  test('does NOT activate on first play of a hand type', () => {
+    const inst = item('repeat_offender');
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR first time: no x3
+    expect(result.mult).toBe(1);
+  });
+
+  test('activates x3 on second play of same hand type this round', () => {
+    const inst = item('repeat_offender');
+    const { game } = setupGame({ equipment: [inst] });
+
+    game.startRound();
+    // Simulate a prior PAIR play this round (after round start reset)
+    inst.state['round_PAIR'] = 1;
+
+    game.state.phase = 'ROLL';
+    const dice = diceWithValue(5, 2);
+    game.state.rolledDice = dice;
+    game.state.selectedForRoll = dice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(dice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1, x3 from repeat offender = 3
+    expect(result.mult).toBe(3);
+  });
+
+  test('does NOT activate for different hand types', () => {
+    const inst = item('repeat_offender');
+    const { game } = setupGame({ equipment: [inst] });
+
+    game.startRound();
+    // Simulate a prior PAIR play this round
+    inst.state['round_PAIR'] = 1;
+
+    // Play a THREE_OF_A_KIND — should not activate
+    game.state.phase = 'ROLL';
+    const dice = diceWithValue(5, 3);
+    game.state.rolledDice = dice;
+    game.state.selectedForRoll = dice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(dice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(result.mult).toBe(3); // THREE_OF_A_KIND baseMult=3, no x3
+  });
+
+  test('resets on new round', () => {
+    const inst = item('repeat_offender');
+    const { player } = setupGame({ equipment: [inst] });
+
+    // Play a PAIR
+    processEquipmentAfterHandScored([inst], HandType.PAIR);
+    expect(inst.state['round_PAIR']).toBe(1);
+
+    // New round resets
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state['round_PAIR']).toBeUndefined();
+  });
+});
+
+// ─── STATEFUL_XMULT (gainOnDiceAdded): New Blood ───
+
+describe('STATEFUL_XMULT: New Blood', () => {
+  test('starts at x1 (no bonus)', () => {
+    const inst = item('new_blood');
+    expect(inst.state.xMult).toBe(1);
+  });
+
+  test('gains x0.25 when a die is added', () => {
+    const inst = item('new_blood');
+    processEquipmentOnDiceAdded([inst]);
+    expect(inst.state.xMult).toBeCloseTo(1.25, 5);
+  });
+
+  test('accumulates across multiple dice additions', () => {
+    const inst = item('new_blood');
+    processEquipmentOnDiceAdded([inst]);
+    processEquipmentOnDiceAdded([inst]);
+    processEquipmentOnDiceAdded([inst]);
+    expect(inst.state.xMult).toBeCloseTo(1.75, 5);
+  });
+
+  test('accumulated xMult applies during scoring', () => {
+    const inst = itemWithState('new_blood', { xMult: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR: baseMult=1, x2 from new blood = 2
+    expect(result.mult).toBe(2);
+  });
+
+  test('integrates with player addDie', () => {
+    const inst = item('new_blood');
+    const { player } = setupGame({ equipment: [inst] });
+    player.addDie({ id: '', value: 5, enhancement: null, sticker: null, aura: null, isGrimy: false, bonusMiles: 0 });
+    expect(inst.state.xMult).toBeCloseTo(1.25, 5);
   });
 });

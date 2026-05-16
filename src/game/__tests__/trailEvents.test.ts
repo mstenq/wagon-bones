@@ -461,7 +461,7 @@ describe('Effect application', () => {
 
   test('LOSE_RANDOM_EQUIPMENT removes equipment', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts'), item('providence')];
+    player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
     expect(player.equipment.length).toBe(1);
@@ -469,7 +469,7 @@ describe('Effect application', () => {
 
   test('LOSE_EQUIPMENT_CHOICE is deferred to UI (no-op in applyEffect)', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts'), item('providence')];
+    player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, player, mods);
     // Equipment is NOT removed here — the UI handles the player's choice
@@ -576,11 +576,11 @@ describe('Effect application', () => {
 
   test('DESTROY_EQUIPMENT removes specific equipment', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts'), item('providence')];
+    player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'spare_wagon_parts' }, player, mods);
     expect(player.equipment.length).toBe(1);
-    expect(player.equipment[0].def.id).toBe('providence');
+    expect(player.equipment[0].def.id).toBe('saint_elmos_shield');
   });
 
   test('ADD_AURA_TO_RANDOM_DICE applies aura', () => {
@@ -723,35 +723,35 @@ describe('Outcome resolution', () => {
   });
 });
 
-// ─── Providence (Legendary Equipment) ───
+// ─── saint_elmos_shield (Legendary Equipment) ───
 
-describe('Providence equipment interaction', () => {
-  test('Providence negates all negative effects', () => {
+describe('saint_elmos_shield equipment interaction', () => {
+  test('saint_elmos_shield negates all negative effects', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
-    player.equipment = [item('providence')];
+    player.equipment = [item('saint_elmos_shield')];
     player.dice = diceWithValue(6, 20);
 
     const event = getTrailEventById('bandit_ambush')!;
     // Choose "pay" which would lose half money
     resolveChoice(event, 'pay', player);
-    // Providence should negate the money loss
+    // saint_elmos_shield should negate the money loss
     expect(player.economy.balance).toBe(20);
   });
 
-  test('Providence allows positive effects through', () => {
+  test('saint_elmos_shield allows positive effects through', () => {
     const player = resetPlayerState();
     player.economy.setBalance(5);
-    player.equipment = [item('providence')];
+    player.equipment = [item('saint_elmos_shield')];
 
     const event = getTrailEventById('caught_fish')!;
     resolveChoice(event, 'take', player);
     expect(player.economy.balance).toBe(9); // +$4 still works
   });
 
-  test('Providence negates day penalties', () => {
+  test('saint_elmos_shield negates day penalties', () => {
     const player = resetPlayerState();
-    player.equipment = [item('providence')];
+    player.equipment = [item('saint_elmos_shield')];
 
     const event = getTrailEventById('lose_trail')!;
     const result = resolveChoice(event, 'wander', player);
@@ -850,7 +850,7 @@ describe('Every trail event choice resolves without error', () => {
       test(`${event.id}/${choice.id}: resolves correctly`, () => {
         const player = resetPlayerState();
         player.economy.setBalance(1000);
-        player.equipment = [item('spare_wagon_parts'), item('providence')];
+        player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
         player.dice = diceWithValue(6, 50);
 
         const supplyDef = getSupplyDefById('coffee_tin')!;

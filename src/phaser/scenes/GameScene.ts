@@ -21,6 +21,7 @@ import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { playScoreAnimation } from '../animations/ScoreAnimation';
+import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
@@ -108,12 +109,16 @@ export class GameScene extends Scene {
     super('Game');
   }
 
+  // Mystery Crate dice to animate on first draw phase
+  private mysteryCrateDiceIds: string[] = [];
+
   create() {
     // Initialize game state only on first create (not on relayout)
     if (!this.gameState) {
       const player = getPlayerState();
       this.gameState = new GameState({ targetMiles: player.targetMiles });
-      this.gameState.startRound();
+      const roundInfo = this.gameState.startRound();
+      this.mysteryCrateDiceIds = roundInfo.mysteryCrateDiceIds;
       // Clear forced/selected state from previous round (scene instance is reused)
       this.forcedDiceIds = new Set();
       this.selectedHandIds = new Set();
@@ -326,6 +331,12 @@ export class GameScene extends Scene {
     this.renderAllStacks();
     this.repositionPlayArea(false);
 
+    // Animate mystery crate dice appearing
+    if (this.mysteryCrateDiceIds.length > 0) {
+      this.animateMysteryCrateDice();
+      this.mysteryCrateDiceIds = [];
+    }
+
     // Show roll button
     this.readyBtn.setVisible(true);
     this.updateDrawButtons();
@@ -476,14 +487,29 @@ export class GameScene extends Scene {
       lockedDiceIds: new Set(this.lockedDiceIds),
       contentCX: this.contentCX,
       onComplete: () => {
-        this.animating = false;
-        this.instructionText.setText('');
-
-        // Auto-advance: clear hand display and go to next day/win/lose
-        this.sidebar.clearHandDisplay();
-        this.time.delayedCall(600, () => {
-          this.onContinue();
-        });
+        // If hand upgrades occurred during scoring (e.g. Surveyor's Transit), animate them
+        if (result.handUpgrades && result.handUpgrades.length > 0) {
+          playHandUpgradeAnimation({
+            scene: this,
+            sidebar: this.sidebar,
+            upgrades: result.handUpgrades,
+            onComplete: () => {
+              this.animating = false;
+              this.instructionText.setText('');
+              this.sidebar.clearHandDisplay();
+              this.time.delayedCall(600, () => {
+                this.onContinue();
+              });
+            },
+          });
+        } else {
+          this.animating = false;
+          this.instructionText.setText('');
+          this.sidebar.clearHandDisplay();
+          this.time.delayedCall(600, () => {
+            this.onContinue();
+          });
+        }
       },
     });
   }
@@ -1017,6 +1043,107 @@ export class GameScene extends Scene {
     }
   }
 
+  /** Animate mystery crate dice popping into existence */
+  private animateMysteryCrateDice(): void {
+    const crateIds = new Set(this.mysteryCrateDiceIds);
+
+    // Find stacks containing the new dice and animate their sprites
+    for (const stack of this.availableStacks) {
+      const hasCrateDie = stack.dice.some((d) => crateIds.has(d.id));
+      if (!hasCrateDie) continue;
+
+      // Animate all sprites in this stack with a pop-in
+      for (const sprite of stack.sprites) {
+        const origScale = sprite.scaleX;
+        sprite.setScale(0);
+        sprite.setAlpha(0);
+        this.tweens.add({
+          targets: sprite,
+          scaleX: origScale * 1.3,
+          scaleY: origScale * 1.3,
+          alpha: 1,
+          duration: 300,
+          ease: 'Back.easeOut',
+          onComplete: () => {
+            this.tweens.add({
+              targets: sprite,
+              scaleX: origScale,
+              scaleY: origScale,
+              duration: 150,
+              ease: 'Sine.easeOut',
+            });
+          },
+        });
+      }
+
+      // Also pop the count text
+      stack.countText.setScale(0);
+      this.tweens.add({
+        targets: stack.countText,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 300,
+        delay: 150,
+        ease: 'Back.easeOut',
+      });
+    }
+
+    // Wiggle the Mystery Crate equipment card
+    const player = getPlayerState();
+    const crateIndex = player.equipment.findIndex((e) => e.def.effectType === 'ROUND_START_ADD_DICE');
+    if (crateIndex >= 0) {
+      const cards = this.equipBar.getCards();
+      if (crateIndex < cards.length) {
+        const card = cards[crateIndex];
+        const origX = card.x;
+        this.tweens.add({
+          targets: card,
+          x: origX - 3,
+          duration: 40,
+          yoyo: true,
+          repeat: 3,
+          ease: 'Sine.easeInOut',
+          onComplete: () => { card.x = origX; },
+        });
+      }
+    }
+
+    // Show floating text
+    const text = this.add
+      .text(this.contentCX, this.availableY - 50, '✨ New Die Added!', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '20px',
+        color: '#ffd700',
+        stroke: '#000000',
+        strokeThickness: 3,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(100)
+      .setAlpha(0);
+
+    this.tweens.add({
+      targets: text,
+      alpha: 1,
+      y: text.y - 10,
+      duration: 300,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: text,
+          alpha: 0,
+          y: text.y - 20,
+          duration: 800,
+          delay: 600,
+          ease: 'Sine.easeIn',
+          onComplete: () => text.destroy(),
+        });
+      },
+    });
+
+    this.sound.play('sfx_foil1', { volume: 0.4 });
+  }
+
   /** Calculate X positions for dice in the play area */
   private getPlayAreaXPositions(count: number): number[] {
     if (count === 0) return [];
@@ -1537,6 +1664,19 @@ export class GameScene extends Scene {
 
     if (result.diceSelection) {
       this.enterConsumableTargeting(result.diceSelection);
+    }
+
+    // Play hand upgrade animation for trail guides
+    if (result.handUpgrade) {
+      this.animating = true;
+      playHandUpgradeAnimation({
+        scene: this,
+        sidebar: this.sidebar,
+        upgrades: [result.handUpgrade],
+        onComplete: () => {
+          this.animating = false;
+        },
+      });
     }
   }
 

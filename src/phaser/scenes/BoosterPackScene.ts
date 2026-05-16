@@ -18,7 +18,7 @@ import {
   getConsumableTexturePrefix,
 } from '../../game/ConsumablesSystem';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
-import { Die, HandType } from '../../game/types';
+import { Die, HandType, HandDefinition } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
@@ -28,7 +28,11 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
+import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
+import handsData from '../../data/hands.json';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
+
+const HAND_TABLE = handsData as HandDefinition[];
 import stickerData from '../../data/pip_enhancements.json';
 import trailGuidesData from '../../data/trail_guides.json';
 import supplyCardsData from '../../data/supply_cards.json';
@@ -890,6 +894,14 @@ export class BoosterPackScene extends Scene {
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
+        if (result.handUpgrade) {
+          playHandUpgradeAnimation({
+            scene: this,
+            sidebar: this.sidebar,
+            upgrades: [result.handUpgrade],
+            onComplete: () => {},
+          });
+        }
       }
     } else if (item.category === 'supply' && item.supplyCardId) {
       const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
@@ -1029,8 +1041,33 @@ export class BoosterPackScene extends Scene {
         break;
       }
       case 'UPGRADE_ALL_HANDS': {
+        const upgrades: import('../../game/types').HandUpgradeInfo[] = [];
         for (const type of Object.values(HandType)) {
+          const stats = player.getHandStats(type);
+          const handDef = HAND_TABLE.find((h) => h.type === type)!;
+          const oldLevel = stats.level;
+          const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
+          const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
           player.upgradeHandLevel(type);
+          const newLevel = stats.level;
+          upgrades.push({
+            handType: type,
+            handName: handDef.name,
+            oldLevel,
+            newLevel,
+            oldBaseMiles,
+            newBaseMiles: handDef.baseMiles + stats.milesPerLevel * (newLevel - 1),
+            oldBaseMult,
+            newBaseMult: handDef.baseMult + stats.multPerLevel * (newLevel - 1),
+          });
+        }
+        if (upgrades.length > 0) {
+          playHandUpgradeAnimation({
+            scene: this,
+            sidebar: this.sidebar,
+            upgrades,
+            onComplete: () => {},
+          });
         }
         break;
       }
@@ -1089,6 +1126,16 @@ export class BoosterPackScene extends Scene {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
         returnScene: 'BoosterPack',
+      });
+    }
+
+    // Play hand upgrade animation for trail guides
+    if (result.handUpgrade) {
+      playHandUpgradeAnimation({
+        scene: this,
+        sidebar: this.sidebar,
+        upgrades: [result.handUpgrade],
+        onComplete: () => {},
       });
     }
   }

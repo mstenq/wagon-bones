@@ -22,7 +22,8 @@ x when i purchase something in the shop it disappears, but then if i buy a vouch
 -Funeral Pyre - Didn't work. I bought it and the item to the right of it didn't get destroyed and Funeral Pyre didn't gain any mult.
 - Wild Card did add its +mult randomly, but the card didn't show an animation of +x when the scoring took place, so it looked like it failed.
 - One Eyed Jack correctly added its values to the score, but the additional trigger didn't animate anything again making it seem like it failed.
-
+- Helfire Bullet doesn't show frontier experience card immediately, it only shows up in equipment bar after round.
+- priests_blessing didn't give holy aura to my 1 piece of equipment that I had.
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
@@ -46,6 +47,9 @@ x when i purchase something in the shop it disappears, but then if i buy a vouch
     accountant: Savings Account - gains and additional $1 per $5.
     doctor: Emergency Supplies - limit is lifted to $8 and under to activate free supply card.
     con artist: Card Counter - gains an additional +2 mult per played pair.
+x new animation type when upgrades happen (surveyors transit/trail guide cards/etc). Needs to show the base hand and current level above the scoring boxes in the sidebar, then 1 by 1 update base miles, then the base mult, then the level number doing a tick, tick, tick noise as they go up. The numbers shouhld get bigger like when scoring occurs reusing that same animation.
+x new animation type. When mystery crate is in your equipment, it would be nice to see an animation of a new dice being added to your playing area. Right now its just there when the scene starts which makes it feel like it didn't work.
+
 
 ## Code Feedback
 - lets convert the JSON data into JS arrays that are typed. It would make a lot of things much easier in our code base if we were sure about the shape of the data without doing checks.

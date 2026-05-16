@@ -22,6 +22,7 @@ import {
   processEndOfRound,
   processHeldInHand,
   processEquipmentOnHandPlayed,
+  processEquipmentAfterHandScored,
   processEquipmentOnReroll,
   processEquipmentOnDiceSpent,
   processEquipmentOnRoundStart,
@@ -83,7 +84,7 @@ export class GameState {
     };
   }
 
-  startRound(config?: Partial<GameConfig>): void {
+  startRound(config?: Partial<GameConfig>): { mysteryCrateDiceIds: string[] } {
     if (config) this.config = { ...this.config, ...config };
 
     // Apply equipment config modifiers (rerolls)
@@ -124,17 +125,21 @@ export class GameState {
     }
 
     // Mystery Crate: add a die with random sticker at round start
+    const mysteryCrateDiceIds: string[] = [];
     for (const equip of player.equipment) {
       if (equip.def.effectType === 'ROUND_START_ADD_DICE') {
         const stickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
         const sticker = stickers[Math.floor(Math.random() * stickers.length)];
-        player.addDie(createDie({ sticker }));
+        const newDie = createDie({ sticker });
+        player.addDie(newDie);
+        mysteryCrateDiceIds.push(newDie.id);
       }
     }
 
     this.state = this.createInitialState();
     this.emit('phase-change', this.state.phase);
     this.emit('hand-updated', this.state.hand);
+    return { mysteryCrateDiceIds };
   }
 
   // ─── SELECT Phase ───
@@ -222,6 +227,13 @@ export class GameState {
     if (this.state.selectedForScore.length === 0) return null;
 
     const handResult: HandResult = detectBestHand(this.state.selectedForScore);
+
+    // Open Palm: all played dice count as scoring
+    const hasOpenPalm = getPlayerState().equipment.some((e) => e.def.effectType === 'ALL_DICE_SCORE');
+    if (hasOpenPalm) {
+      handResult.scoringDice = [...this.state.selectedForScore];
+    }
+
     this.state.currentHandType = handResult.type;
     this.state.handHistory.push(handResult.type);
     console.log(
@@ -262,6 +274,9 @@ export class GameState {
       );
     }
     console.log('[SCORE] After leveling: baseMiles:', leveledResult.baseMiles, '| baseMult:', leveledResult.baseMult);
+
+    // Step 2: "On Played" items activate before scoring (Card Counter, Square Dance, etc.)
+    processEquipmentOnHandPlayed(player.equipment, handType, this.state.selectedForScore);
 
     const baseResult = scoreHand(leveledResult, player.equipment, {
       currentDay: this.state.day,
@@ -313,6 +328,7 @@ export class GameState {
       currentDay: this.state.day,
       maxDays: this.config.maxDays,
       allDice: player.dice,
+      handType,
     });
 
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
@@ -330,11 +346,14 @@ export class GameState {
     // Record hand played
     player.recordHandPlayed(handType);
 
-    // Update stateful equipment on hand played (e.g. Card Counter)
-    processEquipmentOnHandPlayed(player.equipment, handType);
+    // Post-scoring equipment updates (Steam Engine decay, Surveyor's Transit, Repeat Offender, Emergency Supplies)
+    const handUpgrades = processEquipmentAfterHandScored(player.equipment, handType, this.state.selectedForScore);
 
     this.state.totalMiles += Math.floor(finalResult.miles);
     this.state.phase = 'DAY_END';
+    if (handUpgrades.length > 0) {
+      finalResult.handUpgrades = handUpgrades;
+    }
     this.emit('score-calculated', finalResult);
     this.emit('phase-change', this.state.phase);
     return finalResult;

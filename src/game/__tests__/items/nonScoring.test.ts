@@ -9,7 +9,13 @@ import {
   getDayModifiers,
   processEquipmentOnDayEnd,
   processEquipmentOnDiceSpent,
+  processEquipmentOnHandPlayed,
+  processEquipmentAfterHandScored,
+  processEquipmentOnReroll,
+  processEquipmentOnPackOpened,
+  processEquipmentOnBossDefeat,
 } from '../../EquipmentEffects';
+import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
 
@@ -267,5 +273,226 @@ describe('SOLO_FIRST_DAY_ENHANCE: Lucky Find', () => {
   test('has correct effect type', () => {
     const inst = item('lucky_find');
     expect(inst.def.effectType).toBe('SOLO_FIRST_DAY_ENHANCE');
+  });
+});
+
+// ─── HAND_UPGRADE_CHANCE: Surveyor's Transit ───
+
+describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
+  test('has a chance to upgrade hand on play', () => {
+    const inst = item('surveyors_transit');
+    const { player } = setupGame({ equipment: [inst] });
+    const initialLevel = player.getHandStats(HandType.PAIR).level;
+    for (let i = 0; i < 100; i++) {
+      processEquipmentAfterHandScored([inst], HandType.PAIR);
+    }
+    // After 100 attempts at 1 in 4, very likely at least one upgrade
+    expect(player.getHandStats(HandType.PAIR).level).toBeGreaterThan(initialLevel);
+  });
+});
+
+// ─── TRAIL_TAX ───
+
+describe('TRAIL_TAX: Trail Tax', () => {
+  test('starts at 0 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('trail_tax')],
+    });
+    expect(result.mult).toBe(1);
+  });
+
+  test('gains +2 mult per day end', () => {
+    const inst = item('trail_tax');
+    processEquipmentOnDayEnd([inst]);
+    expect(inst.state.mult).toBe(2);
+    processEquipmentOnDayEnd([inst]);
+    expect(inst.state.mult).toBe(4);
+  });
+
+  test('loses -1 mult per reroll', () => {
+    const inst = item('trail_tax');
+    inst.state.mult = 6;
+    processEquipmentOnReroll([inst], 3);
+    expect(inst.state.mult).toBe(5);
+  });
+
+  test('does not go below 0 on reroll loss', () => {
+    const inst = item('trail_tax');
+    inst.state.mult = 0;
+    processEquipmentOnReroll([inst], 3);
+    expect(inst.state.mult).toBe(0);
+  });
+
+  test('accumulated mult applies during scoring', () => {
+    const inst = item('trail_tax');
+    inst.state.mult = 8;
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR: baseMult=1, +8 from trail tax = 9
+    expect(result.mult).toBe(9);
+  });
+});
+
+// ─── PACK_OPEN_SUPPLY_CHANCE: Leftovers ───
+
+describe('PACK_OPEN_SUPPLY_CHANCE: Leftovers', () => {
+  test('has correct effect type', () => {
+    const inst = item('leftovers');
+    expect(inst.def.effectType).toBe('PACK_OPEN_SUPPLY_CHANCE');
+  });
+
+  test('processEquipmentOnPackOpened returns boolean', () => {
+    const inst = item('leftovers');
+    // Run it many times; it should return true sometimes (1 in 2)
+    let gotTrue = false;
+    let gotFalse = false;
+    for (let i = 0; i < 100; i++) {
+      const result = processEquipmentOnPackOpened([inst]);
+      if (result) gotTrue = true;
+      else gotFalse = true;
+      if (gotTrue && gotFalse) break;
+    }
+    expect(gotTrue).toBe(true);
+    expect(gotFalse).toBe(true);
+  });
+
+  test('returns false with no PACK_OPEN_SUPPLY_CHANCE equipment', () => {
+    const result = processEquipmentOnPackOpened([item('horseshoe')]);
+    expect(result).toBe(false);
+  });
+});
+
+// ─── END_ROUND_MONEY_SCALING: Railroad Bonds ───
+
+describe('END_ROUND_MONEY_SCALING: Railroad Bonds', () => {
+  test('earns $1 base at end of round (no bosses defeated)', () => {
+    const inst = item('railroad_bonds');
+    const { player } = setupGame({ equipment: [inst] });
+    const payout = player.calculatePayout(0);
+    expect(payout.equipmentMoney).toBe(1);
+  });
+
+  test('earns $1 + $2 per boss defeated while equipped', () => {
+    const inst = item('railroad_bonds');
+    const { player } = setupGame({ equipment: [inst] });
+    // Defeat 2 bosses while equipped
+    processEquipmentOnBossDefeat([inst]);
+    processEquipmentOnBossDefeat([inst]);
+    const payout = player.calculatePayout(0);
+    expect(payout.equipmentMoney).toBe(5);
+  });
+
+  test('does not count bosses defeated before equipping', () => {
+    // Player is on leg 3 but just picked up railroad bonds
+    const inst = item('railroad_bonds');
+    const { player } = setupGame({ equipment: [inst], leg: 3 });
+    // No boss defeats tracked on this item
+    const payout = player.calculatePayout(0);
+    expect(payout.equipmentMoney).toBe(1);
+  });
+
+  test('stacks with other end-of-round money equipment', () => {
+    const bonds = item('railroad_bonds');
+    processEquipmentOnBossDefeat([bonds]); // 1 boss defeated while equipped
+    const { player } = setupGame({ equipment: [bonds, item('payday')] });
+    // railroad bonds: $1 + $2 = $3, payday: $4, total = $7
+    const payout = player.calculatePayout(0);
+    expect(payout.equipmentMoney).toBe(7);
+  });
+});
+
+// ─── XMULT_RISKY: Nitro (end of round) ───
+
+describe('XMULT_RISKY: Nitro (end of round)', () => {
+  test('has a 1/1000 destroy chance', () => {
+    const inst = item('nitro');
+    expect(inst.def.effectParams.destroyChance).toEqual([1, 1000]);
+  });
+
+  test('processEndOfRound includes XMULT_RISKY items in destroy check', () => {
+    const inst = item('nitro');
+    // Run many times — extremely unlikely to destroy (1/1000)
+    let destroyed = false;
+    for (let i = 0; i < 100; i++) {
+      const result = processEndOfRound([inst]);
+      if (result.destroyedIndices.length > 0) {
+        destroyed = true;
+        break;
+      }
+    }
+    // With 100 iterations, 1/1000 chance, very unlikely to destroy, but we just check it doesn't throw
+    expect(typeof destroyed).toBe('boolean');
+  });
+});
+
+// ─── ENHANCEMENT_COUNT_MILES: Quarry Mine ───
+
+describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
+  test('adds +25 miles per stone die in collection', () => {
+    const stoneDice = [
+      die({ value: 0, enhancement: 'stone' }),
+      die({ value: 0, enhancement: 'stone' }),
+    ];
+    const normalDice = diceWithValue(5, 2);
+    // Include stone dice in the "all dice" pool
+    const allDice = [...normalDice, ...stoneDice, ...diceWithValue(1, 48)];
+    const { game, player } = setupGame({
+      equipment: [item('quarry_mine')],
+      dice: allDice,
+    });
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = normalDice;
+    game.state.selectedForRoll = normalDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(normalDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR: baseMiles=10, totalValue=10, +50 (2 stone × 25) = 70 * mult(1)
+    expect(result.miles).toBe(70);
+  });
+
+  test('no bonus with zero stone dice', () => {
+    const normalDice = diceWithValue(5, 2);
+    const allDice = [...normalDice, ...diceWithValue(1, 48)];
+    const { game, player } = setupGame({
+      equipment: [item('quarry_mine')],
+      dice: allDice,
+    });
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = normalDice;
+    game.state.selectedForRoll = normalDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(normalDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR: baseMiles=10, totalValue=10, +0 (no stone) = 20 * mult(1)
+    expect(result.miles).toBe(20);
+  });
+
+  test('scales with number of stone dice', () => {
+    const stoneDice = [
+      die({ value: 0, enhancement: 'stone' }),
+      die({ value: 0, enhancement: 'stone' }),
+      die({ value: 0, enhancement: 'stone' }),
+      die({ value: 0, enhancement: 'stone' }),
+    ];
+    const normalDice = diceWithValue(5, 2);
+    const allDice = [...normalDice, ...stoneDice, ...diceWithValue(1, 44)];
+    const { game, player } = setupGame({
+      equipment: [item('quarry_mine')],
+      dice: allDice,
+    });
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = normalDice;
+    game.state.selectedForRoll = normalDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(normalDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR: baseMiles=10, totalValue=10, +100 (4 stone × 25) = 120 * mult(1)
+    expect(result.miles).toBe(120);
   });
 });

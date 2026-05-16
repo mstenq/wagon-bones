@@ -6,7 +6,10 @@
 import type { ItemAura } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
-import { HandType } from './types';
+import { HandType, HandDefinition } from './types';
+import handsData from '../data/hands.json';
+
+const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
 export type ConsumableCategory = 'supply' | 'trail_guide' | 'frontier';
 
@@ -243,6 +246,8 @@ export interface UseConsumableResult {
   consumablesCreated?: number;
   /** Reason for failure */
   failReason?: string;
+  /** Hand upgrade info for animation (trail guides, etc.) */
+  handUpgrade?: import('./types').HandUpgradeInfo;
 }
 
 /**
@@ -252,10 +257,51 @@ export interface UseConsumableResult {
 export function executeConsumableEffect(consumed: ConsumableInstance, player: PlayerState): UseConsumableResult {
   const def = consumed.def;
 
+  // Update Campfire Stories: +mult per supply card used
+  if (def.category === 'supply') {
+    for (const equip of player.equipment) {
+      if (equip.def.effectType === 'SUPPLY_USED_MULT') {
+        equip.state.mult = (equip.state.mult ?? 0) + ((equip.def.effectParams as Record<string, unknown>).value as number);
+      }
+    }
+  }
+
   // ─── Trail guide → upgrade hand level ───
   if (def.category === 'trail_guide' && def.handType) {
-    player.upgradeHandLevel(def.handType as HandType);
-    return { success: true };
+    const ht = def.handType as HandType;
+    const stats = player.getHandStats(ht);
+    const handDef = HAND_TABLE.find((h) => h.type === ht)!;
+    const oldLevel = stats.level;
+    const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
+    const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
+
+    player.upgradeHandLevel(ht);
+    player.trailGuidesUsed++;
+
+    const newLevel = stats.level;
+    const newBaseMiles = handDef.baseMiles + stats.milesPerLevel * (newLevel - 1);
+    const newBaseMult = handDef.baseMult + stats.multPerLevel * (newLevel - 1);
+
+    // Update Guide Lantern xMult
+    for (const equip of player.equipment) {
+      if (equip.def.effectType === 'TRAIL_GUIDE_XMULT') {
+        const gain = (equip.def.effectParams.value as number) ?? 0.1;
+        equip.state.xMult = (equip.state.xMult ?? 1) + gain;
+      }
+    }
+    return {
+      success: true,
+      handUpgrade: {
+        handType: ht,
+        handName: handDef.name,
+        oldLevel,
+        newLevel,
+        oldBaseMiles,
+        newBaseMiles,
+        oldBaseMult,
+        newBaseMult,
+      },
+    };
   }
 
   // ─── Dice selection cards (shallow_grave, mirage, etc.) ───

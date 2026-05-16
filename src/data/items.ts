@@ -347,7 +347,7 @@ const items: ItemDef[] = [
     name: 'Spare Holster',
     cost: 4,
     rarity: 'common',
-    description: '+1 re-roll per day',
+    description: '+1 re-roll per leg',
     effectType: 'MODIFY_REROLLS',
     effectParams: { value: 1 },
     hintDisplay: () => [[active('+1 reroll')]],
@@ -693,14 +693,14 @@ const items: ItemDef[] = [
     hintDisplay: () => [[miles('+25'), text(' miles')], [text('Preview trail events')]],
   },
   {
-    id: 'providence',
-    name: 'Providence',
+    id: 'saint_elmos_shield',
+    name: "Saint Elmo's Shield",
     cost: 20,
     rarity: 'legendary',
-    description: 'All negative effects from trail events are prevented. Divine favor intervenes.',
+    description: 'Disables all boss effects and negative effects from trail events are prevented. Divine favor intervenes.',
     effectType: 'NONE',
     effectParams: {},
-    hintDisplay: () => [[active('Negates'), text(' all negative trail events')]],
+    hintDisplay: () => [[active('Negates'), text(' negative effects')]],
   },
 
   // ─── Phase 3 Items ───
@@ -900,6 +900,369 @@ const items: ItemDef[] = [
     effectType: 'ENHANCED_SCORE_MONEY',
     effectParams: { chance: [1, 2], value: 2 },
     hintDisplay: () => [[money('$2'), odds('1 in 2'), condition('enhanced scored')]],
+  },
+
+  // ─── Phase 4 Items ───
+  {
+    id: 'trail_journal',
+    name: 'Trail Journal',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Adds the number of times the hand has been played this trip as mult',
+    effectType: 'HAND_TIMES_PLAYED_MULT',
+    effectParams: {},
+    hintDisplay: (game, player) => {
+      const handType = game?.state.currentHandType;
+      if (handType) {
+        const stats = player.getHandStats(handType);
+        return [[mult(`+${stats.timesPlayed}`), condition(HAND_NAMES[handType])]];
+      }
+      return [[mult('+?'), condition('times played')]];
+    },
+  },
+  {
+    id: 'marked',
+    name: 'Marked',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+1 mult per hand played without scoring a 6. Scoring a 6 resets mult to 0.',
+    effectType: 'MARKED_NO_SIX_MULT',
+    effectParams: { multPerHand: 1 },
+    initialState: { mult: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'marked');
+      const m = equip?.state.mult ?? 0;
+      return [[mult(`+${m}`), condition('no 6s')]];
+    },
+  },
+  {
+    id: 'surveyors_transit',
+    name: "Surveyor's Transit",
+    cost: 5,
+    rarity: 'uncommon',
+    description: '1 in 4 chance to upgrade trail knowledge of hand type played',
+    effectType: 'HAND_UPGRADE_CHANCE',
+    effectParams: { chance: [1, 4] },
+    hintDisplay: () => [[odds('1 in 4'), condition('upgrade hand')]],
+  },
+  {
+    id: 'guide_lantern',
+    name: 'Guide Lantern',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Gain x0.1 mult for every trail guide used',
+    effectType: 'TRAIL_GUIDE_XMULT',
+    effectParams: { value: 0.1 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'guide_lantern');
+      const xm = equip?.state.xMult ?? 1;
+      if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
+      return [[mult('x0.1'), condition('per guide used')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'steam_engine',
+    name: 'Steam Engine',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Gains +100 miles. -5 miles per hand played.',
+    effectType: 'STATEFUL_ADD_MILES',
+    effectParams: { decayPerHand: 5 },
+    initialState: { miles: 100 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'steam_engine');
+      const m = equip?.state.miles ?? 100;
+      if (m > 0) return [[miles(`+${m}`)]];
+      return [[inactive('+0 miles')]];
+    },
+  },
+  {
+    id: 'bloodline',
+    name: 'Bloodline',
+    cost: 8,
+    rarity: 'rare',
+    description: 'If first day of leg only scores one die, add a permanent copy to your collection',
+    effectType: 'FIRST_DAY_SOLO_COPY',
+    effectParams: {},
+    hintDisplay: (game) => {
+      if (game && game.state.day === 1 && game.state.selectedForScore?.length === 1)
+        return [[active('Copying!')]];
+      return [[condition('Solo first day')], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'open_palm',
+    name: 'Open Palm',
+    cost: 3,
+    rarity: 'common',
+    description: 'All dice count when scoring',
+    effectType: 'ALL_DICE_SCORE',
+    effectParams: {},
+    hintDisplay: () => [[active('All dice score')]],
+  },
+  {
+    id: 'hellfire_round',
+    name: 'Hellfire Round',
+    cost: 6,
+    rarity: 'rare',
+    description: 'If first hand of round is an enhanced 6, destroy it and gain a Frontier Encounter card',
+    effectType: 'FIRST_HAND_ENHANCED_SIX',
+    effectParams: {},
+    hintDisplay: (game) => {
+      if (game && game.state.day === 1) return [[condition('First hand'), active('Ready')]];
+      return [[condition('First hand'), inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'cowboy_boots',
+    name: 'Cowboy Boots',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Every played die permanently gains +5 miles when scored',
+    effectType: 'PERMANENT_DIE_MILES_GAIN',
+    effectParams: { value: 5 },
+    hintDisplay: () => [[miles('+5'), condition('per die (permanent)')]],
+  },
+  {
+    id: 'trail_tax',
+    name: 'Trail Tax',
+    cost: 4,
+    rarity: 'common',
+    description: '+2 mult per day travelled, -1 mult per re-roll used',
+    effectType: 'TRAIL_TAX',
+    effectParams: { multPerDay: 2, multLostPerReroll: 1 },
+    initialState: { mult: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'trail_tax');
+      const m = equip?.state.mult ?? 0;
+      return [[mult(`+${m}`)]];
+    },
+  },
+  {
+    id: 'wanted_poster',
+    name: 'Wanted Poster',
+    cost: 4,
+    rarity: 'common',
+    description: 'Earn $4 if hand is [hand]. Changes each leg of journey.',
+    effectType: 'WANTED_HAND_MONEY',
+    effectParams: { value: 4 },
+    initialState: { targetHand: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'wanted_poster');
+      const handIdx = equip?.state.targetHand ?? 0;
+      const handTypes = Object.values(HandType);
+      const handType = handTypes[handIdx % handTypes.length] as HandType;
+      return [[money('$4'), condition(HAND_NAMES[handType] ?? '?')]];
+    },
+  },
+
+  // ─── Phase 5 Items ───
+  {
+    id: 'nitro',
+    name: 'Nitro',
+    cost: 4,
+    rarity: 'rare',
+    description: 'x3 mult. 1 in 1000 chance of being destroyed at end of round.',
+    effectType: 'XMULT_RISKY',
+    effectParams: { value: 3, destroyChance: [1, 1000] },
+    hintDisplay: () => [[mult('x3')], [odds('1 in 1000'), text('self-destruct')]],
+  },
+  {
+    id: 'repeat_offender',
+    name: 'Repeat Offender',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'x3 mult if played hand has already been played this round',
+    effectType: 'REPEAT_HAND_XMULT',
+    effectParams: { value: 3 },
+    hintDisplay: (game) => {
+      if (game && game.state.currentHandType && game.state.handHistory.filter((h) => h === game.state.currentHandType).length > 1)
+        return [[mult('x3')], [active('Repeat!')]];
+      return [[mult('x3'), condition('repeat hand')]];
+    },
+  },
+  {
+    id: 'tight_fist',
+    name: 'Tight Fist',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Gains +3 mult when any booster pack is skipped',
+    effectType: 'STATEFUL_ADD_MULT',
+    effectParams: { gainOnPackSkip: 3 },
+    initialState: { mult: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'tight_fist');
+      const m = equip?.state.mult ?? 0;
+      if (m > 0) return [[mult(`+${m}`)]];
+      return [[mult('+3'), condition('per pack skipped')]];
+    },
+  },
+  {
+    id: 'haunted_totem',
+    name: 'Haunted Totem',
+    cost: 4,
+    rarity: 'uncommon',
+    description: 'Gains x0.5 mult when leg is started. Destroys one random equipment.',
+    effectType: 'LEG_START_XMULT_DESTROY',
+    effectParams: { value: 0.5 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'haunted_totem');
+      const xm = equip?.state.xMult ?? 1;
+      if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
+      return [[mult('x0.5'), condition('per leg start')]];
+    },
+  },
+  {
+    id: 'square_dance',
+    name: 'Square Dance',
+    cost: 4,
+    rarity: 'common',
+    description: 'Gains +4 miles if played hand has exactly 4 dice',
+    effectType: 'EXACT_DICE_COUNT_MILES',
+    effectParams: { count: 4, value: 4 },
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'square_dance');
+      const m = equip?.state.miles ?? 0;
+      if (m > 0) return [[miles(`+${m}`), condition('4 dice')]];
+      return [[miles('+4'), condition('exactly 4 dice')]];
+    },
+  },
+  {
+    id: 'junk_dealer',
+    name: 'Junk Dealer',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'When leg starts, create 2 common pieces of equipment',
+    effectType: 'LEG_START_CREATE_EQUIPMENT',
+    effectParams: { count: 2, rarity: 'common' },
+    hintDisplay: () => [[text('2 common equip'), condition('per leg')]],
+  },
+  {
+    id: 'new_blood',
+    name: 'New Blood',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'Gains x0.25 mult for every new dice added to collection',
+    effectType: 'STATEFUL_XMULT',
+    effectParams: { gainOnDiceAdded: 0.25 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'new_blood');
+      const xm = equip?.state.xMult ?? 1;
+      if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
+      return [[mult('x0.25'), condition('per new dice')]];
+    },
+  },
+  {
+    id: 'emergency_supplies',
+    name: 'Emergency Supplies',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'Create a random supply card if hand is played with $4 or less',
+    effectType: 'LOW_MONEY_SUPPLY',
+    effectParams: { threshold: 4 },
+    hintDisplay: (_game, player) => {
+      if (player.economy.balance <= 4) return [[text('Supply card!'), active('Active')]];
+      return [[text('Supply card'), condition('≤$4')]];
+    },
+  },
+  {
+    id: 'railroad_bonds',
+    name: 'Railroad Bonds',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Earn $1 at end of round, increased by $2 for every boss defeated',
+    effectType: 'END_ROUND_MONEY_SCALING',
+    effectParams: { base: 1, perBoss: 2 },
+    initState: { bossesDefeated: 0 },
+    hintDisplay: (_game, player, equip) => {
+      const bossesDefeated = (equip?.state?.bossesDefeated as number) ?? 0;
+      const total = 1 + bossesDefeated * 2;
+      return [[money(`$${total}`), condition('end of round')]];
+    },
+  },
+  {
+    id: 'leftovers',
+    name: 'Leftovers',
+    cost: 4,
+    rarity: 'common',
+    description: '1 in 2 chance to gain a supply card when opening a booster pack',
+    effectType: 'PACK_OPEN_SUPPLY_CHANCE',
+    effectParams: { chance: [1, 2] },
+    hintDisplay: () => [[odds('1 in 2'), text('supply'), condition('on pack open')]],
+  },
+  {
+    id: 'campfire_stories',
+    name: 'Campfire Stories',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+1 mult per supply card used this journey',
+    effectType: 'SUPPLY_USED_MULT',
+    effectParams: { value: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'campfire_stories');
+      const m = equip?.state.mult ?? 0;
+      if (m > 0) return [[mult(`+${m}`)]];
+      return [[mult('+1'), condition('per supply used')]];
+    },
+  },
+  {
+    id: 'quarry_mine',
+    name: 'Quarry Mine',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+25 miles for each stone die in collection',
+    effectType: 'ENHANCEMENT_COUNT_MILES',
+    effectParams: { enhancement: 'stone', value: 25 },
+    hintDisplay: (_game, player) => {
+      const count = player.dice.filter((d) => d.enhancement === 'stone').length;
+      const total = count * 25;
+      if (count > 0) return [[miles(`+${total}`), condition(`${count} stone`)]];
+      return [[miles('+25'), condition('per stone die')]];
+    },
+  },
+  {
+    id: 'antique_revolver',
+    name: 'Antique Revolver',
+    cost: 4,
+    rarity: 'common',
+    description: 'When leg starts, gain $3 of sell value to current card',
+    effectType: 'LEG_START_SELL_VALUE',
+    effectParams: { value: 3 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'antique_revolver');
+      const sv = equip?.sellValue ?? 2;
+      return [[money(`$${sv}`), text('sell value')]];
+    },
+  },
+  {
+    id: 'hardtack',
+    name: 'Hardtack',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'When leg starts, gain +3 days and lose all rerolls',
+    effectType: 'LEG_START_DAYS_NO_REROLLS',
+    effectParams: { days: 3 },
+    hintDisplay: () => [[text('+3 days'), condition('no rerolls')]],
+  },
+  {
+    id: 'manifest_destiny',
+    name: 'Manifest Destiny',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Gains +15 miles if hand contains a 5 straight',
+    effectType: 'HAND_MILES_GAIN',
+    effectParams: { handType: HandType.FIVE_STRAIGHT, value: 15 },
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'manifest_destiny');
+      const m = equip?.state.miles ?? 0;
+      if (m > 0) return [[miles(`+${m}`), condition(HAND_NAMES.FIVE_STRAIGHT)]];
+      return [[miles('+15'), condition(HAND_NAMES.FIVE_STRAIGHT)]];
+    },
   },
 ];
 

@@ -194,3 +194,98 @@ describe('MILES_PER_DOLLAR: Money Wagon', () => {
     expect(result.miles).toBe(20);
   });
 });
+
+// ─── ALL_DICE_SCORE: Open Palm ───
+
+describe('ALL_DICE_SCORE: Open Palm', () => {
+  test('all played dice count as scoring', () => {
+    const dice = [die({ value: 5 }), die({ value: 5 }), die({ value: 3 }), die({ value: 7 }), die({ value: 9 })];
+    const { result } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [item('open_palm')],
+    });
+    // PAIR detected from two 5s, but all 5 dice contribute miles: 5+5+3+7+9 = 29
+    expect(result.totalValue).toBe(29);
+  });
+
+  test('without open palm only scoring dice contribute', () => {
+    const dice = [die({ value: 5 }), die({ value: 5 }), die({ value: 3 }), die({ value: 7 }), die({ value: 9 })];
+    const { result } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [],
+    });
+    // PAIR from the 5s — only two 5s contribute: 5+5 = 10
+    expect(result.totalValue).toBe(10);
+  });
+});
+
+// ─── FIRST_DAY_SOLO_COPY: Bloodline ───
+
+describe('FIRST_DAY_SOLO_COPY: Bloodline', () => {
+  test('copies die when scoring solo on first day', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 7, enhancement: 'gold' })],
+      equipment: [item('bloodline')],
+      currentDay: 1,
+    });
+    const goldDice = player.dice.filter((d) => d.enhancement === 'gold' && d.value === 7);
+    expect(goldDice.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('does not copy if not first day', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 7, enhancement: 'gold' })],
+      equipment: [item('bloodline')],
+      currentDay: 2,
+    });
+    const goldDice = player.dice.filter((d) => d.enhancement === 'gold' && d.value === 7);
+    expect(goldDice.length).toBeLessThanOrEqual(1);
+  });
+
+  test('does not copy if more than one die scored', () => {
+    const { player } = calculateTestScore({
+      scoredDice: diceWithValue(7, 2),
+      equipment: [item('bloodline')],
+      currentDay: 1,
+    });
+    const sevens = player.dice.filter((d) => d.value === 7);
+    expect(sevens.length).toBeLessThanOrEqual(2);
+  });
+});
+
+// ─── FIRST_HAND_ENHANCED_SIX: Hellfire Round ───
+
+describe('FIRST_HAND_ENHANCED_SIX: Hellfire Round', () => {
+  test('destroys enhanced 6 on first day and grants frontier card', () => {
+    const enhanced6 = die({ value: 6, enhancement: 'bone' });
+    const { player } = calculateTestScore({
+      scoredDice: [enhanced6, die({ value: 6 })],
+      equipment: [item('hellfire_round')],
+      currentDay: 1,
+    });
+    const remaining = player.dice.filter((d) => d.id === enhanced6.id);
+    expect(remaining.length).toBe(0);
+    const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
+    expect(frontier.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('does not trigger if no enhanced 6', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 6 }), die({ value: 6 })],
+      equipment: [item('hellfire_round')],
+      currentDay: 1,
+    });
+    const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
+    expect(frontier.length).toBe(0);
+  });
+
+  test('does not trigger if not first day', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 6, enhancement: 'bone' }), die({ value: 6 })],
+      equipment: [item('hellfire_round')],
+      currentDay: 2,
+    });
+    const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
+    expect(frontier.length).toBe(0);
+  });
+});

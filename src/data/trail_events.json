@@ -13,8 +13,9 @@
         "outcomes": [
           {
             "probability": 1.0,
+            "message": "You found 2 bone dice with purple flower stickers! However you feel a dark aura and your lucky will change soon.",
             "effects": [
-              { "type": "GAIN_DICE", "count": 3, "enhancement": null, "aura": null, "sticker": null },
+              { "type": "GAIN_DICE", "count": 2, "enhancement": "bone", "aura": null, "sticker": "purple_flower" },
               { "type": "BOSS_UPGRADE", "multiplier": 1.5 }
             ]
           }
@@ -2162,14 +2163,15 @@
     "choices": [
       {
         "id": "mine_cheap",
-        "label": "Mine it ($4, sacrifice 2 dice)",
+        "label": "Try to mine it yourself ($4)",
         "condition": { "type": "HAS_MONEY", "amount": 4 },
         "outcomes": [
           {
             "probability": 1.0,
+            "message": "You had some difficulty mining the ore and lost 1 random enhanced dice. Gained 2 steel die.",
             "effects": [
               { "type": "LOSE_MONEY", "amount": 4 },
-              { "type": "LOSE_RANDOM_DICE", "count": 2 },
+              { "type": "LOSE_RANDOM_DICE", "count": 1 },
               { "type": "GAIN_DICE", "count": 2, "enhancement": "steel", "aura": null, "sticker": null }
             ]
           }
@@ -2182,9 +2184,10 @@
         "outcomes": [
           {
             "probability": 1.0,
+            "message": "The miners do the work, but take a cut. Gained 1 steel die with a red bullet sticker.",
             "effects": [
               { "type": "LOSE_MONEY", "amount": 8 },
-              { "type": "GAIN_DICE", "count": 1, "enhancement": "steel", "aura": "icy", "sticker": null }
+              { "type": "GAIN_DICE", "count": 1, "enhancement": "steel", "aura": null, "sticker": "red_bullet" }
             ]
           }
         ]
@@ -2659,12 +2662,14 @@
     "choices": [
       {
         "id": "accept",
-        "label": "Accept the deal (lose 1 equipment slot)",
+        "label": "Accept the deal and sell your soul? (lose 1 equipment slot)",
         "outcomes": [
           {
             "probability": 1.0,
+            "message": "You shake the stanger's hand. A cold sensation runs through you. The stranger smiles, here are your rewards...",
             "effects": [
               { "type": "GAIN_DICE", "count": 1, "enhancement": "diamond", "aura": "fire", "sticker": "red_bullet" },
+              { "type": "GAIN_RANDOM_EQUIPMENT", "rarity": "legendary", "aura": "ghost" },
               { "type": "LOSE_EQUIPMENT_SLOT_PERMANENT" }
             ]
           }
@@ -2676,6 +2681,7 @@
         "outcomes": [
           {
             "probability": 1.0,
+            "message": "The strangers laughs and disappears leaving behind a pouch of coins and a bone die.",
             "effects": [
               { "type": "GAIN_MONEY", "amount": 5 },
               { "type": "GAIN_DICE", "count": 1, "enhancement": "bone", "aura": null, "sticker": null }

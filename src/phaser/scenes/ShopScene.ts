@@ -27,6 +27,7 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
+import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { PermitDef, generateShopPermit, getPermitShopDiscount, applyPermitEffect, hasPermitDiceInShop } from '../../game/PermitsSystem';
 import { createDie } from '../../game/DiceSystem';
 import { Die } from '../../game/types';
@@ -724,6 +725,16 @@ export class ShopScene extends Scene {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
         returnScene: 'Shop',
+      });
+    }
+
+    // Play hand upgrade animation for trail guides
+    if (result.handUpgrade) {
+      playHandUpgradeAnimation({
+        scene: this,
+        sidebar: this.sidebar,
+        upgrades: [result.handUpgrade],
+        onComplete: () => {},
       });
     }
   }
