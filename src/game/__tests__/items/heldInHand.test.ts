@@ -217,3 +217,13 @@ describe("HELD_ENHANCED_MONEY: Prospector's Pouch", () => {
     }
   });
 });
+
+// ─── HELD_RETRIGGER: Silver Bullets ───
+
+describe('HELD_RETRIGGER: Silver Bullets', () => {
+  test('retriggers held dice (same as Double Down)', () => {
+    const inst = item('silver_bullets');
+    expect(inst.def.effectType).toBe('HELD_RETRIGGER');
+    expect(inst.def.effectParams.value).toBe(1);
+  });
+});

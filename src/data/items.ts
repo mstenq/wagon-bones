@@ -104,66 +104,66 @@ const items: ItemDef[] = [
     effectParams: { value: 4 },
     hintDisplay: () => [[mult('+4')]],
   },
-  {
-    id: 'snake_eyes',
-    name: 'Snake Eyes',
-    cost: 5,
-    rarity: 'common',
-    description: 'Scored 1s give +3 mult',
-    effectType: 'PIP_MULT',
-    effectParams: { pip: 1, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition('per 1')]],
-  },
-  {
-    id: 'double_deuces',
-    name: 'Double Deuces',
-    cost: 5,
-    rarity: 'common',
-    description: 'Scored 2s give +3 mult',
-    effectType: 'PIP_MULT',
-    effectParams: { pip: 2, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition('per 2')]],
-  },
-  {
-    id: 'triad_totem',
-    name: 'Triad Totem',
-    cost: 5,
-    rarity: 'common',
-    description: 'Scored 3s give +3 mult',
-    effectType: 'PIP_MULT',
-    effectParams: { pip: 3, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition('per 3')]],
-  },
-  {
-    id: 'four_aces_brand',
-    name: 'Four Aces Brand',
-    cost: 5,
-    rarity: 'common',
-    description: 'Scored 4s give +3 mult',
-    effectType: 'PIP_MULT',
-    effectParams: { pip: 4, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition('per 4')]],
-  },
-  {
-    id: 'high_five',
-    name: 'High Five',
-    cost: 5,
-    rarity: 'common',
-    description: 'Scored 5s give +3 mult',
-    effectType: 'PIP_MULT',
-    effectParams: { pip: 5, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition('per 5')]],
-  },
-  {
-    id: 'devils_dice',
-    name: "Devil's Dice",
-    cost: 5,
-    rarity: 'common',
-    description: 'Scored 6s give +3 mult',
-    effectType: 'PIP_MULT',
-    effectParams: { pip: 6, value: 3 },
-    hintDisplay: () => [[mult('+3'), condition('per 6')]],
-  },
+  // {
+  //   id: 'snake_eyes',
+  //   name: 'Snake Eyes',
+  //   cost: 5,
+  //   rarity: 'common',
+  //   description: 'Scored 1s give +3 mult',
+  //   effectType: 'PIP_MULT',
+  //   effectParams: { pip: 1, value: 3 },
+  //   hintDisplay: () => [[mult('+3'), condition('per 1')]],
+  // },
+  // {
+  //   id: 'double_deuces',
+  //   name: 'Double Deuces',
+  //   cost: 5,
+  //   rarity: 'common',
+  //   description: 'Scored 2s give +3 mult',
+  //   effectType: 'PIP_MULT',
+  //   effectParams: { pip: 2, value: 3 },
+  //   hintDisplay: () => [[mult('+3'), condition('per 2')]],
+  // },
+  // {
+  //   id: 'triad_totem',
+  //   name: 'Triad Totem',
+  //   cost: 5,
+  //   rarity: 'common',
+  //   description: 'Scored 3s give +3 mult',
+  //   effectType: 'PIP_MULT',
+  //   effectParams: { pip: 3, value: 3 },
+  //   hintDisplay: () => [[mult('+3'), condition('per 3')]],
+  // },
+  // {
+  //   id: 'four_aces_brand',
+  //   name: 'Four Aces Brand',
+  //   cost: 5,
+  //   rarity: 'common',
+  //   description: 'Scored 4s give +3 mult',
+  //   effectType: 'PIP_MULT',
+  //   effectParams: { pip: 4, value: 3 },
+  //   hintDisplay: () => [[mult('+3'), condition('per 4')]],
+  // },
+  // {
+  //   id: 'high_five',
+  //   name: 'High Five',
+  //   cost: 5,
+  //   rarity: 'common',
+  //   description: 'Scored 5s give +3 mult',
+  //   effectType: 'PIP_MULT',
+  //   effectParams: { pip: 5, value: 3 },
+  //   hintDisplay: () => [[mult('+3'), condition('per 5')]],
+  // },
+  // {
+  //   id: 'devils_dice',
+  //   name: "Devil's Dice",
+  //   cost: 5,
+  //   rarity: 'common',
+  //   description: 'Scored 6s give +3 mult',
+  //   effectType: 'PIP_MULT',
+  //   effectParams: { pip: 6, value: 3 },
+  //   hintDisplay: () => [[mult('+3'), condition('per 6')]],
+  // },
   {
     id: 'wedding_ring',
     name: 'Wedding Ring',
@@ -250,8 +250,8 @@ const items: ItemDef[] = [
     },
   },
   {
-    id: 'last_stand',
-    name: 'Last Stand',
+    id: 'deadeye',
+    name: 'Deadeye',
     cost: 5,
     rarity: 'uncommon',
     description: '+20 mult if 3 or fewer dice are scored',
@@ -292,16 +292,16 @@ const items: ItemDef[] = [
       return [[mult(`+${total}`)]];
     },
   },
-  {
-    id: 'trail_boss',
-    name: 'Trail Boss',
-    cost: 4,
-    rarity: 'common',
-    description: 'Sixes add +30 miles when scored',
-    effectType: 'PIP_MILES',
-    effectParams: { pip: 6, value: 30 },
-    hintDisplay: () => [[miles('+30'), condition('per 6')]],
-  },
+  // {
+  //   id: 'trail_boss',
+  //   name: 'Trail Boss',
+  //   cost: 4,
+  //   rarity: 'common',
+  //   description: 'Sixes add +30 miles when scored',
+  //   effectType: 'PIP_MILES',
+  //   effectParams: { pip: 6, value: 30 },
+  //   hintDisplay: () => [[miles('+30'), condition('per 6')]],
+  // },
   {
     id: 'even_odds',
     name: 'Even Odds',
@@ -701,6 +701,205 @@ const items: ItemDef[] = [
     effectType: 'NONE',
     effectParams: {},
     hintDisplay: () => [[active('Negates'), text(' all negative trail events')]],
+  },
+
+  // ─── Phase 3 Items ───
+  {
+    id: 'twin_colts',
+    name: 'Twin Colts',
+    cost: 4,
+    rarity: 'common',
+    description: 'If played hand contains two pair +80 miles',
+    effectType: 'HAND_MILES',
+    effectParams: { handType: HandType.TWO_PAIR, value: 80 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.TWO_PAIR))
+        return [[miles('+80'), condition(HAND_NAMES.TWO_PAIR)], [active('Active!')]];
+      return [[miles('+80'), condition(HAND_NAMES.TWO_PAIR)], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'rail_line',
+    name: 'Rail Line',
+    cost: 4,
+    rarity: 'common',
+    description: 'If played hand contains a 4 straight +80 miles',
+    effectType: 'HAND_MILES',
+    effectParams: { handType: HandType.FOUR_STRAIGHT, value: 80 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FOUR_STRAIGHT))
+        return [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT)], [active('Active!')]];
+      return [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT)], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'long_haul',
+    name: 'Long Haul',
+    cost: 4,
+    rarity: 'common',
+    description: 'If played hand contains a 5 straight +100 miles',
+    effectType: 'HAND_MILES',
+    effectParams: { handType: HandType.FIVE_STRAIGHT, value: 100 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FIVE_STRAIGHT))
+        return [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT)], [active('Active!')]];
+      return [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT)], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'silver_bullets',
+    name: 'Silver Bullets',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Retrigger all dice held in hand',
+    effectType: 'HELD_RETRIGGER',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[text('Retrigger'), condition('held dice')]],
+  },
+  {
+    id: 'funeral_pyre',
+    name: 'Funeral Pyre',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'When starting leg, destroy equipment to right and add double its sell value as mult',
+    effectType: 'LEG_START_DESTROY_RIGHT',
+    effectParams: {},
+    initialState: { mult: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'funeral_pyre');
+      const m = equip?.state.mult ?? 0;
+      if (m > 0) return [[mult(`+${m}`)]];
+      return [[text('Destroys right'), condition('leg start')]];
+    },
+  },
+  {
+    id: 'quarry_stone',
+    name: 'Quarry Stone',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Add one stone die to collection when starting leg',
+    effectType: 'LEG_START_ADD_STONE',
+    effectParams: {},
+    hintDisplay: () => [[active('+1 stone'), condition('leg start')]],
+  },
+  {
+    id: 'six_shooter',
+    name: 'Six Shooter',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'x4 mult every 6th hand played',
+    effectType: 'EVERY_NTH_HAND_XMULT',
+    effectParams: { n: 6, value: 4 },
+    initialState: { handsPlayed: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'six_shooter');
+      const hands = equip?.state.handsPlayed ?? 0;
+      const remaining = 6 - (hands % 6);
+      if (remaining === 6 && hands > 0) return [[mult('x4')], [active('Active!')]];
+      return [[mult('x4'), condition(`in ${remaining}`)]];
+    },
+  },
+  {
+    id: 'wild_card',
+    name: 'Wild Card',
+    cost: 4,
+    rarity: 'common',
+    description: '+0 to +23 mult (random)',
+    effectType: 'RANDOM_MULT',
+    effectParams: { min: 0, max: 23 },
+    hintDisplay: () => [[mult('+0-23'), odds('random')]],
+  },
+  {
+    id: 'snake_eyes',
+    name: 'Snake Eyes',
+    cost: 5,
+    rarity: 'uncommon',
+    description: '1 in 4 chance to get a supply card when a 1 is scored',
+    effectType: 'PIP_SUPPLY_CHANCE',
+    effectParams: { pip: 1, chance: [1, 4] },
+    hintDisplay: () => [[odds('1 in 4'), condition('supply per 1')]],
+  },
+  {
+    id: 'coupon_book',
+    name: 'Coupon Book',
+    cost: 4,
+    rarity: 'common',
+    description: '1 free reroll per shop visit',
+    effectType: 'FREE_SHOP_REROLL',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[active('1 free reroll'), condition('per shop')]],
+  },
+  {
+    id: 'last_stand',
+    name: 'Last Stand',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Retrigger all played dice on final day of round',
+    effectType: 'SCORED_RETRIGGER_FINAL_DAY',
+    effectParams: {},
+    hintDisplay: (game) => {
+      if (game && game.state.day >= game.config.maxDays) return [[text('Retrigger all'), active('Final day!')]];
+      return [[text('Retrigger all'), condition('final day')], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'lucky_find',
+    name: 'Lucky Find',
+    cost: 8,
+    rarity: 'rare',
+    description: 'If one die is scored alone on first day, add a random enhancement',
+    effectType: 'SOLO_FIRST_DAY_ENHANCE',
+    effectParams: {},
+    hintDisplay: (game) => {
+      if (game && game.state.day === 1 && game.state.selectedForScore?.length === 1)
+        return [[active('Enhancing!')]];
+      return [[condition('Solo first day'), inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'iron_furnace',
+    name: 'Iron Furnace',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'x0.2 mult for each steel die in collection',
+    effectType: 'ENHANCEMENT_COUNT_XMULT',
+    effectParams: { enhancement: 'steel', value: 0.2 },
+    hintDisplay: (_game, player) => {
+      const count = player.dice.filter((d) => d.enhancement === 'steel').length;
+      const xm = 1 + count * 0.2;
+      if (count > 0) return [[mult(`x${xm.toFixed(1)}`), condition(`${count} steel`)]];
+      return [[mult('x0.2'), condition('per steel')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'rainy_day_fund',
+    name: 'Rainy Day Fund',
+    cost: 4,
+    rarity: 'common',
+    description: '$1 per unused re-roll at end of round',
+    effectType: 'END_ROUND_MONEY_PER_REROLL',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[money('$1'), condition('per unused reroll')]],
+  },
+  {
+    id: 'one_eyed_jack',
+    name: 'One-Eyed Jack',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Retrigger each played 1',
+    effectType: 'PIP_RETRIGGER',
+    effectParams: { pip: 1 },
+    hintDisplay: () => [[text('Retrigger'), condition('each 1')]],
+  },
+  {
+    id: 'gold_pan',
+    name: 'Gold Pan',
+    cost: 4,
+    rarity: 'common',
+    description: '1 in 2 chance to give $2 when an enhanced die scores',
+    effectType: 'ENHANCED_SCORE_MONEY',
+    effectParams: { chance: [1, 2], value: 2 },
+    hintDisplay: () => [[money('$2'), odds('1 in 2'), condition('enhanced scored')]],
   },
 ];
 

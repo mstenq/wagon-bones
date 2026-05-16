@@ -7,6 +7,8 @@ import {
   createTrailGuideConsumableDef,
   createConsumableInstance,
   getSupplyDefById,
+  executeConsumableEffect,
+  useConsumableDirectly,
 } from '../ConsumablesSystem';
 import { applyDiceSelectionEffect, DiceSelectionConfig } from '../DiceSelectionSystem';
 import supplyCardsData from '../../data/supply_cards.json';
@@ -148,6 +150,76 @@ describe('PlayerState consumable management', () => {
     player.useConsumable(0);
     expect(player.lastUsedConsumable).not.toBeNull();
     expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+  });
+
+  test('second_helpings duplicates last used consumable', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const coffeeDef = getSupplyDefById('coffee_tin')!;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+
+    // Use a coffee tin first to set lastUsedConsumable
+    player.addConsumable(coffeeDef);
+    const used = player.useConsumable(0);
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+
+    // Now add and use second_helpings
+    player.addConsumable(secondHelpingsDef);
+    const secondHelpings = player.useConsumable(0)!;
+    expect(secondHelpings.def.id).toBe('second_helpings');
+    // lastUsedConsumable should NOT have been overwritten to second_helpings
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+
+    const result = executeConsumableEffect(secondHelpings, player);
+    expect(result.success).toBe(true);
+    expect(result.consumablesCreated).toBe(1);
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('coffee_tin');
+  });
+
+  test('second_helpings fails when no previous consumable used', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+    player.addConsumable(secondHelpingsDef);
+    const secondHelpings = player.useConsumable(0)!;
+    const result = executeConsumableEffect(secondHelpings, player);
+    expect(result.success).toBe(false);
+  });
+
+  test('useConsumableDirectly sets lastUsedConsumable for normal cards', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const coffeeDef = getSupplyDefById('coffee_tin')!;
+    useConsumableDirectly(coffeeDef, player);
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+  });
+
+  test('useConsumableDirectly does NOT overwrite lastUsedConsumable for second_helpings', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const coffeeDef = getSupplyDefById('coffee_tin')!;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+
+    // Use coffee first
+    useConsumableDirectly(coffeeDef, player);
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+
+    // Use second_helpings — should clone coffee, not overwrite lastUsedConsumable
+    const result = useConsumableDirectly(secondHelpingsDef, player);
+    expect(result.success).toBe(true);
+    expect(result.consumablesCreated).toBe(1);
+    expect(player.consumables[0].def.id).toBe('coffee_tin');
+    // lastUsedConsumable should still be coffee_tin
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+  });
+
+  test('useConsumableDirectly second_helpings fails without prior use', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+    const result = useConsumableDirectly(secondHelpingsDef, player);
+    expect(result.success).toBe(false);
   });
 
   test('useConsumable returns null for invalid index', () => {

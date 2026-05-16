@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, resetDieIds } from '../testHelpers';
 import { processEquipmentOnHandPlayed } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
@@ -233,5 +233,63 @@ describe('HAND_MULT_GAIN: Card Counter', () => {
     });
     // PAIR: baseMult=1 + 6 = 7
     expect(result.mult).toBe(7);
+  });
+});
+
+// ─── HAND_MILES Items ───
+
+describe('HAND_MILES: Twin Colts (TWO_PAIR, +80 miles)', () => {
+  test('adds miles when hand is TWO_PAIR', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [...diceWithValue(3, 2), ...diceWithValue(7, 2)],
+      equipment: [item('twin_colts')],
+    });
+    // TWO_PAIR: baseMiles=15, +80 = 95, baseMult=2
+    // totalValue = 3+3+7+7 = 20
+    // miles = (95 + 20) * 2 = 230
+    expect(result.miles).toBe(230);
+  });
+
+  test('does not trigger on non-TWO_PAIR hand', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 3),
+      equipment: [item('twin_colts')],
+    });
+    // THREE_OF_A_KIND: baseMiles=20, no bonus from twin_colts
+    // totalValue = 15, miles = (20 + 15) * 3 = 105
+    expect(result.miles).toBe(105);
+  });
+});
+
+describe('HAND_MILES: Rail Line (FOUR_STRAIGHT, +80 miles)', () => {
+  test('adds miles when hand is FOUR_STRAIGHT', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6]),
+      equipment: [item('rail_line')],
+    });
+    // FOUR_STRAIGHT: baseMiles=20, +80 = 100, baseMult=3
+    // totalValue = 18, miles = (100 + 18) * 3 = 354
+    expect(result.miles).toBe(354);
+  });
+
+  test('does not trigger on non-FOUR_STRAIGHT hand', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('rail_line')],
+    });
+    // PAIR: baseMiles=10, no bonus
+    expect(result.miles).toBe((10 + 10) * 1);
+  });
+});
+
+describe('HAND_MILES: Long Haul (FIVE_STRAIGHT, +100 miles)', () => {
+  test('adds miles when hand is FIVE_STRAIGHT', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([2, 3, 4, 5, 6]),
+      equipment: [item('long_haul')],
+    });
+    // FIVE_STRAIGHT: baseMiles=40, +100 = 140, baseMult=6
+    // totalValue = 20, miles = (140 + 20) * 6 = 960
+    expect(result.miles).toBe(960);
   });
 });

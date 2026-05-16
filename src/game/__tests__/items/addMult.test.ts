@@ -241,3 +241,25 @@ describe('SELL_VALUE_AS_MULT: Desperado', () => {
     expect(result.mult).toBe(1);
   });
 });
+
+// ─── RANDOM_MULT: Wild Card ───
+
+describe('RANDOM_MULT: Wild Card', () => {
+  test('adds random bonus mult between 0 and 23', () => {
+    const results: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      resetDieIds();
+      const { result } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('wild_card')],
+      });
+      // PAIR: baseMult=1, bonusMult from wild_card is random 0-23
+      results.push(result.mult);
+    }
+    // All results should be >= 1 (baseMult) and <= 24 (1 + 23)
+    expect(results.every((r) => r >= 1 && r <= 24)).toBe(true);
+    // At least some variation (not all the same)
+    const unique = new Set(results);
+    expect(unique.size).toBeGreaterThan(1);
+  });
+});

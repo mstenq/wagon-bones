@@ -13,8 +13,8 @@ import {
   ConsumableDef,
   ConsumableInstance,
   executeConsumableEffect,
+  useConsumableDirectly,
   getConsumableTexturePrefix,
-  createConsumableInstance,
   getRandomSupplyDef,
   getRandomTrailGuideDef,
   getRandomFrontierDef,
@@ -42,17 +42,22 @@ function canBuyAndUse(def: ConsumableDef): boolean {
   // Dice-selection cards can't be used from the shop (no dice to select)
   if (def.diceSelection) return false;
   if (def.instantEffect) return true;
+  // second_helpings requires a previous consumable to clone
+  if (def.id === 'second_helpings') {
+    const player = getPlayerState();
+    return player.lastUsedConsumable != null && player.lastUsedConsumable.id !== 'second_helpings';
+  }
   // Special-case supply/frontier IDs handled by switch in executeConsumableEffect
-  const SPECIAL_IDS = ['doctor', 'compass', 'supply_cache', 'bless', 'second_helpings'];
+  const SPECIAL_IDS = ['doctor', 'compass', 'supply_cache', 'bless'];
   if (SPECIAL_IDS.includes(def.id)) return true;
   return false;
 }
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
-  | { type: 'equipment'; def: EquipmentDef }
-  | { type: 'consumable'; def: ConsumableDef }
-  | { type: 'dice'; die: Die; displayDef: EquipmentDef };
+  | { type: 'equipment'; def: EquipmentDef; sold?: boolean }
+  | { type: 'consumable'; def: ConsumableDef; sold?: boolean }
+  | { type: 'dice'; die: Die; displayDef: EquipmentDef; sold?: boolean };
 
 const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
 const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
@@ -232,6 +237,13 @@ export class ShopScene extends Scene {
       });
       card.setDepth(10);
 
+      // If this stock item was already sold (e.g. before a permit rebuild), mark and skip
+      if (shopItem.sold) {
+        card.markSold();
+        this.cards.push(card);
+        continue;
+      }
+
       const discountedCost = displayDef.cost;
       if (shopItem.type === 'equipment') {
         const alreadyOwned = player.equipment.some((e) => e.def.id === shopItem.def.id);
@@ -243,8 +255,17 @@ export class ShopScene extends Scene {
           card.setAffordable(canAffordEquip);
           this.setupShopCardClick(card, i);
         }
+      } else if (shopItem.type === 'consumable') {
+        const alreadyOwned = player.consumables.some((c) => c.def.id === shopItem.def.id);
+        if (alreadyOwned) {
+          card.markSold();
+        } else {
+          const canAfford = player.economy.balance >= discountedCost;
+          card.setAffordable(canAfford);
+          this.setupShopCardClick(card, i);
+        }
       } else {
-        // Consumable or dice card
+        // Dice card
         const canAfford = player.economy.balance >= discountedCost;
         card.setAffordable(canAfford);
         this.setupShopCardClick(card, i);
@@ -410,6 +431,7 @@ export class ShopScene extends Scene {
       state: def.initialState ? { ...def.initialState } : {},
     });
     card.markSold();
+    this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
     this.updateDisplays();
     this.equipBar.refresh();
@@ -442,6 +464,7 @@ export class ShopScene extends Scene {
     player.economy.spend(cost);
     player.addDie(shopItem.die);
     card.markSold();
+    this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
     this.updateDisplays();
     this.dicePouch.refresh();
@@ -474,6 +497,7 @@ export class ShopScene extends Scene {
     player.economy.spend(cost);
     player.addConsumable(def);
     card.markSold();
+    this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
     this.updateDisplays();
     this.consumableBar.refresh();
@@ -506,6 +530,7 @@ export class ShopScene extends Scene {
     }
     player.economy.spend(cost);
     card.markSold();
+    this.markStockSold(card);
     this.sound.play('sfx_tarot1', { volume: 0.5 });
 
     // Fade out card
@@ -520,10 +545,9 @@ export class ShopScene extends Scene {
       onComplete: () => card.destroy(),
     });
 
-    // Create a temporary instance and execute its effect immediately
-    const consumed = createConsumableInstance(def);
-    player.lastUsedConsumable = def;
-    this.handleConsumableUsed(consumed);
+    // Use consumable directly (handles lastUsedConsumable tracking)
+    const result = useConsumableDirectly(def, player);
+    this.handleConsumableResult(result);
   }
 
   // ─── Shop Card Action Tabs ───
@@ -662,7 +686,10 @@ export class ShopScene extends Scene {
   private handleConsumableUsed(consumed: ConsumableInstance): void {
     const player = getPlayerState();
     const result = executeConsumableEffect(consumed, player);
+    this.handleConsumableResult(result);
+  }
 
+  private handleConsumableResult(result: ReturnType<typeof executeConsumableEffect>): void {
     // Refresh all UI
     this.updateDisplays();
     this.equipBar.refresh();
@@ -777,6 +804,8 @@ export class ShopScene extends Scene {
     }
 
     this.rerollBtn.setEnabled(player.canRerollShop());
+    const rerollCost = player.shopRerollCost;
+    this.rerollBtn.setText(rerollCost === 0 ? 'Reroll\nFREE' : `Reroll\n$${rerollCost}`);
     this.dicePouch.refresh();
   }
 
@@ -791,11 +820,27 @@ export class ShopScene extends Scene {
     this.equipBar.updateHints(null, getPlayerState());
   }
 
+  /** Mark a stock item as sold by matching the card's index in this.cards */
+  private markStockSold(card: ItemCard): void {
+    const idx = this.cards.indexOf(card);
+    if (idx >= 0 && this.stockItems[idx]) {
+      this.stockItems[idx].sold = true;
+    }
+  }
+
+  /** Get IDs of equipment and consumables the player already owns */
+  private getOwnedItemIds(player: ReturnType<typeof getPlayerState>): string[] {
+    const equipIds = player.equipment.map((e) => e.def.id);
+    const consumableIds = player.consumables.map((c) => c.def.id);
+    return [...equipIds, ...consumableIds];
+  }
+
   /** Generate a mix of equipment and consumable cards for the shop stock.
    *  Each slot is independently rolled from a weighted category pool. */
   private generateMixedStock(player: ReturnType<typeof getPlayerState>): ShopItem[] {
     const slotCount = Math.max(1, player.shopSlots);
     const items: ShopItem[] = [];
+    const excludeIds = this.getOwnedItemIds(player);
 
     // If permit allows dice in shop, always include one die as the first slot
     const diceMode = hasPermitDiceInShop(player.purchasedPermits);
@@ -829,18 +874,20 @@ export class ShopScene extends Scene {
       }
 
       if (picked === 'equipment') {
-        const [def] = generateShopStock(1);
+        const [def] = generateShopStock(1, excludeIds);
         items.push({ type: 'equipment', def });
+        excludeIds.push(def.id); // also exclude from subsequent slots
       } else {
         let def: ConsumableDef;
         if (picked === 'supply') {
-          def = getRandomSupplyDef();
+          def = getRandomSupplyDef(undefined, excludeIds);
         } else if (picked === 'trail_guide') {
-          def = getRandomTrailGuideDef();
+          def = getRandomTrailGuideDef(undefined, excludeIds);
         } else {
-          def = getRandomFrontierDef();
+          def = getRandomFrontierDef(undefined, excludeIds);
         }
         items.push({ type: 'consumable', def });
+        excludeIds.push(def.id); // also exclude from subsequent slots
       }
     }
 
@@ -849,6 +896,13 @@ export class ShopScene extends Scene {
 
   /** Generate a single random stock item using the same category weights */
   private generateOneStockItem(player: ReturnType<typeof getPlayerState>): ShopItem {
+    const excludeIds = this.getOwnedItemIds(player);
+    // Also exclude items already in current stock
+    for (const item of this.stockItems) {
+      if (item.type === 'equipment') excludeIds.push(item.def.id);
+      else if (item.type === 'consumable') excludeIds.push(item.def.id);
+    }
+
     const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier'; weight: number }[] = [
       { type: 'equipment', weight: SHOP_WEIGHTS.equipment },
       { type: 'supply', weight: SHOP_WEIGHTS.supply },
@@ -865,13 +919,13 @@ export class ShopScene extends Scene {
       if (roll <= 0) { picked = cat.type; break; }
     }
     if (picked === 'equipment') {
-      const [def] = generateShopStock(1);
+      const [def] = generateShopStock(1, excludeIds);
       return { type: 'equipment', def };
     }
     let def: ConsumableDef;
-    if (picked === 'supply') def = getRandomSupplyDef();
-    else if (picked === 'trail_guide') def = getRandomTrailGuideDef();
-    else def = getRandomFrontierDef();
+    if (picked === 'supply') def = getRandomSupplyDef(undefined, excludeIds);
+    else if (picked === 'trail_guide') def = getRandomTrailGuideDef(undefined, excludeIds);
+    else def = getRandomFrontierDef(undefined, excludeIds);
     return { type: 'consumable', def };
   }
 

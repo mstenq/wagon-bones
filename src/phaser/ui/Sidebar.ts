@@ -575,6 +575,40 @@ export class Sidebar extends GameObjects.Container {
     this.handLevelText.setVisible(false);
   }
 
+  /** Get world position of the miles (blue) pill center */
+  getMilesPillWorldPos(): { x: number; y: number } {
+    return { x: this.x + this.milesBaseText.x, y: this.y + this.milesBaseText.y };
+  }
+
+  /** Get world position of the mult (red) pill center */
+  getMultPillWorldPos(): { x: number; y: number } {
+    return { x: this.x + this.multText.x, y: this.y + this.multText.y };
+  }
+
+  /** Pop the miles pill bigger briefly */
+  shakeMilesPill(): void {
+    this.scene.tweens.add({
+      targets: this.milesBaseText,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 120,
+      yoyo: true,
+      ease: 'Sine.easeOut',
+    });
+  }
+
+  /** Pop the mult pill bigger briefly. Intense mode for xmult. */
+  shakeMultPill(intense = false): void {
+    this.scene.tweens.add({
+      targets: this.multText,
+      scaleX: intense ? 1.4 : 1.25,
+      scaleY: intense ? 1.4 : 1.25,
+      duration: intense ? 150 : 120,
+      yoyo: true,
+      ease: 'Sine.easeOut',
+    });
+  }
+
   // ─── Profession Tooltip ───
 
   private showProfTooltip(scene: Scene, sidebarW: number, tooltipY: number, prof: ProfessionDef): void {

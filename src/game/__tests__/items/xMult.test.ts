@@ -1,12 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { diceWithValue, item, itemWithState, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
 import {
   processEquipmentOnLuckyTrigger,
   processEquipmentOnSell,
   processEquipmentOnBossDefeat,
   processEquipmentOnReroll,
+  processEquipmentOnHandPlayed,
 } from '../../EquipmentEffects';
+import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
 
@@ -205,5 +207,111 @@ describe('FINAL_DAY_XMULT: High Noon', () => {
       maxDays: 1,
     });
     expect(result.mult).toBe(3);
+  });
+});
+
+// ─── EVERY_NTH_HAND_XMULT: Six Shooter ───
+
+describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {
+  test('does not trigger before 6th hand', () => {
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 4 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [sixShooter],
+    });
+    // PAIR: baseMult=1, no x4 since handsPlayed=4 (not multiple of 6)
+    expect(result.mult).toBe(1);
+  });
+
+  test('triggers x4 when handsPlayed is multiple of 6', () => {
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 6 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [sixShooter],
+    });
+    // PAIR: baseMult=1, x4 because handsPlayed=6, 6%6===0
+    expect(result.mult).toBe(4);
+  });
+
+  test('triggers x4 at 12 hands played', () => {
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 12 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [sixShooter],
+    });
+    // 12%6===0 → x4
+    expect(result.mult).toBe(4);
+  });
+
+  test('increments handsPlayed on processEquipmentOnHandPlayed', () => {
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 0 });
+    processEquipmentOnHandPlayed([sixShooter], HandType.PAIR);
+    expect(sixShooter.state.handsPlayed).toBe(1);
+    processEquipmentOnHandPlayed([sixShooter], HandType.PAIR);
+    expect(sixShooter.state.handsPlayed).toBe(2);
+  });
+});
+
+// ─── ENHANCEMENT_COUNT_XMULT: Iron Furnace ───
+
+describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
+  test('gives xMult based on steel dice in collection, not scored dice', () => {
+    // Steel dice in collection but NOT rolled — only scored dice are plain
+    const scoredDice = diceWithValue(5, 2);
+    const steelInCollection = [
+      die({ value: 3, enhancement: 'steel' }),
+      die({ value: 4, enhancement: 'steel' }),
+      die({ value: 6, enhancement: 'steel' }),
+    ];
+
+    const { game, player } = setupGame({
+      equipment: [item('iron_furnace')],
+      dice: [...scoredDice, ...steelInCollection, ...diceWithValue(1, 50)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice; // only plain dice rolled
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1
+    // 3 steel dice in collection → x(1 + 3*0.2) = x1.6
+    expect(result.mult).toBeCloseTo(1.6);
+  });
+
+  test('no xMult when no steel dice in collection', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('iron_furnace')],
+    });
+    // No steel dice anywhere → x1 (no bonus)
+    expect(result.mult).toBe(1);
+  });
+
+  test('scales with more steel dice in collection', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const steelInCollection = Array.from({ length: 5 }, (_, i) =>
+      die({ value: i + 1, enhancement: 'steel' }),
+    );
+
+    const { game } = setupGame({
+      equipment: [item('iron_furnace')],
+      dice: [...scoredDice, ...steelInCollection, ...diceWithValue(1, 50)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1
+    // 5 steel dice in collection → x(1 + 5*0.2) = x2.0
+    expect(result.mult).toBeCloseTo(2.0);
   });
 });

@@ -7,11 +7,11 @@ beforeEach(() => resetDieIds());
 
 // ─── CONDITIONAL_MULT Items ───
 
-describe('CONDITIONAL_MULT: Last Stand (scored ≤3 dice, +20 mult)', () => {
+describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
   test('activates when scoring 1 die', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 10 })],
-      equipment: [item('last_stand')],
+      equipment: [item('deadeye')],
     });
     // HIGH_VALUE: baseMult=1, +20 = 21
     expect(result.mult).toBe(21);
@@ -20,7 +20,7 @@ describe('CONDITIONAL_MULT: Last Stand (scored ≤3 dice, +20 mult)', () => {
   test('activates when scoring 2 dice', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      equipment: [item('last_stand')],
+      equipment: [item('deadeye')],
     });
     // PAIR: baseMult=1, +20 = 21
     expect(result.mult).toBe(21);
@@ -29,7 +29,7 @@ describe('CONDITIONAL_MULT: Last Stand (scored ≤3 dice, +20 mult)', () => {
   test('activates when scoring 3 dice', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 3),
-      equipment: [item('last_stand')],
+      equipment: [item('deadeye')],
     });
     // THREE_OF_A_KIND: baseMult=3, +20 = 23
     expect(result.mult).toBe(23);
@@ -38,7 +38,7 @@ describe('CONDITIONAL_MULT: Last Stand (scored ≤3 dice, +20 mult)', () => {
   test('does NOT activate when scoring 4 dice', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 4),
-      equipment: [item('last_stand')],
+      equipment: [item('deadeye')],
     });
     // FOUR_OF_A_KIND: baseMult=5, no bonus
     expect(result.mult).toBe(5);
@@ -47,7 +47,7 @@ describe('CONDITIONAL_MULT: Last Stand (scored ≤3 dice, +20 mult)', () => {
   test('does NOT activate when scoring 5 dice', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 5),
-      equipment: [item('last_stand')],
+      equipment: [item('deadeye')],
     });
     // FIVE_OF_A_KIND: baseMult=6, no bonus
     expect(result.mult).toBe(6);

@@ -12,9 +12,9 @@ import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
   createFrontierConsumableDef,
-  createConsumableInstance,
   ConsumableInstance,
   executeConsumableEffect,
+  useConsumableDirectly,
   getConsumableTexturePrefix,
 } from '../../game/ConsumablesSystem';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
@@ -511,6 +511,21 @@ export class BoosterPackScene extends Scene {
       // Build action tabs
       const tabs = this.buildActionTabs(sprite);
 
+      // If no tabs available (e.g. second_helpings with no target), show popup
+      if (tabs.length === 0) {
+        // Undo the card lift
+        this.tweens.add({
+          targets: container,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 150,
+        });
+        container.setDepth(10);
+        this.sound.play('sfx_cancel', { volume: 0.5 });
+        this.showFloatingText('Nothing to copy');
+        return;
+      }
+
       // Show tabs — use ItemCard if available, otherwise build custom tabs on container
       if (itemCard) {
         itemCard.showActionTabs(tabs);
@@ -580,6 +595,14 @@ export class BoosterPackScene extends Scene {
 
   private buildActionTabs(sprite: CardSprite): CardActionTabConfig[] {
     const item = sprite.item;
+
+    // second_helpings needs a valid clone target
+    if (item.supplyCardId === 'second_helpings') {
+      const player = getPlayerState();
+      if (!player.lastUsedConsumable || player.lastUsedConsumable.id === 'second_helpings') {
+        return [];
+      }
+    }
 
     // BUMP_VALUE gets two tabs (+1 / -1)
     if (item.diceSelection && item.diceSelection.effectType === 'BUMP_VALUE') {
@@ -860,25 +883,19 @@ export class BoosterPackScene extends Scene {
     } else if (item.category === 'dice' && item.die) {
       player.addDie(item.die);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
-      // Use immediately — upgrade hand level
       const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
       if (tg) {
         const def = createTrailGuideConsumableDef(tg);
-        const consumed = createConsumableInstance(def);
-        player.lastUsedConsumable = def;
-        const result = executeConsumableEffect(consumed, player);
+        const result = useConsumableDirectly(def, player);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
       }
     } else if (item.category === 'supply' && item.supplyCardId) {
-      // Use immediately via executeConsumableEffect (handles doctor, compass, etc.)
       const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
       if (cardData) {
         const def = createSupplyConsumableDef(cardData);
-        const consumed = createConsumableInstance(def);
-        player.lastUsedConsumable = def;
-        const result = executeConsumableEffect(consumed, player);
+        const result = useConsumableDirectly(def, player);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
@@ -887,9 +904,7 @@ export class BoosterPackScene extends Scene {
       const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
       if (fe) {
         const def = createFrontierConsumableDef(fe);
-        const consumed = createConsumableInstance(def);
-        player.lastUsedConsumable = def;
-        const result = executeConsumableEffect(consumed, player);
+        const result = useConsumableDirectly(def, player);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }

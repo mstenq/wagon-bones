@@ -114,30 +114,7 @@ describe('equipment: ADD_MULT', () => {
   });
 });
 
-describe('equipment: PIP_MULT', () => {
-  test('snake_eyes adds mult per scored 1', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(1, 3),
-      equipment: [item('snake_eyes')],
-    });
-    // THREE_OF_A_KIND: baseMiles=20, baseMult=3
-    // PIP_MULT: +3 per die with value 1 → +9
-    // totalValue = 3
-    // mult = 3 + 9 = 12
-    // miles = (20 + 3) * 12 = 276
-    expect(result.mult).toBe(12);
-    expect(result.miles).toBe(276);
-  });
-
-  test('snake_eyes does not trigger on non-1 dice', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 3),
-      equipment: [item('snake_eyes')],
-    });
-    // No 1s scored → no PIP_MULT bonus
-    expect(result.mult).toBe(3);
-  });
-});
+// PIP_MULT tests removed — deprecated items (snake_eyes, etc.) replaced in Phase 3
 
 describe('equipment: HAND_MULT', () => {
   test('wedding_ring adds mult on pair', () => {
@@ -400,21 +377,6 @@ describe('combined scenarios', () => {
     // miles = (20 + 24) * 19 = 836
     expect(result.mult).toBe(19);
     expect(result.miles).toBe(836);
-  });
-
-  test('snake_eyes + wedding_ring on pair of 1s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(1, 2),
-      equipment: [item('snake_eyes'), item('wedding_ring')],
-    });
-    // PAIR: baseMiles=10, baseMult=1
-    // snake_eyes: +3 per 1 scored → +6
-    // wedding_ring: +8 (pair)
-    // mult = 1 + 6 + 8 = 15
-    // totalValue = 2
-    // miles = (10 + 2) * 15 = 180
-    expect(result.mult).toBe(15);
-    expect(result.miles).toBe(180);
   });
 
   test('steel held + equipment + scored bone dice', () => {

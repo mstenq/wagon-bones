@@ -1482,12 +1482,25 @@
       {
         "id": "accept",
         "label": "Throw it out (lose 1 random supply card)",
+        "condition": { "type": "HAS_CONSUMABLE_ANY" },
         "outcomes": [
           {
             "probability": 1.0,
             "effects": [
               { "type": "LOSE_RANDOM_SUPPLY_CARD", "count": 1 }
             ]
+          }
+        ]
+      },
+      {
+        "id": "nothing",
+        "label": "Nothing to throw out",
+        "condition": { "type": "NOT_HAS_CONSUMABLE_ANY" },
+        "outcomes": [
+          {
+            "probability": 1.0,
+            "effects": [],
+            "message": "You had nothing to lose."
           }
         ]
       }
@@ -1586,12 +1599,25 @@
       {
         "id": "lose",
         "label": "Accept losses (-2 random supply/trail cards)",
+        "condition": { "type": "HAS_CONSUMABLE_ANY" },
         "outcomes": [
           {
             "probability": 1.0,
             "effects": [
               { "type": "LOSE_RANDOM_SUPPLY_CARD", "count": 2 }
             ]
+          }
+        ]
+      },
+      {
+        "id": "nothing",
+        "label": "Nothing was damaged",
+        "condition": { "type": "NOT_HAS_CONSUMABLE_ANY" },
+        "outcomes": [
+          {
+            "probability": 1.0,
+            "effects": [],
+            "message": "You had nothing to lose."
           }
         ]
       },

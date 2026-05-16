@@ -14,143 +14,7 @@ import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
 
-// ─── PIP_MULT Items ───
-
-describe('PIP_MULT: Snake Eyes (pip 1, +3 mult)', () => {
-  test('triggers on scored 1s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(1, 3),
-      equipment: [item('snake_eyes')],
-    });
-    // THREE_OF_A_KIND: baseMult=3, +3 per 1 scored (×3) = +9 → mult=12
-    expect(result.mult).toBe(12);
-  });
-
-  test('does not trigger on non-1 dice', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 3),
-      equipment: [item('snake_eyes')],
-    });
-    expect(result.mult).toBe(3);
-  });
-
-  test('triggers for each matching die in a mixed hand', () => {
-    const { result } = calculateTestScore({
-      scoredDice: [...diceWithValue(1, 2), ...diceWithValue(7, 2)],
-      equipment: [item('snake_eyes')],
-    });
-    // TWO_PAIR: baseMult=2, +3 per 1 (×2) = +6 → mult=8
-    expect(result.mult).toBe(8);
-  });
-});
-
-describe('PIP_MULT: Double Deuces (pip 2, +3 mult)', () => {
-  test('triggers on scored 2s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(2, 3),
-      equipment: [item('double_deuces')],
-    });
-    // THREE_OF_A_KIND: baseMult=3, +3×3 = +9 → mult=12
-    expect(result.mult).toBe(12);
-  });
-
-  test('does not trigger on non-2 dice', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(4, 3),
-      equipment: [item('double_deuces')],
-    });
-    expect(result.mult).toBe(3);
-  });
-});
-
-describe('PIP_MULT: Triad Totem (pip 3, +3 mult)', () => {
-  test('triggers on scored 3s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(3, 2),
-      equipment: [item('triad_totem')],
-    });
-    // PAIR: baseMult=1, +3×2 = +6 → mult=7
-    expect(result.mult).toBe(7);
-  });
-});
-
-describe('PIP_MULT: Four Aces Brand (pip 4, +3 mult)', () => {
-  test('triggers on scored 4s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(4, 2),
-      equipment: [item('four_aces_brand')],
-    });
-    // PAIR: baseMult=1, +3×2 = +6 → mult=7
-    expect(result.mult).toBe(7);
-  });
-});
-
-describe('PIP_MULT: High Five (pip 5, +3 mult)', () => {
-  test('triggers on scored 5s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [item('high_five')],
-    });
-    // PAIR: baseMult=1, +3×2 = +6 → mult=7
-    expect(result.mult).toBe(7);
-  });
-});
-
-describe("PIP_MULT: Devil's Dice (pip 6, +3 mult)", () => {
-  test('triggers on scored 6s', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(6, 2),
-      equipment: [item('devils_dice')],
-    });
-    // PAIR: baseMult=1, +3×2 = +6 → mult=7
-    expect(result.mult).toBe(7);
-  });
-
-  test('does not trigger on non-6 dice', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [item('devils_dice')],
-    });
-    expect(result.mult).toBe(1);
-  });
-});
-
-// ─── PIP_MILES Items ───
-
-describe('PIP_MILES: Trail Boss (pip 6, +30 miles)', () => {
-  test('adds miles per scored 6', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(6, 3),
-      equipment: [item('trail_boss')],
-    });
-    // THREE_OF_A_KIND: baseMiles=20, baseMult=3
-    // Per-die: totalValue = 6+6+6 = 18, +30 per 6 → totalValue = 18+90 = 108
-    // miles = (20 + 108) * 3 = 384
-    expect(result.totalValue).toBe(108);
-    expect(result.miles).toBe(384);
-  });
-
-  test('does not trigger on non-6 dice', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 3),
-      equipment: [item('trail_boss')],
-    });
-    // totalValue = 15 (just the pip values)
-    expect(result.totalValue).toBe(15);
-  });
-
-  test('only triggers on 6s in mixed hand', () => {
-    const { result } = calculateTestScore({
-      scoredDice: [...diceWithValue(6, 2), ...diceWithValue(3, 2)],
-      equipment: [item('trail_boss')],
-    });
-    // TWO_PAIR: baseMiles=15, baseMult=2
-    // totalValue = 6+6+3+3 + 30+30 (two 6s) = 78
-    // miles = (15 + 78) * 2 = 186
-    expect(result.totalValue).toBe(78);
-    expect(result.miles).toBe(186);
-  });
-});
+// ─── PIP_MULT Items (deprecated — snake_eyes, double_deuces, etc. removed in Phase 3) ───
 
 // ─── GOLD_DICE_MONEY: Gold Tooth ───
 
@@ -210,5 +74,61 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     const inst = item('lucky_number');
     expect(inst.def.effectType).toBe('LUCKY_NUMBER_PIP_XMULT');
     expect(inst.def.effectParams.value).toBe(1.5);
+  });
+});
+
+// ─── PIP_RETRIGGER: One-Eyed Jack ───
+
+describe('PIP_RETRIGGER: One-Eyed Jack', () => {
+  test('retriggers dice with pip value 1', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(1, 2),
+      equipment: [item('one_eyed_jack')],
+    });
+    // PAIR: baseMiles=10, baseMult=1
+    // Each 1 gets retriggered once: totalValue = 1+1+1+1 = 4
+    // miles = (10 + 4) * 1 = 14
+    expect(result.totalValue).toBe(4);
+  });
+
+  test('does not retrigger non-1 dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('one_eyed_jack')],
+    });
+    // PAIR: totalValue = 5+5 = 10 (no retrigger)
+    expect(result.totalValue).toBe(10);
+  });
+
+  test('retriggers only 1s in mixed hand', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [...diceWithValue(1, 2), ...diceWithValue(5, 2)],
+      equipment: [item('one_eyed_jack')],
+    });
+    // TWO_PAIR: two 1s retriggered once each = +2 value
+    // totalValue = 1+1+5+5 + 1+1 (retriggers) = 14
+    expect(result.totalValue).toBe(14);
+  });
+});
+
+// ─── PIP_SUPPLY_CHANCE: Snake Eyes ───
+
+describe('PIP_SUPPLY_CHANCE: Snake Eyes', () => {
+  test('has correct effect type and params', () => {
+    const inst = item('snake_eyes');
+    expect(inst.def.effectType).toBe('PIP_SUPPLY_CHANCE');
+    expect(inst.def.effectParams.pip).toBe(1);
+    expect(inst.def.effectParams.chance).toEqual([1, 4]);
+  });
+});
+
+// ─── ENHANCED_SCORE_MONEY: Gold Pan ───
+
+describe('ENHANCED_SCORE_MONEY: Gold Pan', () => {
+  test('has correct effect type and params', () => {
+    const inst = item('gold_pan');
+    expect(inst.def.effectType).toBe('ENHANCED_SCORE_MONEY');
+    expect(inst.def.effectParams.chance).toEqual([1, 2]);
+    expect(inst.def.effectParams.value).toBe(2);
   });
 });

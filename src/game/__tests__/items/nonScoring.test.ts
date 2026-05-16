@@ -192,3 +192,80 @@ describe('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
     expect(result.miles).toBe(35);
   });
 });
+
+// ─── SCORED_RETRIGGER_FINAL_DAY: Last Stand ───
+
+describe('SCORED_RETRIGGER_FINAL_DAY: Last Stand', () => {
+  test('retriggers scored dice on final day', () => {
+    const lastStand = item('last_stand');
+    const count = getScoredRetriggerCount([lastStand], { currentDay: 5, maxDays: 5 });
+    expect(count).toBe(1);
+  });
+
+  test('does not retrigger on non-final day', () => {
+    const lastStand = item('last_stand');
+    const count = getScoredRetriggerCount([lastStand], { currentDay: 3, maxDays: 5 });
+    expect(count).toBe(0);
+  });
+
+  test('stacks with other scored retriggers (e.g. War Drums)', () => {
+    const lastStand = item('last_stand');
+    const warDrums = item('war_drums');
+    const count = getScoredRetriggerCount([lastStand, warDrums], { currentDay: 5, maxDays: 5 });
+    // Last Stand: +1, War Drums: +1 = 2
+    expect(count).toBe(2);
+  });
+});
+
+// ─── FREE_SHOP_REROLL: Coupon Book ───
+
+describe('FREE_SHOP_REROLL: Coupon Book', () => {
+  test('getConfigModifiers reports free rerolls', () => {
+    const coupon = item('coupon_book');
+    const config = getConfigModifiers([coupon]);
+    expect(config.freeShopRerolls).toBe(1);
+  });
+
+  test('shop reroll cost is 0 for free rerolls', () => {
+    const { player } = setupGame({ equipment: [item('coupon_book')] });
+    player.shopRerollCount = 0;
+    expect(player.shopRerollCost).toBe(0);
+  });
+
+  test('shop reroll cost resumes after free rerolls used', () => {
+    const { player } = setupGame({ equipment: [item('coupon_book')] });
+    player.shopRerollCount = 1; // 1 free used, now paid
+    expect(player.shopRerollCost).toBeGreaterThan(0);
+  });
+
+  test('multiple coupon books stack free rerolls', () => {
+    const { player } = setupGame({
+      equipment: [item('coupon_book'), item('coupon_book')],
+    });
+    player.shopRerollCount = 0;
+    expect(player.shopRerollCost).toBe(0);
+    player.shopRerollCount = 1;
+    expect(player.shopRerollCost).toBe(0);
+    player.shopRerollCount = 2; // both free used
+    expect(player.shopRerollCost).toBeGreaterThan(0);
+  });
+});
+
+// ─── END_ROUND_MONEY_PER_REROLL: Rainy Day Fund ───
+
+describe('END_ROUND_MONEY_PER_REROLL: Rainy Day Fund', () => {
+  test('has correct effectType', () => {
+    const inst = item('rainy_day_fund');
+    expect(inst.def.effectType).toBe('END_ROUND_MONEY_PER_REROLL');
+    expect(inst.def.effectParams.value).toBe(1);
+  });
+});
+
+// ─── SOLO_FIRST_DAY_ENHANCE: Lucky Find ───
+
+describe('SOLO_FIRST_DAY_ENHANCE: Lucky Find', () => {
+  test('has correct effect type', () => {
+    const inst = item('lucky_find');
+    expect(inst.def.effectType).toBe('SOLO_FIRST_DAY_ENHANCE');
+  });
+});

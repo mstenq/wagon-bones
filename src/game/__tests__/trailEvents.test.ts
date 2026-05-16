@@ -287,6 +287,25 @@ describe('Choice availability', () => {
     const choices = getAvailableChoices(event, player);
     expect(choices.some((c) => c.id === 'spare_parts')).toBe(false);
   });
+
+  test('HAS_CONSUMABLE_ANY hides choice when player has no consumables', () => {
+    const player = resetPlayerState();
+    player.consumables = [];
+    const event = getTrailEventById('swamped_wagon')!;
+    const choices = getAvailableChoices(event, player);
+    expect(choices.some((c) => c.id === 'lose')).toBe(false);
+    expect(choices.some((c) => c.id === 'nothing')).toBe(true);
+  });
+
+  test('HAS_CONSUMABLE_ANY shows choice when player has consumables', () => {
+    const player = resetPlayerState();
+    const supply = createConsumableInstance(getSupplyDefById('rabbits_foot')!);
+    player.consumables = [supply];
+    const event = getTrailEventById('swamped_wagon')!;
+    const choices = getAvailableChoices(event, player);
+    expect(choices.some((c) => c.id === 'lose')).toBe(true);
+    expect(choices.some((c) => c.id === 'nothing')).toBe(false);
+  });
 });
 
 // ─── isNegativeEffect ───

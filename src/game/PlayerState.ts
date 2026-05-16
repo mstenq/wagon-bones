@@ -6,7 +6,7 @@ import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
-import { processEquipmentOnSell, processEquipmentOnShopReroll } from './EquipmentEffects';
+import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnLegStart } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
@@ -220,8 +220,12 @@ export class PlayerState {
   }
 
   get shopRerollCost(): number {
+    // Coupon Book: free rerolls before paid ones
+    const freeRerolls = getConfigModifiers(this.equipment).freeShopRerolls;
+    if (this.shopRerollCount < freeRerolls) return 0;
     const discount = getPermitShopRerollDiscount(this.purchasedPermits);
-    return Math.max(0, SHOP_REROLL_COST + this.shopRerollCount - discount);
+    const paidRerollIndex = this.shopRerollCount - freeRerolls;
+    return Math.max(0, SHOP_REROLL_COST + paidRerollIndex - discount);
   }
 
   canRerollShop(): boolean {
@@ -320,7 +324,11 @@ export class PlayerState {
   useConsumable(index: number): ConsumableInstance | null {
     if (index < 0 || index >= this.consumables.length) return null;
     const [item] = this.consumables.splice(index, 1);
-    this.lastUsedConsumable = item.def;
+    // Don't overwrite lastUsedConsumable when using second_helpings,
+    // since it reads the previous value to duplicate it
+    if (item.def.id !== 'second_helpings') {
+      this.lastUsedConsumable = item.def;
+    }
     return item;
   }
 
@@ -397,6 +405,9 @@ export class PlayerState {
       if (equip.def.effectType === 'END_ROUND_MONEY') {
         equipmentMoney += (equip.def.effectParams.value as number) ?? 0;
       }
+      if (equip.def.effectType === 'END_ROUND_MONEY_PER_REROLL') {
+        equipmentMoney += ((equip.def.effectParams.value as number) ?? 0) * rerollsRemaining;
+      }
     }
 
     return {
@@ -423,6 +434,19 @@ export class PlayerState {
       // New leg — clear the current permit so a new one generates
       this.currentLegPermit = null;
       this.permitPurchasedThisLeg = false;
+
+      // Process leg-start equipment effects (Funeral Pyre, Quarry Stone)
+      const legResult = processEquipmentOnLegStart(this.equipment);
+
+      // Remove destroyed equipment (indices in reverse order to preserve positions)
+      for (const idx of [...legResult.destroyedIndices].sort((a, b) => b - a)) {
+        this.equipment.splice(idx, 1);
+      }
+
+      // Add stone dice from Quarry Stone
+      for (let i = 0; i < legResult.stoneDiceToAdd; i++) {
+        this.addDie({ id: '', value: 0, enhancement: 'stone', sticker: 'none', aura: 'none', isGrimy: false });
+      }
     }
     // Spent dice persist across rounds — only refreshed by paying or auto-refresh
     return this.journeyComplete;

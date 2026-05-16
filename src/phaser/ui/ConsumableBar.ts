@@ -45,18 +45,28 @@ export class ConsumableBar extends CardBar {
     const consumable = player.consumables[index];
     if (!consumable) return null;
 
-    return [
-      {
+    const tabs: CardActionTabConfig[] = [];
+
+    // Block USE for second_helpings when there's no valid target to clone
+    const canUse =
+      consumable.def.id !== 'second_helpings' ||
+      (player.lastUsedConsumable != null && player.lastUsedConsumable.id !== 'second_helpings');
+
+    if (canUse) {
+      tabs.push({
         label: 'USE',
         color: 0x2255aa,
         callback: () => this.onUseConsumable(card, index),
-      },
-      {
-        label: `SELL\n$${consumable.sellValue}`,
-        color: 0x338833,
-        callback: () => this.animateSellCard(card, index),
-      },
-    ];
+      });
+    }
+
+    tabs.push({
+      label: `SELL\n$${consumable.sellValue}`,
+      color: 0x338833,
+      callback: () => this.animateSellCard(card, index),
+    });
+
+    return tabs;
   }
 
   protected onReorder(fromIndex: number, toIndex: number): void {

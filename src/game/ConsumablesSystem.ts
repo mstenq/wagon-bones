@@ -149,20 +149,38 @@ export function createConsumableInstance(def: ConsumableDef): ConsumableInstance
 }
 
 /** Get a random supply card def */
-export function getRandomSupplyDef(aura?: ItemAura | null): ConsumableDef {
-  const card = SUPPLY_CARDS[Math.floor(Math.random() * SUPPLY_CARDS.length)];
+export function getRandomSupplyDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
+  let pool = SUPPLY_CARDS;
+  if (excludeIds && excludeIds.length > 0) {
+    const excluded = new Set(excludeIds);
+    pool = pool.filter((c) => !excluded.has(c.id));
+  }
+  if (pool.length === 0) pool = SUPPLY_CARDS; // fallback if all excluded
+  const card = pool[Math.floor(Math.random() * pool.length)];
   return createSupplyConsumableDef(card, aura);
 }
 
 /** Get a random trail guide def */
-export function getRandomTrailGuideDef(aura?: ItemAura | null): ConsumableDef {
-  const tg = TRAIL_GUIDES[Math.floor(Math.random() * TRAIL_GUIDES.length)];
+export function getRandomTrailGuideDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
+  let pool = TRAIL_GUIDES;
+  if (excludeIds && excludeIds.length > 0) {
+    const excluded = new Set(excludeIds);
+    pool = pool.filter((t) => !excluded.has(t.id));
+  }
+  if (pool.length === 0) pool = TRAIL_GUIDES; // fallback if all excluded
+  const tg = pool[Math.floor(Math.random() * pool.length)];
   return createTrailGuideConsumableDef(tg, aura);
 }
 
 /** Get a random frontier encounter def */
-export function getRandomFrontierDef(aura?: ItemAura | null): ConsumableDef {
-  const fe = FRONTIER_ENCOUNTERS[Math.floor(Math.random() * FRONTIER_ENCOUNTERS.length)];
+export function getRandomFrontierDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
+  let pool = FRONTIER_ENCOUNTERS;
+  if (excludeIds && excludeIds.length > 0) {
+    const excluded = new Set(excludeIds);
+    pool = pool.filter((f) => !excluded.has(f.id));
+  }
+  if (pool.length === 0) pool = FRONTIER_ENCOUNTERS; // fallback if all excluded
+  const fe = pool[Math.floor(Math.random() * pool.length)];
   return createFrontierConsumableDef(fe, aura);
 }
 
@@ -298,6 +316,19 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
 
   // Fallback — no known effect
   return { success: true };
+}
+
+/**
+ * Create a consumable instance from a def and execute its effect.
+ * Handles lastUsedConsumable tracking (skips for second_helpings which reads the previous value).
+ * Use this instead of manually setting lastUsedConsumable + calling executeConsumableEffect.
+ */
+export function useConsumableDirectly(def: ConsumableDef, player: PlayerState): UseConsumableResult {
+  const consumed = createConsumableInstance(def);
+  if (def.id !== 'second_helpings') {
+    player.lastUsedConsumable = def;
+  }
+  return executeConsumableEffect(consumed, player);
 }
 
 function applyConsumableInstantEffect(effect: InstantEffect, player: PlayerState): UseConsumableResult {

@@ -4,6 +4,7 @@
 // Emits callbacks so the rendering layer can react to state changes.
 
 import {
+  Die,
   RoundState,
   GameConfig,
   DEFAULT_CONFIG,
@@ -202,7 +203,9 @@ export class GameState {
     if (this.state.phase !== 'ROLL') return false;
     if (diceIds.length < 1 || diceIds.length > this.config.scoreSize) return false;
 
-    const selected = this.state.rolledDice.filter((d) => diceIds.includes(d.id));
+    // Preserve the caller's order (visual drag order from UI)
+    const diceMap = new Map(this.state.rolledDice.map((d) => [d.id, d]));
+    const selected = diceIds.map((id) => diceMap.get(id)).filter((d): d is Die => d !== undefined);
     if (selected.length !== diceIds.length) return false;
 
     this.state.selectedForScore = selected;
@@ -260,7 +263,10 @@ export class GameState {
     }
     console.log('[SCORE] After leveling: baseMiles:', leveledResult.baseMiles, '| baseMult:', leveledResult.baseMult);
 
-    const baseResult = scoreHand(leveledResult, player.equipment);
+    const baseResult = scoreHand(leveledResult, player.equipment, {
+      currentDay: this.state.day,
+      maxDays: this.config.maxDays,
+    });
     console.log(
       '[SCORE] After scoreHand: totalValue:',
       baseResult.totalValue,
@@ -287,6 +293,7 @@ export class GameState {
       totalValue: baseResult.totalValue,
       miles: (baseResult.handResult.baseMiles + baseResult.totalValue) * heldMult,
       mult: heldMult,
+      animEvents: [...baseResult.animEvents, ...heldResult.animEvents],
     };
     console.log('[SCORE] After held-in-hand: mult:', afterHeldResult.mult, '| miles:', afterHeldResult.miles);
 
@@ -305,13 +312,8 @@ export class GameState {
       playerBalance: player.economy.balance,
       currentDay: this.state.day,
       maxDays: this.config.maxDays,
+      allDice: player.dice,
     });
-
-    // Attach animation context for the rendering layer
-    finalResult.heldSteps = heldResult.animSteps;
-    finalResult.playerBalance = player.economy.balance;
-    finalResult.currentDay = this.state.day;
-    finalResult.maxDays = this.config.maxDays;
 
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
 

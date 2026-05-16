@@ -208,14 +208,14 @@ export const ANIM = {
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
   SCORE_STEP_DELAY: 200, // ms between each scoring step (dice, equip, held)
-  SCORE_SUBSTEP_DELAY: 300, // ms between sub-events on the same die (miles → mult → etc)
+  SCORE_SUBSTEP_DELAY: 200, // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,
   SCORE_COMPLETE_DELAY: 400,
   HOVER_DURATION: 100,
   CARD_HOVER_SCALE: 1.05,
 
   // Card wobble / tilt / drag swing
-  CARD_WOBBLE_ANGLE: 0.018, // radians, ~1°
+  CARD_WOBBLE_ANGLE: 0.022, // radians, ~1°
   CARD_WOBBLE_DURATION_MIN: 1800, // ms per half-cycle
   CARD_WOBBLE_DURATION_MAX: 2600,
   CARD_TILT_MAX: 0.08, // radians, ~4.5° max rotation on hover

@@ -87,8 +87,8 @@
     "id": "doctor",
     "title": "Doctor",
     "name": "Dr. Eleanor Sykes",
-    "description": "Start with 2 medicine cards, medicine is twice as likely in shop",
-    "modifiers": { "startingSupplyCards": ["medicine", "medicine"], "medicineShopWeight": 2 }
+    "description": "Start with 2 medicine cards with ghost aura, receive 1 free medicine card  with ghost aura after each boss",
+    "modifiers": { "startingSupplyCards": ["medicine", "medicine"]}
   },
   {
     "id": "con_artist",

@@ -203,6 +203,12 @@ export function checkCondition(condition: TrailEventCondition, player: PlayerSta
     case 'HAS_SUPPLY_CARDS':
       return player.consumables.some((c) => c.def.category === 'supply');
 
+    case 'HAS_CONSUMABLE_ANY':
+      return player.consumables.length > 0;
+
+    case 'NOT_HAS_CONSUMABLE_ANY':
+      return player.consumables.length === 0;
+
     case 'IS_PROFESSION':
       return player.profession?.id === condition.id;
 

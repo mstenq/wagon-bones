@@ -67,8 +67,18 @@ export function applyRandomAura(def: EquipmentDef): EquipmentDef {
 // ─── Shop Stock ───
 
 /** Generate a random shop stock of equipment, with random aura rolls */
-export function generateShopStock(count: number = SHOP_SIZE): EquipmentDef[] {
-  const shuffled = [...ITEMS_POOL].sort(() => Math.random() - 0.5);
+export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string[]): EquipmentDef[] {
+  let pool = ITEMS_POOL;
+  if (excludeIds && excludeIds.length > 0) {
+    const excluded = new Set(excludeIds);
+    pool = pool.filter((i) => !excluded.has(i.id));
+  }
+  if (pool.length === 0) {
+    // Fallback: if all items are owned, generate horseshoe copies
+    const horseshoe = ITEMS_POOL.find((i) => i.id === 'horseshoe') ?? ITEMS_POOL[0];
+    return Array.from({ length: count }, () => applyRandomAura({ ...horseshoe }));
+  }
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(count, shuffled.length)).map(applyRandomAura);
 }
 

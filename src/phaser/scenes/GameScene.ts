@@ -463,7 +463,6 @@ export class GameScene extends Scene {
     // Store round score before this hand for the animation
     const roundScoreBefore = this.gameState.state.totalMiles - result.miles;
     result.roundScoreBefore = roundScoreBefore;
-    result.rerollsRemaining = this.gameState.state.rerollsRemaining;
 
     // Play sequential scoring animation
     this.animating = true;
@@ -474,7 +473,6 @@ export class GameScene extends Scene {
       sidebar: this.sidebar,
       equipBar: this.equipBar,
       consumableBar: this.consumableBar,
-      equipment: player.equipment,
       lockedDiceIds: new Set(this.lockedDiceIds),
       contentCX: this.contentCX,
       onComplete: () => {
@@ -553,7 +551,8 @@ export class GameScene extends Scene {
 
   private onScore(): void {
     if (this.animating) return;
-    const ids = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id)).map((d) => d.id);
+    // Use rollSprites order (user's visual/drag order) instead of rolledDice order
+    const ids = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     if (ids.length === 0) return;
 
     const success = this.gameState.selectForScore(ids);
