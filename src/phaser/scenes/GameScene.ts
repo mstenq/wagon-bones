@@ -109,16 +109,17 @@ export class GameScene extends Scene {
     super('Game');
   }
 
-  // Mystery Crate dice to animate on first draw phase
-  private mysteryCrateDiceIds: string[] = [];
+  // Dice IDs to animate popping in on first draw phase (Mystery Crate, Quarry Stone, etc.)
+  private pendingNewDiceIds: string[] = [];
 
   create() {
     // Initialize game state only on first create (not on relayout)
     if (!this.gameState) {
       const player = getPlayerState();
       this.gameState = new GameState({ targetMiles: player.targetMiles });
-      const roundInfo = this.gameState.startRound();
-      this.mysteryCrateDiceIds = roundInfo.mysteryCrateDiceIds;
+      this.gameState.startRound();
+      // Pick up any dice added during leg transition or round start
+      this.pendingNewDiceIds = player.pendingNewDiceIds.splice(0);
       // Clear forced/selected state from previous round (scene instance is reused)
       this.forcedDiceIds = new Set();
       this.selectedHandIds = new Set();
@@ -332,9 +333,9 @@ export class GameScene extends Scene {
     this.repositionPlayArea(false);
 
     // Animate mystery crate dice appearing
-    if (this.mysteryCrateDiceIds.length > 0) {
-      this.animateMysteryCrateDice();
-      this.mysteryCrateDiceIds = [];
+    if (this.pendingNewDiceIds.length > 0) {
+      this.animateNewDiceAppearing();
+      this.pendingNewDiceIds = [];
     }
 
     // Show roll button
@@ -602,12 +603,23 @@ export class GameScene extends Scene {
       (d) => !scoredIds.has(d.id) && d.enhancement === 'gold',
     ).length;
 
-    const outcome = this.gameState.endDay();
+    const { outcome, destroyedEquipment } = this.gameState.endDay();
+
+    // Show destroyed equipment animation (e.g. dynamite explosion)
+    if (destroyedEquipment.length > 0) {
+      this.equipBar.refresh();
+      for (const name of destroyedEquipment) {
+        this.showFloatingText(`💥 ${name} destroyed!`, 0xff4444);
+      }
+    }
 
     if (outcome === 'won') {
       this.sound.play('sfx_win', { volume: 0.6 });
       const player = getPlayerState();
-      if (goldHeldCount > 0) player.economy.earn(goldHeldCount * 3);
+      if (goldHeldCount > 0) {
+        player.economy.earn(goldHeldCount * 3)
+        this.showFloatingText(`$${goldHeldCount * 3} from gold dice!`, COLORS.GOLD);
+      };
       const daysRemaining = this.gameState.config.maxDays - this.gameState.state.day;
       const rerollsRemaining = this.gameState.state.rerollsRemaining;
       this.scene.start('Payout', {
@@ -1043,14 +1055,14 @@ export class GameScene extends Scene {
     }
   }
 
-  /** Animate mystery crate dice popping into existence */
-  private animateMysteryCrateDice(): void {
-    const crateIds = new Set(this.mysteryCrateDiceIds);
+  /** Animate new dice popping into existence (Mystery Crate, Quarry Stone, etc.) */
+  private animateNewDiceAppearing(): void {
+    const newIds = new Set(this.pendingNewDiceIds);
 
     // Find stacks containing the new dice and animate their sprites
     for (const stack of this.availableStacks) {
-      const hasCrateDie = stack.dice.some((d) => crateIds.has(d.id));
-      if (!hasCrateDie) continue;
+      const hasNewDie = stack.dice.some((d) => newIds.has(d.id));
+      if (!hasNewDie) continue;
 
       // Animate all sprites in this stack with a pop-in
       for (const sprite of stack.sprites) {
@@ -1927,5 +1939,28 @@ export class GameScene extends Scene {
     }
 
     this.dicePouch.refresh();
+  }
+
+  private showFloatingText(message: string, color: number = 0xffd700): void {
+    const hex = `#${color.toString(16).padStart(6, '0')}`;
+    const text = this.add
+      .text(this.contentCX, this.scale.height / 2, message, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: hex,
+        stroke: '#000000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(1000);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 40,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    });
   }
 }

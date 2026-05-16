@@ -40,6 +40,12 @@ export class Preloader extends Scene {
       this.load.image(`item_${item.id}`, `assets/items/${item.id}.png`);
     }
 
+    // Load card template overlays (dynamic — derived from items that use cardTemplate)
+    const templateIds = new Set(allItems.map((i) => i.cardTemplate).filter(Boolean));
+    for (const tpl of templateIds) {
+      this.load.image(`card_template_${tpl}`, `assets/card-templates/${tpl}.png`);
+    }
+
     // Load trail guide images (ids already include 'tg_' prefix)
     const tgPrefix = getConsumableTexturePrefix('trail_guide');
     for (const tg of allTrailGuides) {

@@ -66,6 +66,7 @@ export class PlayerState {
   trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
   skipNextShop: boolean = false; // set by trail events (Native Guide)
   trailGuidesUsed: number = 0; // count of trail guides consumed this journey (for Guide Lantern)
+  pendingNewDiceIds: string[] = []; // dice IDs pending animation (Quarry Stone, Mystery Crate, etc.)
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
 
@@ -454,7 +455,9 @@ export class PlayerState {
 
       // Add stone dice from Quarry Stone
       for (let i = 0; i < legResult.stoneDiceToAdd; i++) {
-        this.addDie({ id: '', value: 0, enhancement: 'stone', sticker: 'none', aura: 'none', isGrimy: false });
+        const dieId = `die_player_${this.nextDieId}`;
+        this.addDie({ id: '', value: 0, enhancement: 'stone', sticker: null, aura: null, isGrimy: false , bonusMiles: 0});
+        this.pendingNewDiceIds.push(dieId);
       }
 
       // Create equipment from Junk Dealer

@@ -457,7 +457,8 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
   // FIRST_HAND_ENHANCED_SIX: Hellfire Round — destroy enhanced 6 on first hand, gain frontier card
   if (scoreContext && scoreContext.currentDay === 1) {
-    for (const equip of equipment) {
+    for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+      const equip = equipment[eIdx];
       if (equip.def.effectType === 'FIRST_HAND_ENHANCED_SIX') {
         const target = handResult.scoringDice.find((d) => d.value === 6 && d.enhancement !== null);
         if (target) {
@@ -470,6 +471,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
             const frontierDef = getRandomFrontierDef();
             if (frontierDef) {
               player.consumables.push(createConsumableInstance(frontierDef));
+              animEvents.push({ target: { kind: 'equip', equipIndex: eIdx }, popupType: 'supply', value: 0 });
             }
           }
         }

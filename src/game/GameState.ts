@@ -84,7 +84,7 @@ export class GameState {
     };
   }
 
-  startRound(config?: Partial<GameConfig>): { mysteryCrateDiceIds: string[] } {
+  startRound(config?: Partial<GameConfig>): void {
     if (config) this.config = { ...this.config, ...config };
 
     // Apply equipment config modifiers (rerolls)
@@ -125,21 +125,19 @@ export class GameState {
     }
 
     // Mystery Crate: add a die with random sticker at round start
-    const mysteryCrateDiceIds: string[] = [];
     for (const equip of player.equipment) {
       if (equip.def.effectType === 'ROUND_START_ADD_DICE') {
         const stickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
         const sticker = stickers[Math.floor(Math.random() * stickers.length)];
         const newDie = createDie({ sticker });
         player.addDie(newDie);
-        mysteryCrateDiceIds.push(newDie.id);
+        player.pendingNewDiceIds.push(newDie.id);
       }
     }
 
     this.state = this.createInitialState();
     this.emit('phase-change', this.state.phase);
     this.emit('hand-updated', this.state.hand);
-    return { mysteryCrateDiceIds };
   }
 
   // ─── SELECT Phase ───
@@ -362,13 +360,15 @@ export class GameState {
   // ─── DAY_END ───
 
   /** Advance to next day or end the round. */
-  endDay(): 'next-day' | 'won' | 'lost' {
-    if (this.state.phase !== 'DAY_END') return 'lost';
+  endDay(): { outcome: 'next-day' | 'won' | 'lost'; destroyedEquipment: string[] } {
+    if (this.state.phase !== 'DAY_END') return { outcome: 'lost', destroyedEquipment: [] };
 
     // Process end-of-round equipment effects (destruction only)
     // END_ROUND_MONEY is handled by the payout system, not here.
     const player = getPlayerState();
     const endEffects = processEndOfRound(player.equipment);
+    // Capture destroyed equipment names before splicing
+    const destroyedEquipment = endEffects.destroyedIndices.map((i) => player.equipment[i].def.name);
     // Destroy risky equipment (iterate in reverse to keep indices valid)
     for (const idx of endEffects.destroyedIndices.sort((a, b) => b - a)) {
       player.equipment.splice(idx, 1);
@@ -390,7 +390,7 @@ export class GameState {
       this.state.phase = 'ROUND_END';
       this.emit('round-won', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
       this.emit('phase-change', this.state.phase);
-      return 'won';
+      return { outcome: 'won', destroyedEquipment };
     }
 
     if (this.state.day >= this.config.maxDays) {
@@ -405,7 +405,7 @@ export class GameState {
         this.state.phase = 'ROUND_END';
         this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
         this.emit('phase-change', this.state.phase);
-        return 'lost';
+        return { outcome: 'lost', destroyedEquipment };
       }
     }
 
@@ -426,7 +426,7 @@ export class GameState {
     this.emit('day-ended', { day: this.state.day });
     this.emit('phase-change', this.state.phase);
     this.emit('hand-updated', this.state.hand);
-    return 'next-day';
+    return { outcome: 'next-day', destroyedEquipment };
   }
 
   // ─── Refresh Spent Dice ───

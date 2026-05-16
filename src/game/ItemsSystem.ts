@@ -43,6 +43,12 @@ const SHOP_SIZE = 5;
 
 // ─── Aura Helpers ───
 
+/** Get an aura by its id. Returns null if not found. */
+export function getItemAuraById(id: string): ItemAura | null {
+  const aura = ITEM_AURAS.find((a) => a.id === id);
+  return aura ? { ...aura } : null;
+}
+
 /** Roll for a random aura. Returns null most of the time. */
 export function rollRandomItemAura(): ItemAura | null {
   for (const aura of ITEM_AURAS) {

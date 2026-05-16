@@ -4,6 +4,7 @@
 // held in the consumable bar. They can be used, sold, or reordered.
 
 import type { ItemAura } from './ItemsSystem';
+import { getItemAuraById } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition } from './types';
@@ -356,6 +357,17 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
     }
     case 'bless': {
       // 1 in 4 chance to bless equipment with aura — stub for now
+      return { success: true };
+    }
+    case 'priests_blessing': {
+      // Add holy aura to random item, delete all others
+      if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
+      const holyAura = getItemAuraById('holy');
+      if (!holyAura) return { success: true };
+      const chosenIdx = Math.floor(Math.random() * player.equipment.length);
+      const chosen = player.equipment[chosenIdx];
+      chosen.def = { ...chosen.def, aura: holyAura };
+      player.equipment.splice(0, player.equipment.length, chosen);
       return { success: true };
     }
   }

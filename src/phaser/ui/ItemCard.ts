@@ -8,6 +8,7 @@ import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../game/Constants';
 import type { ItemAura } from '../../game/ItemsSystem';
 import type { HintSegment } from '../../game/ItemsSystem';
+import type { CardTemplate } from '../../data/items';
 import type { GameState } from '../../game/GameState';
 import type { PlayerState } from '../../game/PlayerState';
 import { applyAuraGlow, createAuraParticles } from './AuraFX';
@@ -20,6 +21,7 @@ export interface CardData {
   cost?: number;
   rarity?: string;
   aura?: ItemAura | null;
+  cardTemplate?: CardTemplate;
   hintDisplay?: (game: GameState | null, player: PlayerState) => HintSegment[][];
 }
 
@@ -276,6 +278,45 @@ export class ItemCard extends GameObjects.Container {
       const img = this.scene.add.image(0, 0, roundedKey);
       this.cardImage = img;
       this.add(img);
+
+      // Render card template overlay on top of the image
+      if (this._def.cardTemplate) {
+        const overlayKey = `card_template_${this._def.cardTemplate}`;
+        if (this.scene.textures.exists(overlayKey)) {
+          const roundedOverlayKey = `${overlayKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
+          if (!this.scene.textures.exists(roundedOverlayKey)) {
+            const overlaySrc = this.scene.textures.get(overlayKey).getSourceImage() as HTMLImageElement;
+            const overlayCanvas = this.scene.textures.createCanvas(roundedOverlayKey, w, h)!;
+            const oCtx = overlayCanvas.getContext();
+
+            // Same rounded rect clip as the base image
+            oCtx.beginPath();
+            oCtx.moveTo(radius, 0);
+            oCtx.lineTo(w - radius, 0);
+            oCtx.arcTo(w, 0, w, radius, radius);
+            oCtx.lineTo(w, h - radius);
+            oCtx.arcTo(w, h, w - radius, h, radius);
+            oCtx.lineTo(radius, h);
+            oCtx.arcTo(0, h, 0, h - radius, radius);
+            oCtx.lineTo(0, radius);
+            oCtx.arcTo(0, 0, radius, 0, radius);
+            oCtx.closePath();
+            oCtx.clip();
+
+            // Cover-fill the overlay
+            const oScale = Math.max(w / overlaySrc.width, h / overlaySrc.height);
+            const oDrawW = overlaySrc.width * oScale;
+            const oDrawH = overlaySrc.height * oScale;
+            const oDx = (w - oDrawW) / 2;
+            const oDy = (h - oDrawH) / 2;
+            oCtx.drawImage(overlaySrc, oDx, oDy, oDrawW, oDrawH);
+
+            overlayCanvas.refresh();
+          }
+          const overlay = this.scene.add.image(0, 0, roundedOverlayKey);
+          this.add(overlay);
+        }
+      }
       }
     }
 

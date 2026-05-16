@@ -40,9 +40,9 @@ export const GAMEPLAY = {
 export const CHANCES = {
   STICKER_EFFECT: 0.08,
   DICE_AURA: 0.1,
-  AURA_HOLY: 0.1,
-  AURA_FIRE: 0.3,
-  AURA_ICY: 0.1,
+  AURA_HOLY: 0.03,
+  AURA_FIRE: 0.14,
+  AURA_ICY: 0.2,
 };
 
 // ─── Shop Stock Category Weights ───
@@ -163,9 +163,9 @@ export const UI = {
   BTN_FONT_SIZE: '18px',
 
   // Cards
-  CARD_W: 133,
+  CARD_W: 132,
   CARD_H: 200,
-  CARD_RADIUS: 12,
+  CARD_RADIUS: 10,
   CARD_SHADOW_OFFSET: 4,
   CARD_SHADOW_ALPHA: 0.35,
   CARD_PRICE_TAG_H: 26,

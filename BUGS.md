@@ -1,22 +1,9 @@
 # Bugs noticed while playing
 
-? mirage supply didn't seem to duplicate dice and also changed the dices value?
-? Outlaw profession is earning interest, and I'm not sure rewards are being calculated correctly
-? When a trail event removes a day it immediately shows in the sidebar which is good, but then it increased again while in the shop before finally reducing again once i was in the game scene.
-x in game scene the Score Dice button and Re-roll button should be swapped to be more like balatro
-x In the dice grab bag packs, when you buy a dice it shows all the dice at the top of the screen before going back to the shop scene
-? When new dice are added to pouch from trail events they have no number showing on them till they are rolled once. Fine for stone ones, but all others should show a value.
 ? Stone dice are showing numbers. They should never have a die value, they should sort as the highest value (above 12s)
 ? Stone dice should also not count towards hands, but should always be scored (Not sure that is happening cause they have numbers)
-x "Buy & Use" tab should stay on the right hand size, but the "Buy" button should actually be a tab at the bottom of the card that the card moves up to reveal. 
-x "Hit the Trail" button should be red
-x "Reroll" button in shop should be green
-x when you get a negative trail event like swamped wagon where you lose 2 random supply/trail cards and don't have any supply cards, it just silently does nothing. We need a new condition for HAS_CONSUMABLE_ANY or something.
-x second helping doesn't seem to work. Have tried it a few times and didn't get an additional card in my consumable bar as expected.
 - you can currently use supply cards like rabbits foot directly from the shop. But really that should only be able to be used in the game scene or booster scenes. Basically things that effect dice need to have dice present on the screen to work. Only cards like treasure map, trade, second helpings, trail guide cards, can be used at anytime because you don't need to select dice first. I think some of this logic might exist cause the "Buy and Use" button doesn't show in the shop stock, but once its in your consumable area the use button shows up.
 - in a dice mega grab bag, after the first dice purchase, i can see 8 dice at the top of the screen half way off the screen.
-x equipment and supply/trail cards that are in equipment bar and consumable bar should not show up in the shop again. But when we implement "Counterfeit Goods" item, then they can show up multiple times and you can purchase a second copy of the equipment (Currently you are blocked from buying copies)
-x when i purchase something in the shop it disappears, but then if i buy a voucher the used card shows up in the shop again.
 - Coupon Book only gives a free reroll when entering the shop. You should be able to purchase the Coupon Book and immediately be able to reroll the shop for free 1 time (Even if your currently at $100 per reroll). Players often buy Coupon Book to reroll one more time then sell it.
 - Gold Pan doesn't animate the +2 gold while scoring is happening so the users won't know if they got any money. It needs to work like mult/miles do with a little popup that displays $2 when it hits.
 -Funeral Pyre - Didn't work. I bought it and the item to the right of it didn't get destroyed and Funeral Pyre didn't gain any mult.
@@ -24,6 +11,8 @@ x when i purchase something in the shop it disappears, but then if i buy a vouch
 - One Eyed Jack correctly added its values to the score, but the additional trigger didn't animate anything again making it seem like it failed.
 - Helfire Bullet doesn't show frontier experience card immediately, it only shows up in equipment bar after round.
 - priests_blessing didn't give holy aura to my 1 piece of equipment that I had.
+- dynamite needs to add a custom animation saying either "safe!" or an explosion animate as its removed. Otherwise it just leaves without you noticing.
+- quarry stone - started round and didn't see any added stone dice until the game after. Maybe we could just hook into the animation system and show an animation for getting the stone dice like mystery crate does.
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
@@ -47,8 +36,7 @@ x when i purchase something in the shop it disappears, but then if i buy a vouch
     accountant: Savings Account - gains and additional $1 per $5.
     doctor: Emergency Supplies - limit is lifted to $8 and under to activate free supply card.
     con artist: Card Counter - gains an additional +2 mult per played pair.
-x new animation type when upgrades happen (surveyors transit/trail guide cards/etc). Needs to show the base hand and current level above the scoring boxes in the sidebar, then 1 by 1 update base miles, then the base mult, then the level number doing a tick, tick, tick noise as they go up. The numbers shouhld get bigger like when scoring occurs reusing that same animation.
-x new animation type. When mystery crate is in your equipment, it would be nice to see an animation of a new dice being added to your playing area. Right now its just there when the scene starts which makes it feel like it didn't work.
+
 
 
 ## Code Feedback

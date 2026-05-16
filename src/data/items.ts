@@ -4,6 +4,9 @@
 
 // ─── Hint System Types ───
 
+/** Card template overlay identifier — matches filename in assets/card-templates/ */
+export type CardTemplate = 'white-text' | 'black-text' | 'white-text-black-outline' | 'black-text-white-outline' | 'marked' | 'hellfire';
+
 /** Visual style for a hint segment */
 export type HintStyle =
   | 'miles' // blue text — distance/miles values
@@ -37,6 +40,7 @@ export interface ItemDef {
   rarity: string;
   description: string;
   effectType: string;
+  cardTemplate?: CardTemplate;
   effectParams: Record<string, unknown>;
   initialState?: Record<string, number>;
   hintDisplay: (game: GameState | null, player: PlayerState) => HintSegment[][];
@@ -97,6 +101,7 @@ const items: ItemDef[] = [
   {
     id: 'horseshoe',
     name: 'Horseshoe',
+    cardTemplate: "white-text-black-outline",
     cost: 2,
     rarity: 'common',
     description: '+4 mult',
@@ -167,6 +172,7 @@ const items: ItemDef[] = [
   {
     id: 'wedding_ring',
     name: 'Wedding Ring',
+    cardTemplate: "white-text",
     cost: 3,
     rarity: 'common',
     description: 'If played hand contains a pair +8 mult',
@@ -181,6 +187,7 @@ const items: ItemDef[] = [
   {
     id: 'town_choir',
     name: 'Town Choir',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: 'If played hand contains three of a kind +12 mult',
@@ -195,6 +202,7 @@ const items: ItemDef[] = [
   {
     id: 'deputy_brothers',
     name: 'Deputy Brothers',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: 'If played hand contains two pair +10 mult',
@@ -209,6 +217,7 @@ const items: ItemDef[] = [
   {
     id: 'work_boots',
     name: 'Work Boots',
+    cardTemplate: "white-text",
     cost: 3,
     rarity: 'common',
     description: 'If played hand contains pair +50 miles',
@@ -223,6 +232,7 @@ const items: ItemDef[] = [
   {
     id: 'buffalo_stampede',
     name: 'Buffalo Stampede',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: 'If played hand contains three of a kind +100 miles',
@@ -237,6 +247,7 @@ const items: ItemDef[] = [
   {
     id: 'trail_rations',
     name: 'Trail Rations',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: '+30 miles per unused re-roll',
@@ -252,6 +263,7 @@ const items: ItemDef[] = [
   {
     id: 'deadeye',
     name: 'Deadeye',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: '+20 mult if 3 or fewer dice are scored',
@@ -267,6 +279,7 @@ const items: ItemDef[] = [
   {
     id: 'stubborn_mule',
     name: 'Stubborn Mule',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: '+15 mult when 0 re-rolls remaining',
@@ -282,6 +295,7 @@ const items: ItemDef[] = [
   {
     id: 'toolbelt',
     name: 'Toolbelt',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: '+3 mult for each piece of equipment',
@@ -305,6 +319,7 @@ const items: ItemDef[] = [
   {
     id: 'even_odds',
     name: 'Even Odds',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: '+4 mult when an even value is scored',
@@ -315,6 +330,7 @@ const items: ItemDef[] = [
   {
     id: 'odd_fellow',
     name: 'Odd Fellow',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: '+31 miles when an odd value is scored',
@@ -325,6 +341,7 @@ const items: ItemDef[] = [
   {
     id: 'dynamite',
     name: 'Dynamite',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: '+15 mult. 1 in 6 chance to be destroyed at end of round.',
@@ -335,6 +352,7 @@ const items: ItemDef[] = [
   {
     id: 'extra_saddlebag',
     name: 'Extra Saddlebag',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: 'Refresh your spent dice for free 1 time a round',
@@ -345,6 +363,7 @@ const items: ItemDef[] = [
   {
     id: 'spare_holster',
     name: 'Spare Holster',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: '+1 re-roll per leg',
@@ -355,6 +374,7 @@ const items: ItemDef[] = [
   {
     id: 'payday',
     name: 'Payday',
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'Earn $4 at end of round',
@@ -367,6 +387,7 @@ const items: ItemDef[] = [
   {
     id: 'double_down',
     name: 'Double Down',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Retrigger all held-in-hand abilities',
@@ -377,6 +398,7 @@ const items: ItemDef[] = [
   {
     id: 'bottom_dollar',
     name: 'Bottom Dollar',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Adds double the rank of lowest held-in-hand die to mult',
@@ -409,6 +431,7 @@ const items: ItemDef[] = [
   {
     id: 'prospectors_pouch',
     name: "Prospector's Pouch",
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'Each enhanced die held in hand has a 1 in 2 chance to give $1',
@@ -424,6 +447,7 @@ const items: ItemDef[] = [
   {
     id: 'eleventh_crossing',
     name: 'The Eleventh Crossing',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: 'Each 11 held in hand gives +11 mult',
@@ -441,6 +465,7 @@ const items: ItemDef[] = [
   {
     id: 'rabbits_foot',
     name: "Rabbit's Foot",
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'Item gains x0.25 for every lucky dice trigger',
@@ -456,6 +481,7 @@ const items: ItemDef[] = [
   {
     id: 'collectors_case',
     name: "Collector's Case",
+    cardTemplate: "white-text-black-outline",
     cost: 8,
     rarity: 'rare',
     description: 'Uncommon equipment each give x1.5 mult',
@@ -470,6 +496,7 @@ const items: ItemDef[] = [
   {
     id: 'money_wagon',
     name: 'Money Wagon',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: '+2 miles for every $1 you have',
@@ -483,6 +510,7 @@ const items: ItemDef[] = [
   {
     id: 'bargain_bin',
     name: 'Bargain Bin',
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'Item gains +2 mult per reroll in the shop',
@@ -498,6 +526,7 @@ const items: ItemDef[] = [
   {
     id: 'fading_memory',
     name: 'Fading Memory',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: '+20 mult, -4 mult per round played, removed after 5 rounds',
@@ -514,6 +543,7 @@ const items: ItemDef[] = [
   {
     id: 'card_counter',
     name: 'Card Counter',
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'Item gains +2 mult if played hand contains 2 pair',
@@ -529,6 +559,7 @@ const items: ItemDef[] = [
   {
     id: 'lucky_number',
     name: 'Lucky Number',
+    cardTemplate: "white-text-black-outline",
     cost: 8,
     rarity: 'rare',
     description: 'Each played [number changes each round] gives x1.5 mult when scored',
@@ -544,6 +575,7 @@ const items: ItemDef[] = [
   {
     id: 'worn_deck',
     name: 'Worn Deck',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'x2 Mult. Loses x0.01 mult per dice re-rolled',
@@ -559,6 +591,7 @@ const items: ItemDef[] = [
   {
     id: 'war_drums',
     name: 'War Drums',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'Retrigger all dice played for the next 10 days of travel',
@@ -577,6 +610,7 @@ const items: ItemDef[] = [
     name: 'Bone Collector',
     cost: 6,
     rarity: 'uncommon',
+    cardTemplate: 'white-text',
     description: 'Gains +3 miles per each enhanced dice that is spent',
     effectType: 'ENHANCED_SPENT_MILES_GAIN',
     effectParams: { value: 3 },
@@ -590,6 +624,7 @@ const items: ItemDef[] = [
   {
     id: 'snake_oil_ledger',
     name: 'Snake Oil Ledger',
+    cardTemplate: "white-text-black-outline",
     cost: 9,
     rarity: 'rare',
     description: 'Item gains x0.25 mult for each card sold. Resets when boss is defeated.',
@@ -605,6 +640,7 @@ const items: ItemDef[] = [
   {
     id: 'gold_tooth',
     name: 'Gold Tooth',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: 'Played gold dice earn $4',
@@ -615,6 +651,7 @@ const items: ItemDef[] = [
   {
     id: 'guardian_totem',
     name: 'Guardian Totem',
+    cardTemplate: "black-text-white-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Prevents death if miles travelled is at least 25% of required distance. Card is destroyed if used.',
@@ -625,6 +662,7 @@ const items: ItemDef[] = [
   {
     id: 'high_noon',
     name: 'High Noon',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'x3 mult on final day of round',
@@ -638,6 +676,7 @@ const items: ItemDef[] = [
   {
     id: 'desperado',
     name: 'Desperado',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: 'Add the sell value of all other owned equipment as mult',
@@ -655,6 +694,7 @@ const items: ItemDef[] = [
   {
     id: 'stagecoach',
     name: 'Stagecoach',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'Dice are automatically refreshed when supply reaches 50% or below. -1 day per round.',
@@ -665,6 +705,7 @@ const items: ItemDef[] = [
   {
     id: 'mystery_crate',
     name: 'Mystery Crate',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'Add a dice at the start of each round with a random sticker',
@@ -675,6 +716,7 @@ const items: ItemDef[] = [
   {
     id: 'spare_wagon_parts',
     name: 'Spare Wagon Parts',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Negates one wagon-damage trail event, then destroys itself. +4 mult.',
@@ -685,6 +727,7 @@ const items: ItemDef[] = [
   {
     id: 'scouts_spyglass',
     name: "Scout's Spyglass",
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'See the next trail event before it happens. Skip it for $3. +25 miles.',
@@ -695,6 +738,7 @@ const items: ItemDef[] = [
   {
     id: 'saint_elmos_shield',
     name: "Saint Elmo's Shield",
+    cardTemplate: "white-text-black-outline",
     cost: 20,
     rarity: 'legendary',
     description: 'Disables all boss effects and negative effects from trail events are prevented. Divine favor intervenes.',
@@ -707,6 +751,7 @@ const items: ItemDef[] = [
   {
     id: 'twin_colts',
     name: 'Twin Colts',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: 'If played hand contains two pair +80 miles',
@@ -721,6 +766,7 @@ const items: ItemDef[] = [
   {
     id: 'rail_line',
     name: 'Rail Line',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: 'If played hand contains a 4 straight +80 miles',
@@ -735,6 +781,7 @@ const items: ItemDef[] = [
   {
     id: 'long_haul',
     name: 'Long Haul',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: 'If played hand contains a 5 straight +100 miles',
@@ -749,6 +796,7 @@ const items: ItemDef[] = [
   {
     id: 'silver_bullets',
     name: 'Silver Bullets',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Retrigger all dice held in hand',
@@ -759,6 +807,7 @@ const items: ItemDef[] = [
   {
     id: 'funeral_pyre',
     name: 'Funeral Pyre',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'When starting leg, destroy equipment to right and add double its sell value as mult',
@@ -775,6 +824,7 @@ const items: ItemDef[] = [
   {
     id: 'quarry_stone',
     name: 'Quarry Stone',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'Add one stone die to collection when starting leg',
@@ -785,6 +835,7 @@ const items: ItemDef[] = [
   {
     id: 'six_shooter',
     name: 'Six Shooter',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: 'x4 mult every 6th hand played',
@@ -812,6 +863,7 @@ const items: ItemDef[] = [
   {
     id: 'snake_eyes',
     name: 'Snake Eyes',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: '1 in 4 chance to get a supply card when a 1 is scored',
@@ -822,6 +874,7 @@ const items: ItemDef[] = [
   {
     id: 'coupon_book',
     name: 'Coupon Book',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: '1 free reroll per shop visit',
@@ -832,6 +885,7 @@ const items: ItemDef[] = [
   {
     id: 'last_stand',
     name: 'Last Stand',
+    cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
     description: 'Retrigger all played dice on final day of round',
@@ -845,6 +899,7 @@ const items: ItemDef[] = [
   {
     id: 'lucky_find',
     name: 'Lucky Find',
+    cardTemplate: "white-text-black-outline",
     cost: 8,
     rarity: 'rare',
     description: 'If one die is scored alone on first day, add a random enhancement',
@@ -859,6 +914,7 @@ const items: ItemDef[] = [
   {
     id: 'iron_furnace',
     name: 'Iron Furnace',
+    cardTemplate: "white-text",
     cost: 7,
     rarity: 'uncommon',
     description: 'x0.2 mult for each steel die in collection',
@@ -874,6 +930,7 @@ const items: ItemDef[] = [
   {
     id: 'rainy_day_fund',
     name: 'Rainy Day Fund',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
     description: '$1 per unused re-roll at end of round',
@@ -894,6 +951,7 @@ const items: ItemDef[] = [
   {
     id: 'gold_pan',
     name: 'Gold Pan',
+    cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
     description: '1 in 2 chance to give $2 when an enhanced die scores',
@@ -923,6 +981,7 @@ const items: ItemDef[] = [
   {
     id: 'marked',
     name: 'Marked',
+    cardTemplate: "marked",
     cost: 6,
     rarity: 'uncommon',
     description: '+1 mult per hand played without scoring a 6. Scoring a 6 resets mult to 0.',
@@ -938,6 +997,7 @@ const items: ItemDef[] = [
   {
     id: 'surveyors_transit',
     name: "Surveyor's Transit",
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: '1 in 4 chance to upgrade trail knowledge of hand type played',
@@ -948,6 +1008,7 @@ const items: ItemDef[] = [
   {
     id: 'guide_lantern',
     name: 'Guide Lantern',
+    cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
     description: 'Gain x0.1 mult for every trail guide used',
@@ -964,6 +1025,7 @@ const items: ItemDef[] = [
   {
     id: 'steam_engine',
     name: 'Steam Engine',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Gains +100 miles. -5 miles per hand played.',
@@ -980,6 +1042,7 @@ const items: ItemDef[] = [
   {
     id: 'bloodline',
     name: 'Bloodline',
+    cardTemplate: "white-text-black-outline",
     cost: 8,
     rarity: 'rare',
     description: 'If first day of leg only scores one die, add a permanent copy to your collection',
@@ -994,6 +1057,7 @@ const items: ItemDef[] = [
   {
     id: 'open_palm',
     name: 'Open Palm',
+    cardTemplate: "white-text-black-outline",
     cost: 3,
     rarity: 'common',
     description: 'All dice count when scoring',
@@ -1004,6 +1068,7 @@ const items: ItemDef[] = [
   {
     id: 'hellfire_round',
     name: 'Hellfire Round',
+    cardTemplate: "hellfire",
     cost: 6,
     rarity: 'rare',
     description: 'If first hand of round is an enhanced 6, destroy it and gain a Frontier Encounter card',
@@ -1017,6 +1082,7 @@ const items: ItemDef[] = [
   {
     id: 'cowboy_boots',
     name: 'Cowboy Boots',
+    cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Every played die permanently gains +5 miles when scored',
@@ -1061,6 +1127,7 @@ const items: ItemDef[] = [
   {
     id: 'nitro',
     name: 'Nitro',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'rare',
     description: 'x3 mult. 1 in 1000 chance of being destroyed at end of round.',
@@ -1071,6 +1138,7 @@ const items: ItemDef[] = [
   {
     id: 'repeat_offender',
     name: 'Repeat Offender',
+    
     cost: 6,
     rarity: 'uncommon',
     description: 'x3 mult if played hand has already been played this round',
@@ -1177,8 +1245,9 @@ const items: ItemDef[] = [
     description: 'Earn $1 at end of round, increased by $2 for every boss defeated',
     effectType: 'END_ROUND_MONEY_SCALING',
     effectParams: { base: 1, perBoss: 2 },
-    initState: { bossesDefeated: 0 },
-    hintDisplay: (_game, player, equip) => {
+    initialState: { bossesDefeated: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'railroad_bonds');
       const bossesDefeated = (equip?.state?.bossesDefeated as number) ?? 0;
       const total = 1 + bossesDefeated * 2;
       return [[money(`$${total}`), condition('end of round')]];
