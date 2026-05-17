@@ -8,6 +8,7 @@ import * as Phaser from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { GameState } from '../../game/GameState';
 import { Die, ScoreResult, HandType } from '../../game/types';
+import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
@@ -743,6 +744,26 @@ export class GameScene extends Scene {
 
     this.scoreBtn.setEnabled(lockedCount > 0);
     this.scoreBtn.setText(lockedCount > 0 ? `Score ${lockedCount} Dice` : 'Lock Dice to Score');
+
+    // Preview hand type when dice are locked
+    if (lockedCount > 0) {
+      const lockedDice = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
+      const handResult = detectBestHand(lockedDice);
+      const player = getPlayerState();
+      const stats = player.getHandStats(handResult.type);
+      const levelBonus = stats.level - 1;
+      const baseMiles = handResult.baseMiles + stats.milesPerLevel * levelBonus;
+      const baseMult = handResult.baseMult + stats.multPerLevel * levelBonus;
+      this.sidebar.updateData({
+        handName: handResult.name,
+        handLevel: stats.level,
+        milesBase: baseMiles,
+        mult: baseMult,
+      });
+    } else {
+      this.sidebar.clearHandDisplay();
+      this.sidebar.updateData({ milesBase: 0, mult: 0 });
+    }
   }
 
   /** Sort roll sprites by die value and reposition them with lock icons */

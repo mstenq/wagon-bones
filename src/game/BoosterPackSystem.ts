@@ -153,7 +153,7 @@ export function generatePackContents(def: PackDefinition): PackItem[] {
 
 function generateDicePackContents(count: number): PackItem[] {
   const items: PackItem[] = [];
-  const enhancements = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'] as const;
+  const enhancements = diceEnhancementsData.map((e) => e.id);
 
   for (let i = 0; i < count; i++) {
     const enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];

@@ -416,11 +416,14 @@ export class GameState {
       player.equipment.splice(idx, 1);
     }
 
-    // Mark only scored dice as spent (unscored dice stay available for next day).
-    // Returns true if all dice were spent and an auto-refresh occurred.
-    const scoredIds = this.state.selectedForScore.map((d) => d.id);
+    // Mark dice as spent:
+    // - Normal day: only scored dice are spent (unscored stay available)
+    // - Round over (won/lost): all rolled dice are spent (prevents gold dice farming)
+    const rolledIds = this.state.rolledDice.map(d => d.id);
+    const scoredIds = this.state.selectedForScore.map(d => d.id);
     const scoredDice = this.state.selectedForScore;
-    player.markDiceSpent(scoredIds);
+    const roundOver = this.state.totalMiles >= this.config.targetMiles || this.state.day >= this.config.maxDays;
+    player.markDiceSpent(roundOver ? rolledIds : scoredIds);
 
     // Track enhanced dice spent (Bone Collector)
     processEquipmentOnDiceSpent(player.equipment, scoredDice);

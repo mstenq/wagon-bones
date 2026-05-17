@@ -5,7 +5,7 @@ import { Die, HandType, HandResult, HandDefinition, ScoreResult, ScoreAnimEvent 
 import handsData from '../data/hands.json';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
-import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger } from './EquipmentEffects';
+import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger, processEquipmentOnDiamondDestroyed } from './EquipmentEffects';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
@@ -15,7 +15,7 @@ let nextDieId = 0;
 // ─── Dice Creation ───
 
 export function createDie(overrides?: Partial<Die>): Die {
-  return {
+  const die: Die = {
     id: `die_${nextDieId++}`,
     value: Math.ceil(Math.random() * 12),
     enhancement: null,
@@ -25,6 +25,8 @@ export function createDie(overrides?: Partial<Die>): Die {
     bonusMiles: 0,
     ...overrides,
   };
+  if (die.enhancement === 'stone') die.value = 0;
+  return die;
 }
 
 export function createPouch(count: number): Die[] {
@@ -235,12 +237,26 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   // Step 3: Per-die scoring (left to right)
   // Calculate global retrigger count (War Drums, Last Stand) once
   const globalRetriggerCount = getScoredRetriggerCount(equipment, scoreContext);
+  const firstDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[0].id : null;
+  const lastDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[handResult.scoringDice.length - 1].id : null;
   for (const die of handResult.scoringDice) {
     // red_bullet sticker: trigger this die twice
     let triggers = die.sticker === 'red_bullet' ? 2 : 1;
     // PIP_RETRIGGER: One-Eyed Jack — extra trigger for matching pip
     for (const equip of equipment) {
       if (equip.def.effectType === 'PIP_RETRIGGER' && die.value === (equip.def.effectParams.pip as number)) {
+        triggers++;
+      }
+      // FIRST_DICE_RETRIGGER: Quick Draw — retrigger first die N additional times
+      if (equip.def.effectType === 'FIRST_DICE_RETRIGGER' && die.id === firstDieId) {
+        triggers += equip.def.effectParams.value as number;
+      }
+      // LAST_DICE_RETRIGGER: Last Laugh — retrigger last die N additional times
+      if (equip.def.effectType === 'LAST_DICE_RETRIGGER' && die.id === lastDieId) {
+        triggers += equip.def.effectParams.value as number;
+      }
+      // ENHANCED_RETRIGGER: Moonshine — retrigger enhanced dice
+      if (equip.def.effectType === 'ENHANCED_RETRIGGER' && die.enhancement !== null) {
         triggers++;
       }
     }
@@ -423,6 +439,53 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
             }
             break;
           }
+          case 'LUCKY_DICE_MONEY': {
+            // Lucky Penny: lucky dice earn money when scored
+            if (die.enhancement === 'lucky') {
+              player.economy.earn(p.value as number);
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
+              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
+            }
+            break;
+          }
+          case 'BONE_DICE_XMULT_CHANCE': {
+            // Bone Charm: bone dice have chance to give xMult
+            if (die.enhancement === 'bone') {
+              const [num, den] = p.chance as [number, number];
+              if (Math.random() < num / den) {
+                xMult *= p.value as number;
+                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
+                console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value}`);
+              }
+            }
+            break;
+          }
+          case 'WOODEN_DICE_MILES': {
+            // Wood Axe: wooden dice give bonus miles
+            if (die.enhancement === 'wooden') {
+              totalValue += p.value as number;
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
+              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`);
+            }
+            break;
+          }
+          case 'IRON_DICE_MULT': {
+            // Iron Spurs: steel dice give bonus mult
+            if (die.enhancement === 'steel') {
+              bonusMult += p.value as number;
+              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
+              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
+            }
+            break;
+          }
+          case 'ENHANCEMENT_SCORED_MILES': {
+            // Covered Wagon: gains permanent miles per matching enhancement scored (only first trigger)
+            if (t === 0 && die.enhancement === (p.enhancement as string)) {
+              equip.state.miles = (equip.state.miles ?? 0) + (p.value as number);
+              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: gained +${p.value} miles (now ${equip.state.miles})`);
+            }
+            break;
+          }
         }
       }
     } // end retrigger loop
@@ -475,6 +538,34 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
             }
           }
         }
+      }
+    }
+  }
+
+  // ENHANCED_RETRIGGER: Moonshine — enhanced dice have chance of being destroyed after scoring
+  for (const equip of equipment) {
+    if (equip.def.effectType !== 'ENHANCED_RETRIGGER') continue;
+
+    const p = equip.def.effectParams as Record<string, unknown>;
+    const [num, den] = p.destroyChance as [number, number];
+    const [dNum, dDen] = p.diamondDestroyChance as [number, number];
+
+    for (const scoredDie of handResult.scoringDice) {
+      if (scoredDie.enhancement === null) continue;
+
+      const chance = scoredDie.enhancement === 'diamond' ? dNum / dDen : num / den;
+      if (Math.random() >= chance) continue;
+
+      const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
+      if (idx < 0) continue;
+
+      const wasDiamond = player.dice[idx].enhancement === 'diamond';
+      player.dice.splice(idx, 1);
+      console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced die ${scoredDie.id} (${scoredDie.enhancement})`);
+
+      // Diamond Coffin: track diamond destruction
+      if (wasDiamond) {
+        processEquipmentOnDiamondDestroyed(equipment);
       }
     }
   }

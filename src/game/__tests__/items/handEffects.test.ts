@@ -403,3 +403,63 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     expect(inst.state.targetHand).toBeLessThan(handTypes.length);
   });
 });
+
+// ─── HAND_MULT: Rail Splitter (4 straight, +8) ───
+
+describe('HAND_MULT: Rail Splitter (4 straight, +8)', () => {
+  test('activates on 4 straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6]),
+      equipment: [item('rail_splitter')],
+    });
+    // FOUR_STRAIGHT: baseMult=3, +8 = 11
+    expect(result.mult).toBe(11);
+  });
+
+  test('activates on 5 straight (contains 4 straight)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6, 7]),
+      equipment: [item('rail_splitter')],
+    });
+    // FIVE_STRAIGHT: baseMult=6, +8 = 14
+    expect(result.mult).toBe(14);
+  });
+
+  test('does not activate on pair', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('rail_splitter')],
+    });
+    expect(result.mult).toBe(1);
+  });
+});
+
+// ─── HAND_MULT: Open Range (5 straight, +12) ───
+
+describe('HAND_MULT: Open Range (5 straight, +12)', () => {
+  test('activates on 5 straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6, 7]),
+      equipment: [item('open_range')],
+    });
+    // FIVE_STRAIGHT: baseMult=6, +12 = 18
+    expect(result.mult).toBe(18);
+  });
+
+  test('does not activate on 4 straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6]),
+      equipment: [item('open_range')],
+    });
+    // FOUR_STRAIGHT: baseMult=3, no bonus
+    expect(result.mult).toBe(3);
+  });
+
+  test('does not activate on pair', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('open_range')],
+    });
+    expect(result.mult).toBe(1);
+  });
+});

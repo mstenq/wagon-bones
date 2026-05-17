@@ -1354,6 +1354,221 @@ const items: ItemDef[] = [
       return [[miles('+15'), condition(HAND_NAMES.FIVE_STRAIGHT)]];
     },
   },
+
+  // ─── Phase 6 Items ───
+  {
+    id: 'rail_splitter',
+    name: 'Rail Splitter',
+    cardTemplate: 'black-text-white-outline',
+    cost: 4,
+    rarity: 'common',
+    description: 'If played hand contains a 4 straight +8 mult',
+    effectType: 'HAND_MULT',
+    effectParams: { handType: HandType.FOUR_STRAIGHT, value: 8 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FOUR_STRAIGHT))
+        return [[mult('+8'), condition(HAND_NAMES.FOUR_STRAIGHT)], [active('Active!')]];
+      return [[mult('+8'), condition(HAND_NAMES.FOUR_STRAIGHT)], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'open_range',
+    name: 'Open Range',
+    cardTemplate: 'white-text-black-outline',
+    cost: 3,
+    rarity: 'common',
+    description: 'If played hand contains a 5 straight +12 mult',
+    effectType: 'HAND_MULT',
+    effectParams: { handType: HandType.FIVE_STRAIGHT, value: 12 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FIVE_STRAIGHT))
+        return [[mult('+12'), condition(HAND_NAMES.FIVE_STRAIGHT)], [active('Active!')]];
+      return [[mult('+12'), condition(HAND_NAMES.FIVE_STRAIGHT)], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'one_man_posse',
+    name: 'One-Man Posse',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'rare',
+    description: 'x1 mult for each empty equipment slot',
+    effectType: 'EMPTY_SLOT_XMULT',
+    effectParams: { value: 1 },
+    hintDisplay: (_game, player) => {
+      const emptySlots = player.maxEquipmentSlots - player.usedEquipmentSlots;
+      if (emptySlots > 0) return [[mult(`x${1 + emptySlots}`), condition(`${emptySlots} empty`)]];
+      return [[mult('x1'), condition('no empty slots')], [inactive('Inactive')]];
+    },
+  },
+  {
+    id: 'covered_wagon',
+    name: 'Covered Wagon',
+    cardTemplate: 'black-text-white-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Gains +30 miles for every Wood die scored',
+    effectType: 'ENHANCEMENT_SCORED_MILES',
+    effectParams: { enhancement: 'wooden', value: 30 },
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'covered_wagon');
+      const m = equip?.state.miles ?? 0;
+      if (m > 0) return [[miles(`+${m}`), condition('wooden scored')]];
+      return [[miles('+30'), condition('per wooden scored')]];
+    },
+  },
+  {
+    id: 'moonshine',
+    name: 'Moonshine',
+    cardTemplate: 'white-text',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Retrigger all enhanced dice. Enhanced dice have 1 in 6 chance of being destroyed, diamond dice 1 in 3.',
+    effectType: 'ENHANCED_RETRIGGER',
+    effectParams: { destroyChance: [1, 6], diamondDestroyChance: [1, 3] },
+    hintDisplay: () => [[text('Retrigger'), condition('enhanced dice')], [odds('1 in 6'), text('destroy')]],
+  },
+  {
+    id: 'burn_barrel',
+    name: 'Burn Barrel',
+    cardTemplate: 'black-text',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'At start of each round, destroy one standard non-enhanced die. If destroyed, earn $3.',
+    effectType: 'ROUND_START_DESTROY_STANDARD_DICE',
+    effectParams: { value: 3 },
+    hintDisplay: () => [[money('+$3'), condition('destroy standard die')]],
+  },
+  {
+    id: 'shortcut_trail',
+    name: 'Shortcut Trail',
+    cardTemplate: 'white-text',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'x0.25 mult for each round of journey skipped',
+    effectType: 'ROUNDS_SKIPPED_XMULT',
+    effectParams: { value: 0.25 },
+    initialState: { roundsSkipped: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'shortcut_trail');
+      const skipped = equip?.state.roundsSkipped ?? 0;
+      const xm = 1 + skipped * 0.25;
+      if (skipped > 0) return [[mult(`x${xm.toFixed(2)}`), condition(`${skipped} skipped`)]];
+      return [[mult('x0.25'), condition('per round skipped')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'quick_draw',
+    name: 'Quick Draw',
+    cardTemplate: 'white-text-black-outline',
+    cost: 4,
+    rarity: 'common',
+    description: 'Retrigger first played die 2 additional times',
+    effectType: 'FIRST_DICE_RETRIGGER',
+    effectParams: { value: 2 },
+    hintDisplay: () => [[text('Retrigger first'), condition('×2')]],
+  },
+  {
+    id: 'last_laugh',
+    name: 'Last Laugh',
+    cardTemplate: 'white-text',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Retrigger last played die 1 additional time',
+    effectType: 'LAST_DICE_RETRIGGER',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[text('Retrigger last'), condition('×1')]],
+  },
+  {
+    id: 'lucky_penny',
+    name: 'Lucky Penny',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'Played lucky dice earn $1 when scored',
+    effectType: 'LUCKY_DICE_MONEY',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[money('+$1'), condition('per lucky scored')]],
+  },
+  {
+    id: 'bone_charm',
+    name: 'Bone Charm',
+    cardTemplate: 'white-text',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'Played bone dice have 1 in 2 chance to give x1.5 mult',
+    effectType: 'BONE_DICE_XMULT_CHANCE',
+    effectParams: { chance: [1, 2], value: 1.5 },
+    hintDisplay: () => [[mult('x1.5'), odds('1 in 2'), condition('per bone')]],
+  },
+  {
+    id: 'wood_axe',
+    name: 'Wood Axe',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'Played wooden dice give +50 miles when scored',
+    effectType: 'WOODEN_DICE_MILES',
+    effectParams: { value: 50 },
+    hintDisplay: () => [[miles('+50'), condition('per wooden')]],
+  },
+  {
+    id: 'iron_spurs',
+    name: 'Iron Spurs',
+    cardTemplate: 'white-text',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'Played iron dice give +7 mult when scored',
+    effectType: 'IRON_DICE_MULT',
+    effectParams: { value: 7 },
+    hintDisplay: () => [[mult('+7'), condition('per steel')]],
+  },
+  {
+    id: 'diamond_coffin',
+    name: 'Diamond Coffin',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Item gains x0.75 mult for every diamond die that is destroyed',
+    effectType: 'DIAMOND_DESTROYED_XMULT',
+    effectParams: { value: 0.75 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'diamond_coffin');
+      const xm = equip?.state.xMult ?? 1;
+      if (xm > 1) return [[mult(`x${xm.toFixed(2)}`)]];
+      return [[mult('x0.75'), condition('per diamond destroyed')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'counterfeit_goods',
+    name: 'Counterfeit Goods',
+    cardTemplate: 'white-text',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Allows items/trail guides/supplies/frontier encounter cards to appear multiple times in the shop and packs',
+    effectType: 'ALLOW_DUPLICATES',
+    effectParams: {},
+    hintDisplay: () => [[active('Duplicates allowed')]],
+  },
+  {
+    id: 'rainbow_trail',
+    name: 'Rainbow Trail',
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'x2 if 2 different enhanced dice score, x3 if 3, x4 if 4, x5 if 5 different',
+    effectType: 'RAINBOW_TRAIL_XMULT',
+    effectParams: {},
+    hintDisplay: (game) => {
+      if (game && game.state.selectedForScore?.length > 0) {
+        const types = new Set(game.state.selectedForScore.filter((d) => d.enhancement !== null).map((d) => d.enhancement));
+        if (types.size >= 2) return [[mult(`x${types.size + 1 - 1}`), active(`${types.size} types`)]];
+      }
+      return [[mult('x2-5'), condition('diverse enhancements')]];
+    },
+  },
 ];
 
 export default items;

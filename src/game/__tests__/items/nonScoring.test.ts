@@ -497,3 +497,102 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     expect(result.miles).toBe(120);
   });
 });
+
+// ─── FIRST_DICE_RETRIGGER: Quick Draw ───
+
+describe('FIRST_DICE_RETRIGGER: Quick Draw', () => {
+  test('retriggers first die 2 additional times', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('quick_draw')],
+    });
+    // PAIR: baseMiles=10, first die triggers 3x (5+5+5) + second die 1x (5) = 20
+    expect(result.totalValue).toBe(20);
+  });
+
+  test('does not retrigger non-first dice', () => {
+    const scoredDice = [die({ value: 3 }), die({ value: 3 })];
+    const { result } = calculateTestScore({
+      scoredDice,
+      equipment: [item('quick_draw')],
+    });
+    // First die triggers 3x (3+3+3) + second die 1x (3) = 12
+    expect(result.totalValue).toBe(12);
+  });
+
+  test('retrigger includes enhancement effects', () => {
+    const scoredDice = [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })];
+    const { result } = calculateTestScore({
+      scoredDice,
+      equipment: [item('quick_draw')],
+    });
+    // First die (bone) triggers 3x: value 5*3=15, bone +4mult*3=12
+    // Second die 1x: value 5
+    // totalValue=20, baseMult=1+12=13
+    expect(result.totalValue).toBe(20);
+    expect(result.mult).toBe(13);
+  });
+});
+
+// ─── LAST_DICE_RETRIGGER: Last Laugh ───
+
+describe('LAST_DICE_RETRIGGER: Last Laugh', () => {
+  test('retriggers last die 1 additional time', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('last_laugh')],
+    });
+    // PAIR: first die 1x (5) + last die 2x (5+5) = 15
+    expect(result.totalValue).toBe(15);
+  });
+
+  test('single die is both first and last — applies both if both equipped', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 8 })],
+      equipment: [item('quick_draw'), item('last_laugh')],
+    });
+    // HIGH_VALUE: die is first AND last, quick_draw +2, last_laugh +1 = 4 triggers
+    // totalValue = 8*4 = 32
+    expect(result.totalValue).toBe(32);
+  });
+});
+
+// ─── ENHANCED_RETRIGGER: Moonshine ───
+
+describe('ENHANCED_RETRIGGER: Moonshine', () => {
+  test('retriggers enhanced dice once', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
+      equipment: [item('moonshine')],
+    });
+    // PAIR: bone die triggers 2x: value 5+5=10, bone +4+4=8
+    // non-enhanced die 1x: value 5
+    // totalValue=15, baseMult=1+8=9
+    expect(result.totalValue).toBe(15);
+    expect(result.mult).toBe(9);
+  });
+
+  test('does not retrigger non-enhanced dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('moonshine')],
+    });
+    // PAIR: both dice trigger 1x (no enhancement), totalValue=10
+    expect(result.totalValue).toBe(10);
+  });
+});
+
+// ─── ALLOW_DUPLICATES: Counterfeit Goods ───
+
+describe('ALLOW_DUPLICATES: Counterfeit Goods', () => {
+  test('has correct effect type', () => {
+    const inst = item('counterfeit_goods');
+    expect(inst.def.effectType).toBe('ALLOW_DUPLICATES');
+  });
+
+  test('item exists and has correct cost', () => {
+    const inst = item('counterfeit_goods');
+    expect(inst.def.cost).toBe(5);
+    expect(inst.def.rarity).toBe('uncommon');
+  });
+});

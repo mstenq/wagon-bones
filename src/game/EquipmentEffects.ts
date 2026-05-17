@@ -269,6 +269,10 @@ export function applyEquipmentEffects(
       case 'XMULT_RISKY':
       case 'REPEAT_HAND_XMULT':
       case 'ROUND_START_XMULT_DESTROY':
+      case 'EMPTY_SLOT_XMULT':
+      case 'ROUNDS_SKIPPED_XMULT':
+      case 'DIAMOND_DESTROYED_XMULT':
+      case 'RAINBOW_TRAIL_XMULT':
         // These are xMult effects, handled in the xMult pass below
         break;
 
@@ -308,6 +312,16 @@ export function applyEquipmentEffects(
 
       case 'HAND_MILES_GAIN': {
         // Manifest Destiny: accumulated miles apply during scoring
+        const val = equip.state.miles ?? 0;
+        if (val > 0) {
+          bonusMiles += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+        }
+        break;
+      }
+
+      case 'ENHANCEMENT_SCORED_MILES': {
+        // Covered Wagon: accumulated miles apply during scoring
         const val = equip.state.miles ?? 0;
         if (val > 0) {
           bonusMiles += val;
@@ -469,6 +483,54 @@ export function applyEquipmentEffects(
           finalMult *= xm;
           animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
           console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'EMPTY_SLOT_XMULT': {
+        // One-Man Posse: x1 per empty equipment slot
+        const player = getPlayerState();
+        const emptySlots = player.maxEquipmentSlots - player.usedEquipmentSlots;
+        if (emptySlots > 0) {
+          const xVal = 1 + emptySlots * ((equip.def.effectParams as Record<string, unknown>).value as number);
+          finalMult *= xVal;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (${emptySlots} empty slots) (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'ROUNDS_SKIPPED_XMULT': {
+        // Shortcut Trail: x0.25 per round of journey skipped (tracked in state)
+        const skipped = equip.state.roundsSkipped ?? 0;
+        if (skipped > 0) {
+          const xVal = 1 + skipped * ((equip.def.effectParams as Record<string, unknown>).value as number);
+          finalMult *= xVal;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (${skipped} rounds skipped) (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'DIAMOND_DESTROYED_XMULT': {
+        // Diamond Coffin: accumulated xMult from diamond destruction
+        const xm = equip.state.xMult ?? 1;
+        if (xm > 1) {
+          finalMult *= xm;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'RAINBOW_TRAIL_XMULT': {
+        // Rainbow Trail: xN based on number of different enhancement types scored
+        const enhTypes = new Set(
+          context.scoringDice
+            .filter((d) => d.enhancement !== null)
+            .map((d) => d.enhancement),
+        );
+        if (enhTypes.size >= 2) {
+          const xVal = enhTypes.size;
+          finalMult *= xVal;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (${enhTypes.size} enhancement types) (finalMult: ${finalMult})`);
         }
         break;
       }
@@ -919,7 +981,7 @@ export interface AnimatedDestruction {
 /** Called at the start of each round. Updates/removes decaying equipment.
  *  Returns indices of equipment to remove. Equipment is processed left-to-right;
  *  if one item destroys another that hasn't triggered yet, the destroyed item is skipped. */
-export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean } {
+export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean; burnBarrelMoney: number; burnBarrelTriggered: boolean } {
   const destroyedIndices: number[] = [];
   const animatedDestructions: AnimatedDestruction[] = [];
   const pendingAnimatedDestroy = new Set<number>(); // indices pending animated destruction
@@ -928,6 +990,8 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
   let stoneDiceToAdd = 0;
   let daysBonus = 0;
   let loseAllRerolls = false;
+  let burnBarrelMoney = 0;
+  let burnBarrelTriggered = false;
   for (let i = 0; i < equipment.length; i++) {
     // Skip items already destroyed by a previous item this round
     if (pendingAnimatedDestroy.has(i) || destroyedIndices.includes(i)) continue;
@@ -970,6 +1034,20 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
         // Hardtack: +days, lose all rerolls
         daysBonus += equip.def.effectParams.days as number;
         loseAllRerolls = true;
+        break;
+      }
+      case 'ROUND_START_DESTROY_STANDARD_DICE': {
+        // Burn Barrel: destroy one standard non-enhanced die and earn money
+        const player = getPlayerState();
+        const standardIdx = player.dice.findIndex((d) => d.enhancement === null);
+        if (standardIdx >= 0) {
+          player.dice.splice(standardIdx, 1);
+          const moneyVal = equip.def.effectParams.value as number;
+          player.economy.earn(moneyVal);
+          burnBarrelMoney += moneyVal;
+          burnBarrelTriggered = true;
+          console.log(`  [equip] ${equip.def.name}: destroyed standard die, earned $${moneyVal}`);
+        }
         break;
       }
       case 'WANTED_HAND_MONEY': {
@@ -1019,7 +1097,7 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
         break;
     }
   }
-  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, daysBonus, loseAllRerolls };
+  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, daysBonus, loseAllRerolls, burnBarrelMoney, burnBarrelTriggered };
 }
 
 /** Called at the end of each day. Updates War Drums counter and Trail Tax. */
@@ -1120,4 +1198,13 @@ export function processEquipmentOnPackOpened(equipment: EquipmentInstance[]): bo
     }
   }
   return false;
+}
+
+/** Called when a diamond die is destroyed. Updates Diamond Coffin. */
+export function processEquipmentOnDiamondDestroyed(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'DIAMOND_DESTROYED_XMULT') {
+      equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
+    }
+  }
 }

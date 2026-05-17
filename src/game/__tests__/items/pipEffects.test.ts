@@ -168,3 +168,154 @@ describe('PERMANENT_DIE_MILES_GAIN: Cowboy Boots', () => {
     expect(result.miles).toBe(30);
   });
 });
+
+// ─── LUCKY_DICE_MONEY: Lucky Penny ───
+
+describe('LUCKY_DICE_MONEY: Lucky Penny', () => {
+  test('lucky dice earn $1 when scored', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'lucky' }), die({ value: 5 })],
+      equipment: [item('lucky_penny')],
+      money: 10,
+    });
+    // 1 lucky die → $1
+    expect(player.economy.balance).toBe(11);
+  });
+
+  test('multiple lucky dice each earn money', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'lucky' }), die({ value: 5, enhancement: 'lucky' })],
+      equipment: [item('lucky_penny')],
+      money: 10,
+    });
+    // 2 lucky dice → $2
+    expect(player.economy.balance).toBe(12);
+  });
+
+  test('no money from non-lucky dice', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
+      equipment: [item('lucky_penny')],
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(10);
+  });
+});
+
+// ─── WOODEN_DICE_MILES: Wood Axe ───
+
+describe('WOODEN_DICE_MILES: Wood Axe', () => {
+  test('wooden dice give +50 miles', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [item('wood_axe')],
+    });
+    // PAIR: baseMiles=10, totalValue: 5+10(wooden enh)+50(wood axe)+5 = 70, miles=(10+70)*1=80
+    expect(result.miles).toBe(80);
+  });
+
+  test('multiple wooden dice each get bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'wooden' })],
+      equipment: [item('wood_axe')],
+    });
+    // PAIR: baseMiles=10, totalValue: (5+10+50)+(5+10+50)=130, miles=(10+130)*1=140
+    expect(result.miles).toBe(140);
+  });
+
+  test('no bonus from non-wooden dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
+      equipment: [item('wood_axe')],
+    });
+    // PAIR: baseMiles=10, totalValue=5+5=10, mult=1+4(bone)=5
+    // miles=(10+10)*5=100
+    expect(result.miles).toBe(100);
+  });
+});
+
+// ─── IRON_DICE_MULT: Iron Spurs ───
+
+describe('IRON_DICE_MULT: Iron Spurs', () => {
+  test('steel dice give +7 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'steel' }), die({ value: 5 })],
+      equipment: [item('iron_spurs')],
+    });
+    // PAIR: baseMult=1, +7 from iron spurs = 8
+    expect(result.mult).toBe(8);
+  });
+
+  test('multiple steel dice each get bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'steel' }), die({ value: 5, enhancement: 'steel' })],
+      equipment: [item('iron_spurs')],
+    });
+    // PAIR: baseMult=1, +7+7=15 from iron spurs = 15
+    expect(result.mult).toBe(15);
+  });
+
+  test('no bonus from non-steel dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
+      equipment: [item('iron_spurs')],
+    });
+    // PAIR: baseMult=1+4(bone)=5, no iron spurs bonus
+    expect(result.mult).toBe(5);
+  });
+});
+
+// ─── ENHANCEMENT_SCORED_MILES: Covered Wagon ───
+
+describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
+  test('gains +30 miles when wooden die is scored', () => {
+    const inst = item('covered_wagon');
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [inst],
+    });
+    // Miles gained: +30 from wooden scored (stored in state)
+    expect(inst.state.miles).toBe(30);
+  });
+
+  test('accumulates across multiple wooden dice', () => {
+    const inst = item('covered_wagon');
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'wooden' })],
+      equipment: [inst],
+    });
+    expect(inst.state.miles).toBe(60);
+  });
+
+  test('does not gain from non-wooden dice', () => {
+    const inst = item('covered_wagon');
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
+      equipment: [inst],
+    });
+    expect(inst.state.miles).toBe(0);
+  });
+});
+
+// ─── BONE_DICE_XMULT_CHANCE: Bone Charm ───
+
+describe('BONE_DICE_XMULT_CHANCE: Bone Charm', () => {
+  test('has correct effect type and params', () => {
+    const inst = item('bone_charm');
+    expect(inst.def.effectType).toBe('BONE_DICE_XMULT_CHANCE');
+    expect(inst.def.effectParams.chance).toEqual([1, 2]);
+    expect(inst.def.effectParams.value).toBe(1.5);
+  });
+
+  test('does not trigger on non-bone dice', () => {
+    // With non-bone dice, the effect should never apply regardless of RNG
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [item('bone_charm')],
+    });
+    // PAIR: baseMult=1, no bone charm trigger, xMult stays 1
+    // The mult should only include base (1) — no x1.5
+    // wooden gives +10 miles but no mult
+    expect(result.mult).toBe(1);
+  });
+});

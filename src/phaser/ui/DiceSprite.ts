@@ -241,23 +241,15 @@ export class DiceSprite extends GameObjects.Container {
     this.bg.closePath();
     this.bg.strokePath();
 
-    // Enhancement accent on front face edge
-    if (this._dieData.enhancement && !isGrimy) {
-      const labelColor = getEnhancementLabelColor(this._dieData.enhancement);
-      this.bg.lineStyle(2, labelColor, 0.7);
-      this.bg.beginPath();
-      this.bg.moveTo(inner[3][0], inner[3][1]);
-      this.bg.lineTo(inner[4][0], inner[4][1]);
-      this.bg.closePath();
-      this.bg.strokePath();
-    }
 
     // Number text on front face (only if not grimy)
     if (!isGrimy && this._dieData.value > 0) {
       const textColor = hasEnhancement ? getEnhancementPipColor(this._dieData.enhancement!) : PIP_COLOR;
+      const enhInfo = hasEnhancement ? ENHANCEMENT_INFO.get(this._dieData.enhancement!) : null;
+      const fontFamily = enhInfo?.fontFamily ?? 'Arial Black';
       this.valueText.setStyle({
-        fontFamily: 'Arial Black',
-        fontSize: this._dieData.value >= 10 ? '15px' : '18px',
+        fontFamily,
+        fontSize: this._dieData.value >= 10 ? '21px' : '24px',
         color: '#' + textColor.toString(16).padStart(6, '0'),
         stroke: '#00000033',
         strokeThickness: 1,
@@ -446,14 +438,14 @@ export class DiceSprite extends GameObjects.Container {
 
 function getEnhancementColor(e: string): number {
   const colors: Record<string, number> = {
-    bone: 0xd4c9a8,
-    lucky: 0x4caf50,
-    wooden: 0x8b6914,
-    steel: 0x808080,
-    gold: 0xcaab02,
-    loaded: 0xcc3333,
+    bone: 0x8e8467,
+    lucky: 0x0e7512,
+    wooden: 0x6e5107,
+    steel: 0x575757,
+    gold: 0x897403,
+    loaded: 0x950a0a,
     diamond: 0x00bcd4,
-    stone: 0x666666,
+    stone: 0x027685,
   };
   return colors[e] ?? 0xffffff;
 }
@@ -461,7 +453,7 @@ function getEnhancementColor(e: string): number {
 /** Full background color for enhanced dice — tinted but visible */
 function getEnhancementBgColor(e: string): number {
   const colors: Record<string, number> = {
-    bone: 0xe8dcc8, // warm cream/bone
+    bone: 0xd4c8b0, // warm cream/bone
     lucky: 0xc8f0c8, // light green
     wooden: 0xc4a055, // wood brown
     steel: 0xa8a8b0, // steel grey

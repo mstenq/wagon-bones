@@ -340,3 +340,36 @@ describe('Funeral Pyre + Haunted Totem interactions', () => {
     expect(result.animatedDestructions[1]).toEqual({ sourceIdx: 2, victimIdx: 0 });
   });
 });
+
+// ─── ROUND_START_DESTROY_STANDARD_DICE: Burn Barrel ───
+
+describe('ROUND_START_DESTROY_STANDARD_DICE: Burn Barrel', () => {
+  test('destroys one standard die and earns $3', () => {
+    const inst = item('burn_barrel');
+    const { player } = setupGame({
+      equipment: [inst],
+      money: 10,
+      dice: [die({ value: 5 }), die({ value: 3 }), die({ value: 7, enhancement: 'bone' })],
+    });
+    const result = processEquipmentOnRoundStart([inst]);
+    expect(result.burnBarrelTriggered).toBe(true);
+    expect(result.burnBarrelMoney).toBe(3);
+    // One standard die removed, enhanced one remains + 1 standard
+    expect(player.dice.length).toBe(2);
+    expect(player.economy.balance).toBe(13);
+  });
+
+  test('does nothing if no standard dice available', () => {
+    const inst = item('burn_barrel');
+    const { player } = setupGame({
+      equipment: [inst],
+      money: 10,
+      dice: [die({ value: 5, enhancement: 'bone' }), die({ value: 3, enhancement: 'steel' })],
+    });
+    const result = processEquipmentOnRoundStart([inst]);
+    expect(result.burnBarrelTriggered).toBe(false);
+    expect(result.burnBarrelMoney).toBe(0);
+    expect(player.dice.length).toBe(2);
+    expect(player.economy.balance).toBe(10);
+  });
+});

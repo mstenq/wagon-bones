@@ -67,8 +67,8 @@ Rail Line - $4 - if played hand contains straight 4 +80 miles
 Long Haul - $4 - if played hand contains straight 5 +100 miles
 Silver Bullets - $5 - retrigger all dice held in hands (blue pips/gold dice/etc)
 Bank Note - $1 go up to $20 in debt. When Charles Whitlock (Banker) sells this equipment, his debt is wiped clean. 
-Funeral Pyre - $6 - When starting leg of journey, permanently destroy equipment to right and add double its sell value as mult
-Quarry Stone - $6 - add one stone dice to collection when starting leg
+Funeral Pyre - $6 - When starting a round, permanently destroy equipment to right and add double its sell value as mult
+Quarry Stone - $6 - add one stone dice to collection when starting round
 Six Shooter - $5 - x4 mult every 6th hand played
 Wild Card - $4 - +0 - +23 mult (Random)
 Snake Eyes - $5 - 1 in 4 chance to get supply card when a 1 is scored. Abigail Turner (Merchant) has a 1 in 2 chance.
@@ -86,28 +86,28 @@ Marked - $6 - +1 mult per hand played without scoring a 6. Scoring a 6 resets mu
 Surveyor’s Transit - $5 - 1 in 4 chance to upgrade trail knowledge of hand type played. 1 in 2 chance if used by Elias Mercer (Surveryor).
 Guide Lantern - $6 - gain x0.1 mult for every trail guide used. Caleb Winters (Scout) gains x0.2 mult for every trail guide used.
 Steam Engine - $5 - gains +100 miles. -5 miles per hand played.
-Bloodline - $8 - if first day of leg only scores one dice, add a permanent copy of that dice to your collection and draw it into your hand
+Bloodline - $8 - if first day of round only scores one dice, add a permanent copy of that dice to your collection and draw it into your hand
 Open Palm - $3 - all dice count when scoring 
 Hellfire Round - $6 - if first hand of round is an enhanced 6, destroy it and gain a "Frontier Encounter" card
 Cowboy Boots - $5 - every played dice permanently gains +5 miles when scored
 Trail Tax - $4 - +2 mult per day travelled, -1 mult per re-roll used
-Wanted Poster - $4 - earn $4 if hand is [hand]. Changes each leg of journey. Nathan Cole (Hunter) gains $8.
+Wanted Poster - $4 - earn $4 if hand is [hand]. Changes each round of journey. Nathan Cole (Hunter) gains $8.
 
 ## Phase 5
 Nitro - $4 - x3 mult. 1 in 1000 chance of being destroyed at end of round. Can only be purchased if dynamite has been purchased and it has self destructed.
-Repeat Offender - $6 - x3 mult if played hand has already been played this leg
+Repeat Offender - $6 - x3 mult if played hand has already been played this round
 Tight Fist - $5 - gains +3 mult when any booster pack is skipped
-Haunted Totem - $4 - gains x0.5mult when small/big leg is started (Destroys one random joker)
+Haunted Totem - $4 - gains x0.5mult when small/big round is started (Destroys one random joker)
 Square Dance - $4 - gains +4 miles if played hand has exactly 4 dice (they do not all have to score)
-Junk Dealer - $6 - when leg starts create 2 common pieces of equipment (Random equipment can have auras)
+Junk Dealer - $6 - when round starts create 2 common pieces of equipment (Random equipment can have auras)
 New Blood - $7 - gains x0.25 mult for every new dice added to collection
 Emergency Supplies - $8 - create a random supply card if hand is played with less than $4 or less. Dr. Eleanor Sykes (Doctor) gets a supply card if hand is played with $8 or less.
 Railroad Bonds - $6 - earn $1 at end of round, increased by $2 for every boss defeated
 Leftovers - $4 - 1 in 2 chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a guaranteed chance.
 Campfire Stories - $6 - +1 mult per supply card used this journey
 Quarry Mine - $6 - +25 miles for each stone dice in collection
-Antique Revolver - $4 - When leg starts gain $3 of sell value to current card
-Hardtack - $6 - When leg starts gain +3 days, and lose all rerolls
+Antique Revolver - $4 - When round starts gain $3 of sell value to current card
+Hardtack - $6 - When round starts gain +3 days, and lose all rerolls
 Manifest Destiny - $5 - gains +15 miles if hand contains a 5 straight
 
 ## Phase 6
@@ -116,9 +116,8 @@ Open Range - $3 - if played hand contains straight 5 +12 mult
 One-Man Posse  - $8 - x1 mult for each empty equipment slot
 Covered Wagon - $6 - Gains +5 miles for every Wood die scored. 
 Moonshine - $6 - retrigger all enhanced dice - enhanced dice have 1 in 6 chance of being destroyed, diamond dice a 1 in 3 chance
-Burn Barrel - $6 - at the start of each leg automatically destroy one standard non-enhanced dice if available, if dice is destroyed earn $3
-Bounty Contract - $6 - sell this item to gain a free double tag 
-Shortcut Trail - $6 - x0.25 mult for each leg of journey skipped
+Burn Barrel - $6 - at the start of each round automatically destroy one standard non-enhanced dice if available, if dice is destroyed earn $3
+Shortcut Trail - $6 - x0.25 mult for each round of journey skipped
 Quick Draw - $4 - retrigger first played dice 2 additional times
 Last Laugh - $5 - retrigger last dice 1 additional time
 Lucky Penny - $7 - played lucky cards earn $1 dollar when scored
@@ -126,7 +125,7 @@ Bone Charm - $7 - played bone dice have 1 in 2 chance to give x1.5 mult
 Wood Axe - $7 - played wooden dice give +50 miles when scored
 Iron Spurs - $7 - played iron dice give +7 mult when scored
 Diamond Coffin - $6 - item gains x0.75 mult for every diamond dice that is destroyed
-Counterfeit Goods - $5 - allows for items/trail guides/supplies/frontier encounter cards to appear multiple times
+Counterfeit Goods - $5 - allows for items/trail guides/supplies/frontier encounter cards to appear multiple times in the shop and packs
 Rainbow Trail - $5 - x2 if 2 different enhanced dice (wood/bone/lucky/steel/gold/diamond) score, x3 if 3 different, x4 if 4, x5 if 5 different score
 
 ## Phase 7
@@ -153,7 +152,7 @@ Trailblazer - $8 - earns x0.2 mult per consecutive hand played without playing y
 Golden Spike - $7 - all scored dice have a 1 in 4 chance to turn into a gold dice
 Sheriff’s Badge - $5 - sell this item to disable the current boss effect
 Double Barrel - $5 - first played 2 pip dice gives x2 mult when scored
-Raffle Ticket - $6 - at the end of each leg add $1 of sell value to each piece of equipment
+Raffle Ticket - $6 - at the end of each round add $1 of sell value to each piece of equipment
 Ghost Town - $6 - +10 mult for each dice below the collections starting size
 Savings Account - $5 - earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.
 
@@ -165,4 +164,5 @@ Saint Elmo’s Shield - $? - Disables all boss round effects and all negative ef
 Ghost Lantern - $? - Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
 
 
- 
+ ## Requires features before implementing
+ Bounty Contract - $6 - sell this item to gain a free double tag 

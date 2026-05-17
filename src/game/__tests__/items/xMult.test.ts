@@ -10,8 +10,9 @@ import {
   processEquipmentAfterHandScored,
   processEquipmentOnRoundStart,
   processEquipmentOnDiceAdded,
+  processEquipmentOnDiamondDestroyed,
 } from '../../EquipmentEffects';
-import { executeConsumableEffect, createConsumableInstance } from '../../ConsumablesSystem';
+import { executeConsumableEffect, createConsumableInstance, createTrailGuideConsumableDef } from '../../ConsumablesSystem';
 import { HandType } from '../../types';
 import trailGuidesData from '../../../data/trail_guides.json';
 
@@ -334,15 +335,7 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
 
   test('gains x0.1 when a trail guide is used', () => {
     const { player } = setupGame({ equipment: [item('guide_lantern')] });
-    const tgData = trailGuidesData[0] as { id: string; name: string; handType: string };
-    const tgDef = {
-      id: tgData.id,
-      name: tgData.name,
-      description: '',
-      category: 'trail_guide' as const,
-      handType: tgData.handType,
-      sellValue: 1,
-    };
+    const tgDef = createTrailGuideConsumableDef(trailGuidesData[0]);
     const consumed = createConsumableInstance(tgDef);
     executeConsumableEffect(consumed, player);
 
@@ -485,5 +478,119 @@ describe('STATEFUL_XMULT: New Blood', () => {
     const { player } = setupGame({ equipment: [inst] });
     player.addDie({ id: '', value: 5, enhancement: null, sticker: null, aura: null, isGrimy: false, bonusMiles: 0 });
     expect(inst.state.xMult).toBeCloseTo(1.25, 5);
+  });
+});
+
+// ─── EMPTY_SLOT_XMULT: One-Man Posse ───
+
+describe('EMPTY_SLOT_XMULT: One-Man Posse', () => {
+  test('x1 per empty slot (with 3 empty)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('one_man_posse')],
+    });
+    // Default maxEquipmentSlots=5, usedSlots=1 (one_man_posse), empty=4
+    // PAIR: baseMult=1, x(1+4)=x5
+    expect(result.mult).toBe(5);
+  });
+
+  test('no bonus when all slots full', () => {
+    const { result, player } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('one_man_posse'), item('horseshoe'), item('horseshoe'), item('horseshoe'), item('horseshoe')],
+    });
+    // maxEquipmentSlots=5, usedSlots=5, empty=0
+    // PAIR: baseMult=1, +4+4+4+4=17 from horseshoes, x1 from posse (no empty)
+    expect(result.mult).toBe(17);
+  });
+});
+
+// ─── ROUNDS_SKIPPED_XMULT: Shortcut Trail ───
+
+describe('ROUNDS_SKIPPED_XMULT: Shortcut Trail', () => {
+  test('no bonus when no rounds skipped (initial state)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('shortcut_trail')],
+    });
+    // No rounds skipped → no bonus
+    expect(result.mult).toBe(1);
+  });
+
+  test('activates based on roundsSkipped state', () => {
+    const inst = itemWithState('shortcut_trail', { roundsSkipped: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR: baseMult=1, x(1+2*0.25)=x1.5
+    expect(result.mult).toBeCloseTo(1.5, 5);
+  });
+});
+
+// ─── DIAMOND_DESTROYED_XMULT: Diamond Coffin ───
+
+describe('DIAMOND_DESTROYED_XMULT: Diamond Coffin', () => {
+  test('starts at x1', () => {
+    const inst = item('diamond_coffin');
+    expect(inst.state.xMult).toBe(1);
+  });
+
+  test('gains x0.75 per diamond destroyed', () => {
+    const inst = item('diamond_coffin');
+    processEquipmentOnDiamondDestroyed([inst]);
+    expect(inst.state.xMult).toBeCloseTo(1.75, 5);
+    processEquipmentOnDiamondDestroyed([inst]);
+    expect(inst.state.xMult).toBeCloseTo(2.5, 5);
+  });
+
+  test('accumulated xMult applies during scoring', () => {
+    const inst = itemWithState('diamond_coffin', { xMult: 2.5 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR: baseMult=1, x2.5
+    expect(result.mult).toBeCloseTo(2.5, 5);
+  });
+});
+
+// ─── RAINBOW_TRAIL_XMULT: Rainbow Trail ───
+
+describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
+  test('x2 with 2 different enhancement types scored', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'wooden' })],
+      equipment: [item('rainbow_trail')],
+    });
+    // PAIR: baseMult=1+4(bone) = 5, x2 from rainbow trail
+    expect(result.mult).toBe(10);
+  });
+
+  test('x3 with 3 different enhancement types scored', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'steel' })],
+      equipment: [item('rainbow_trail')],
+    });
+    // THREE_OF_A_KIND: baseMult=3+4(bone) = 7, x3 from rainbow trail
+    expect(result.mult).toBe(21);
+  });
+
+  test('no bonus with only 1 enhancement type', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'bone' })],
+      equipment: [item('rainbow_trail')],
+    });
+    // PAIR: baseMult=1+4+4(bone)=9, no rainbow bonus (only 1 type)
+    expect(result.mult).toBe(9);
+  });
+
+  test('no bonus with no enhanced dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('rainbow_trail')],
+    });
+    // PAIR: baseMult=1, no bonus
+    expect(result.mult).toBe(1);
   });
 });
