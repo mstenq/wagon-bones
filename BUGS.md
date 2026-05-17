@@ -13,6 +13,7 @@
 - priests_blessing didn't give holy aura to my 1 piece of equipment that I had.
 - dynamite needs to add a custom animation saying either "safe!" or an explosion animate as its removed. Otherwise it just leaves without you noticing.
 - quarry stone - started round and didn't see any added stone dice until the game after. Maybe we could just hook into the animation system and show an animation for getting the stone dice like mystery crate does.
+- magic_beans created "Nitro" and i had never gotten dynamite and had it explode first. The random generation needs to filter out nitro unless dynamite was destroyed naturally.
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.

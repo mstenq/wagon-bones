@@ -16,8 +16,10 @@ import {
   executeConsumableEffect,
   useConsumableDirectly,
   getConsumableTexturePrefix,
+  getRandomSupplyDef,
 } from '../../game/ConsumablesSystem';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
+import { processEquipmentOnPackSkipped, processEquipmentOnPackOpened } from '../../game/EquipmentEffects';
 import { Die, HandType, HandDefinition } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
@@ -108,6 +110,14 @@ export class BoosterPackScene extends Scene {
     this.cardSprites = [];
     this.selectedDiceIds = new Set();
     this.activeTabCard = null;
+
+    // Process pack-opened equipment effects (Leftovers: chance to grant supply card)
+    const player = getPlayerState();
+    const grantSupply = processEquipmentOnPackOpened(player.equipment);
+    if (grantSupply) {
+      const supplyDef = getRandomSupplyDef();
+      player.addConsumable(supplyDef);
+    }
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
@@ -1092,6 +1102,8 @@ export class BoosterPackScene extends Scene {
   }
 
   private onSkip(): void {
+    const player = getPlayerState();
+    processEquipmentOnPackSkipped(player.equipment);
     this.scene.start('Shop');
   }
 

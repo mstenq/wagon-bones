@@ -14,6 +14,7 @@ import {
   createEmptyModifiers,
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
+import { GAMEPLAY } from '../Constants';
 
 beforeEach(() => {
   resetDieIds();
@@ -384,7 +385,7 @@ describe('Effect application', () => {
     player.trailEventModifiers = mods;
     game.startRound();
     // base 6 - 3 = 3
-    expect(game.config.maxRerolls).toBe(3);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 3);
   });
 
   test('LOSE_ALL_REROLLS sets maxRerolls to 0 in next round', () => {
@@ -403,7 +404,7 @@ describe('Effect application', () => {
     player.trailEventModifiers = mods;
     game.startRound();
     // base handSize 8 - 2 = 6
-    expect(game.config.rollSize).toBe(6);
+    expect(game.config.rollSize).toBe(GAMEPLAY.ROLL_SIZE - 2);
   });
 
   test('LOSE_RANDOM_DICE removes only enhanced dice from player', () => {
@@ -664,11 +665,11 @@ describe('Effect application', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_REROLLS_PER_DAY', amount: 1 }, player, mods);
     // 1 reroll/day * 4 days = 4 reroll penalty
-    expect(mods.rerollPenalty).toBe(4);
+    expect(mods.rerollPenalty).toBe(GAMEPLAY.MAX_DAYS * 1);
     player.trailEventModifiers = mods;
     game.startRound();
     // base 6 - 4 = 2 rerolls
-    expect(game.config.maxRerolls).toBe(2);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - GAMEPLAY.MAX_DAYS * 1);
   });
 });
 
@@ -795,7 +796,7 @@ describe('Round modifier integration', () => {
 
     // Verify effects were applied
     expect(game.config.maxDays).toBe(2);
-    expect(game.config.maxRerolls).toBe(5);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
     expect(game.config.targetMiles).toBe(1500);
 
     // Verify modifiers are cleared after consumption

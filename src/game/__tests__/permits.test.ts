@@ -29,11 +29,11 @@ beforeEach(() => {
 // ─── Reroll Overhaul ───
 
 describe('Reroll overhaul (per-round, not per-day)', () => {
-  test('rerolls start at 6 per round', () => {
+  test('rerolls start at N per round', () => {
     const { game } = setupGame();
     game.startRound();
-    expect(game.state.rerollsRemaining).toBe(6);
-    expect(game.config.maxRerolls).toBe(6);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS);
   });
 
   test('rerolls are NOT reset between days', () => {
@@ -44,7 +44,7 @@ describe('Reroll overhaul (per-round, not per-day)', () => {
     game.selectForRoll(game.state.hand.slice(0, 5).map((d) => d.id));
     game.reroll([game.state.rolledDice[0].id]);
     game.reroll([game.state.rolledDice[1].id]);
-    expect(game.state.rerollsRemaining).toBe(4);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS - 2);
 
     // Score and end day
     game.selectForScore(game.state.rolledDice.slice(0, 2).map((d) => d.id));
@@ -52,13 +52,13 @@ describe('Reroll overhaul (per-round, not per-day)', () => {
     game.endDay();
 
     // Rerolls should persist (not reset to 6)
-    expect(game.state.rerollsRemaining).toBe(4);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS - 2);
   });
 
   test('rerolls reset at the start of a new round', () => {
     const { game } = setupGame();
     game.startRound();
-    expect(game.state.rerollsRemaining).toBe(6);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS);
   });
 });
 

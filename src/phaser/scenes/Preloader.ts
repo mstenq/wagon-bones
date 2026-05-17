@@ -107,6 +107,8 @@ export class Preloader extends Scene {
     this.load.audio('sfx_card_fan', 'assets/sounds/cardFan2.ogg');
     this.load.audio('sfx_crumple1', 'assets/sounds/crumple1.ogg');
     this.load.audio('sfx_polychrome1', 'assets/sounds/polychrome1.ogg');
+    this.load.audio('sfx_ambient_fire', 'assets/sounds/ambientFire1.ogg');
+    this.load.audio('sfx_slice1', 'assets/sounds/slice1.ogg');
 
 
     // Background music

@@ -5,7 +5,16 @@
 // ─── Hint System Types ───
 
 /** Card template overlay identifier — matches filename in assets/card-templates/ */
-export type CardTemplate = 'white-text' | 'black-text' | 'white-text-black-outline' | 'black-text-white-outline' | 'marked' | 'hellfire';
+export type CardTemplate = 'white-text' | 
+'white-text-noborder' | 
+'black-text' | 
+'black-text-noborder' | 
+'white-text-black-outline' | 
+'white-text-black-outline-noborder' | 
+'black-text-white-outline' | 
+'black-text-white-outline-noborder' | 
+'marked' | 
+'hellfire';
 
 /** Visual style for a hint segment */
 export type HintStyle =
@@ -263,7 +272,7 @@ const items: ItemDef[] = [
   {
     id: 'deadeye',
     name: 'Deadeye',
-    cardTemplate: "white-text",
+    cardTemplate: "black-text-white-outline",
     cost: 5,
     rarity: 'uncommon',
     description: '+20 mult if 3 or fewer dice are scored',
@@ -624,7 +633,7 @@ const items: ItemDef[] = [
   {
     id: 'snake_oil_ledger',
     name: 'Snake Oil Ledger',
-    cardTemplate: "white-text-black-outline",
+    cardTemplate: "white-text",
     cost: 9,
     rarity: 'rare',
     description: 'Item gains x0.25 mult for each card sold. Resets when boss is defeated.',
@@ -810,15 +819,15 @@ const items: ItemDef[] = [
     cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
-    description: 'When starting leg, destroy equipment to right and add double its sell value as mult',
-    effectType: 'LEG_START_DESTROY_RIGHT',
+    description: 'When starting round, destroy equipment to right and add double its sell value as mult',
+    effectType: 'ROUND_START_DESTROY_RIGHT',
     effectParams: {},
     initialState: { mult: 0 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'funeral_pyre');
       const m = equip?.state.mult ?? 0;
       if (m > 0) return [[mult(`+${m}`)]];
-      return [[text('Destroys right'), condition('leg start')]];
+      return [[text('Destroys right'), condition('round start')]];
     },
   },
   {
@@ -827,10 +836,10 @@ const items: ItemDef[] = [
     cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
-    description: 'Add one stone die to collection when starting leg',
-    effectType: 'LEG_START_ADD_STONE',
+    description: 'Add one stone die to collection when starting round',
+    effectType: 'ROUND_START_ADD_STONE',
     effectParams: {},
-    hintDisplay: () => [[active('+1 stone'), condition('leg start')]],
+    hintDisplay: () => [[active('+1 stone'), condition('round start')]],
   },
   {
     id: 'six_shooter',
@@ -1045,7 +1054,7 @@ const items: ItemDef[] = [
     cardTemplate: "white-text-black-outline",
     cost: 8,
     rarity: 'rare',
-    description: 'If first day of leg only scores one die, add a permanent copy to your collection',
+    description: 'If first day of round only scores one die, add a permanent copy to your collection',
     effectType: 'FIRST_DAY_SOLO_COPY',
     effectParams: {},
     hintDisplay: (game) => {
@@ -1110,7 +1119,7 @@ const items: ItemDef[] = [
     name: 'Wanted Poster',
     cost: 4,
     rarity: 'common',
-    description: 'Earn $4 if hand is [hand]. Changes each leg of journey.',
+    description: 'Earn $4 if hand is [hand]. Changes each round.',
     effectType: 'WANTED_HAND_MONEY',
     effectParams: { value: 4 },
     initialState: { targetHand: 0 },
@@ -1138,7 +1147,7 @@ const items: ItemDef[] = [
   {
     id: 'repeat_offender',
     name: 'Repeat Offender',
-    
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: 'x3 mult if played hand has already been played this round',
@@ -1153,6 +1162,7 @@ const items: ItemDef[] = [
   {
     id: 'tight_fist',
     name: 'Tight Fist',
+    cardTemplate: "black-text-white-outline-noborder",
     cost: 5,
     rarity: 'uncommon',
     description: 'Gains +3 mult when any booster pack is skipped',
@@ -1169,22 +1179,24 @@ const items: ItemDef[] = [
   {
     id: 'haunted_totem',
     name: 'Haunted Totem',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'uncommon',
-    description: 'Gains x0.5 mult when leg is started. Destroys one random equipment.',
-    effectType: 'LEG_START_XMULT_DESTROY',
+    description: 'Gains x0.5 mult when round starts (not boss rounds). Destroys one random equipment.',
+    effectType: 'ROUND_START_XMULT_DESTROY',
     effectParams: { value: 0.5 },
     initialState: { xMult: 1 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'haunted_totem');
       const xm = equip?.state.xMult ?? 1;
       if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
-      return [[mult('x0.5'), condition('per leg start')]];
+      return [[mult('x0.5'), condition('per round start')]];
     },
   },
   {
     id: 'square_dance',
     name: 'Square Dance',
+    cardTemplate: "black-text-white-outline",
     cost: 4,
     rarity: 'common',
     description: 'Gains +4 miles if played hand has exactly 4 dice',
@@ -1194,23 +1206,25 @@ const items: ItemDef[] = [
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'square_dance');
       const m = equip?.state.miles ?? 0;
-      if (m > 0) return [[miles(`+${m}`), condition('4 dice')]];
-      return [[miles('+4'), condition('exactly 4 dice')]];
+      if (m > 0) return [[miles(`+${m}`), condition('4 dice played')]];
+      return [[miles('+4')],[condition('when 4 dice played')]];
     },
   },
   {
     id: 'junk_dealer',
     name: 'Junk Dealer',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
-    description: 'When leg starts, create 2 common pieces of equipment',
-    effectType: 'LEG_START_CREATE_EQUIPMENT',
+    description: 'When round starts, create 2 common pieces of equipment',
+    effectType: 'ROUND_START_CREATE_EQUIPMENT',
     effectParams: { count: 2, rarity: 'common' },
-    hintDisplay: () => [[text('2 common equip'), condition('per leg')]],
+    hintDisplay: () => [[text('2 common equip')],[condition('per round')]],
   },
   {
     id: 'new_blood',
     name: 'New Blood',
+    cardTemplate: "black-text-white-outline",
     cost: 7,
     rarity: 'uncommon',
     description: 'Gains x0.25 mult for every new dice added to collection',
@@ -1227,6 +1241,7 @@ const items: ItemDef[] = [
   {
     id: 'emergency_supplies',
     name: 'Emergency Supplies',
+    cardTemplate: "black-text",
     cost: 8,
     rarity: 'uncommon',
     description: 'Create a random supply card if hand is played with $4 or less',
@@ -1256,6 +1271,7 @@ const items: ItemDef[] = [
   {
     id: 'leftovers',
     name: 'Leftovers',
+    cardTemplate: "black-text-white-outline",
     cost: 4,
     rarity: 'common',
     description: '1 in 2 chance to gain a supply card when opening a booster pack',
@@ -1266,6 +1282,7 @@ const items: ItemDef[] = [
   {
     id: 'campfire_stories',
     name: 'Campfire Stories',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: '+1 mult per supply card used this journey',
@@ -1281,6 +1298,7 @@ const items: ItemDef[] = [
   {
     id: 'quarry_mine',
     name: 'Quarry Mine',
+    cardTemplate: "white-text-black-outline",
     cost: 6,
     rarity: 'uncommon',
     description: '+25 miles for each stone die in collection',
@@ -1296,10 +1314,11 @@ const items: ItemDef[] = [
   {
     id: 'antique_revolver',
     name: 'Antique Revolver',
+    cardTemplate: "white-text",
     cost: 4,
     rarity: 'common',
-    description: 'When leg starts, gain $3 of sell value to current card',
-    effectType: 'LEG_START_SELL_VALUE',
+    description: 'When round starts, gain $3 of sell value to current card',
+    effectType: 'ROUND_START_SELL_VALUE',
     effectParams: { value: 3 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'antique_revolver');
@@ -1310,16 +1329,18 @@ const items: ItemDef[] = [
   {
     id: 'hardtack',
     name: 'Hardtack',
+    cardTemplate: "black-text-white-outline",
     cost: 6,
     rarity: 'uncommon',
-    description: 'When leg starts, gain +3 days and lose all rerolls',
-    effectType: 'LEG_START_DAYS_NO_REROLLS',
+    description: 'When round starts, gain +3 days and lose all rerolls',
+    effectType: 'ROUND_START_DAYS_NO_REROLLS',
     effectParams: { days: 3 },
     hintDisplay: () => [[text('+3 days'), condition('no rerolls')]],
   },
   {
     id: 'manifest_destiny',
     name: 'Manifest Destiny',
+    cardTemplate: "black-text-white-outline",
     cost: 5,
     rarity: 'uncommon',
     description: 'Gains +15 miles if hand contains a 5 straight',

@@ -16,6 +16,7 @@ import {
   processEquipmentOnBossDefeat,
 } from '../../EquipmentEffects';
 import { HandType } from '../../types';
+import { GAMEPLAY } from '../../Constants';
 
 beforeEach(() => resetDieIds());
 
@@ -40,8 +41,8 @@ describe('MODIFY_REROLLS: Spare Holster (+1 reroll)', () => {
     });
     game.startRound();
     // Default maxRerolls=6, +1 from spare_holster = 7
-    expect(game.config.maxRerolls).toBe(7);
-    expect(game.state.rerollsRemaining).toBe(7);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS + 1);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS + 1);
   });
 });
 

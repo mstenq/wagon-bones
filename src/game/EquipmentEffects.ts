@@ -190,7 +190,7 @@ export function applyEquipmentEffects(
         break;
       }
 
-      case 'LEG_START_DESTROY_RIGHT': {
+      case 'ROUND_START_DESTROY_RIGHT': {
         const val = equip.state.mult ?? 0;
         if (val > 0) {
           bonusMult += val;
@@ -268,7 +268,7 @@ export function applyEquipmentEffects(
       case 'SELL_XMULT_GAIN':
       case 'XMULT_RISKY':
       case 'REPEAT_HAND_XMULT':
-      case 'LEG_START_XMULT_DESTROY':
+      case 'ROUND_START_XMULT_DESTROY':
         // These are xMult effects, handled in the xMult pass below
         break;
 
@@ -462,7 +462,7 @@ export function applyEquipmentEffects(
         }
         break;
       }
-      case 'LEG_START_XMULT_DESTROY': {
+      case 'ROUND_START_XMULT_DESTROY': {
         // Haunted Totem: accumulated xMult applies
         const xm = equip.state.xMult ?? 1;
         if (xm > 1) {
@@ -910,13 +910,85 @@ export function processEquipmentOnLuckyTrigger(equipment: EquipmentInstance[]): 
   }
 }
 
+/** A single animated equipment destruction: source triggered victim's removal */
+export interface AnimatedDestruction {
+  sourceIdx: number;
+  victimIdx: number;
+}
+
 /** Called at the start of each round. Updates/removes decaying equipment.
- *  Returns indices of equipment to remove. */
-export function processEquipmentOnRoundStart(equipment: EquipmentInstance[]): { destroyedIndices: number[] } {
+ *  Returns indices of equipment to remove. Equipment is processed left-to-right;
+ *  if one item destroys another that hasn't triggered yet, the destroyed item is skipped. */
+export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean } {
   const destroyedIndices: number[] = [];
+  const animatedDestructions: AnimatedDestruction[] = [];
+  const pendingAnimatedDestroy = new Set<number>(); // indices pending animated destruction
+  let equipmentToCreate = 0;
+  let equipmentCreateRarity = 'common';
+  let stoneDiceToAdd = 0;
+  let daysBonus = 0;
+  let loseAllRerolls = false;
   for (let i = 0; i < equipment.length; i++) {
+    // Skip items already destroyed by a previous item this round
+    if (pendingAnimatedDestroy.has(i) || destroyedIndices.includes(i)) continue;
+
     const equip = equipment[i];
     switch (equip.def.effectType) {
+      case 'ROUND_START_ADD_STONE': {
+        // Quarry Stone: add a stone die
+        stoneDiceToAdd++;
+        break;
+      }
+      case 'ROUND_START_CREATE_EQUIPMENT': {
+        // Junk Dealer: create common equipment
+        equipmentToCreate += equip.def.effectParams.count as number;
+        equipmentCreateRarity = equip.def.effectParams.rarity as string;
+        break;
+      }
+      case 'ROUND_START_XMULT_DESTROY': {
+        // Haunted Totem: gains xMult every round (except boss rounds), destroys random other equipment
+        if (!isBossRound) {
+          equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
+          // Pick a random OTHER equipment to destroy (not self, not already destroyed)
+          const otherIndices = equipment
+            .map((_, idx) => idx)
+            .filter((idx) => idx !== i && !destroyedIndices.includes(idx) && !pendingAnimatedDestroy.has(idx));
+          if (otherIndices.length > 0) {
+            const victimIdx = otherIndices[Math.floor(Math.random() * otherIndices.length)];
+            pendingAnimatedDestroy.add(victimIdx);
+            animatedDestructions.push({ sourceIdx: i, victimIdx });
+          }
+        }
+        break;
+      }
+      case 'ROUND_START_SELL_VALUE': {
+        // Antique Revolver: gain sell value each round
+        equip.sellValue += equip.def.effectParams.value as number;
+        break;
+      }
+      case 'ROUND_START_DAYS_NO_REROLLS': {
+        // Hardtack: +days, lose all rerolls
+        daysBonus += equip.def.effectParams.days as number;
+        loseAllRerolls = true;
+        break;
+      }
+      case 'WANTED_HAND_MONEY': {
+        // Wanted Poster: randomize target hand each round
+        const handTypes = Object.values(HandType);
+        equip.state.targetHand = Math.floor(Math.random() * handTypes.length);
+        break;
+      }
+      case 'ROUND_START_DESTROY_RIGHT': {
+        // Funeral Pyre: destroy equipment to the right and gain double sell value as mult
+        const rightIdx = i + 1;
+        if (rightIdx < equipment.length && !destroyedIndices.includes(rightIdx) && !pendingAnimatedDestroy.has(rightIdx)) {
+          const rightEquip = equipment[rightIdx];
+          equip.state.mult = (equip.state.mult ?? 0) + rightEquip.sellValue * 2;
+          pendingAnimatedDestroy.add(rightIdx);
+          animatedDestructions.push({ sourceIdx: i, victimIdx: rightIdx });
+        }
+        break;
+      }
       case 'DECAYING_MULT': {
         // Fading Memory: -4 mult per round, removed after 5 rounds
         const decay = equip.def.effectParams.decayPerRound as number;
@@ -947,7 +1019,7 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[]): { 
         break;
     }
   }
-  return { destroyedIndices };
+  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, daysBonus, loseAllRerolls };
 }
 
 /** Called at the end of each day. Updates War Drums counter and Trail Tax. */
@@ -1003,80 +1075,11 @@ export function getDayModifiers(equipment: EquipmentInstance[]): { daysPenalty: 
   return { daysPenalty };
 }
 
-/** Called when a new leg starts. Processes Funeral Pyre (destroy right neighbor) and Quarry Stone (add stone die).
- *  Returns indices of equipment to destroy and dice to add. */
-export function processEquipmentOnLegStart(equipment: EquipmentInstance[]): {
-  destroyedIndices: number[];
-  stoneDiceToAdd: number;
-  equipmentToCreate: number;
-  equipmentCreateRarity: string;
-  daysBonus: number;
-  loseAllRerolls: boolean;
-} {
-  const destroyedIndices: number[] = [];
-  let stoneDiceToAdd = 0;
-  let equipmentToCreate = 0;
-  let equipmentCreateRarity = 'common';
-  let daysBonus = 0;
-  let loseAllRerolls = false;
-
-  for (let i = 0; i < equipment.length; i++) {
-    const equip = equipment[i];
-
-    if (equip.def.effectType === 'LEG_START_DESTROY_RIGHT') {
-      // Funeral Pyre: destroy equipment to the right and gain double sell value as mult
-      const rightIdx = i + 1;
-      if (rightIdx < equipment.length && !destroyedIndices.includes(rightIdx)) {
-        const rightEquip = equipment[rightIdx];
-        equip.state.mult = (equip.state.mult ?? 0) + rightEquip.sellValue * 2;
-        destroyedIndices.push(rightIdx);
-      }
-    }
-
-    if (equip.def.effectType === 'LEG_START_ADD_STONE') {
-      stoneDiceToAdd++;
-    }
-
-    if (equip.def.effectType === 'WANTED_HAND_MONEY') {
-      // Wanted Poster: randomize target hand each leg
-      const handTypes = Object.values(HandType);
-      equip.state.targetHand = Math.floor(Math.random() * handTypes.length);
-    }
-
-    if (equip.def.effectType === 'LEG_START_XMULT_DESTROY') {
-      // Haunted Totem: gains xMult, will destroy a random other equipment
-      equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
-      // Pick a random OTHER equipment to destroy (not self)
-      const otherIndices = equipment
-        .map((_, idx) => idx)
-        .filter((idx) => idx !== i && !destroyedIndices.includes(idx));
-      if (otherIndices.length > 0) {
-        const victimIdx = otherIndices[Math.floor(Math.random() * otherIndices.length)];
-        destroyedIndices.push(victimIdx);
-      }
-    }
-
-    if (equip.def.effectType === 'LEG_START_CREATE_EQUIPMENT') {
-      // Junk Dealer: create common equipment
-      equipmentToCreate += equip.def.effectParams.count as number;
-      equipmentCreateRarity = equip.def.effectParams.rarity as string;
-    }
-
-    if (equip.def.effectType === 'LEG_START_SELL_VALUE') {
-      // Antique Revolver: gain sell value
-      equip.sellValue += equip.def.effectParams.value as number;
-    }
-
-    if (equip.def.effectType === 'LEG_START_DAYS_NO_REROLLS') {
-      // Hardtack: +days, lose all rerolls
-      daysBonus += equip.def.effectParams.days as number;
-      loseAllRerolls = true;
-    }
-
-    // (Repeat Offender history is reset per round in processEquipmentOnRoundStart)
-  }
-
-  return { destroyedIndices, stoneDiceToAdd, equipmentToCreate, equipmentCreateRarity, daysBonus, loseAllRerolls };
+/** Called when a new leg starts. Processes leg-specific transitions (permits, etc.).
+ *  Most equipment effects have moved to processEquipmentOnRoundStart. */
+export function processEquipmentOnLegStart(_equipment: EquipmentInstance[]): void {
+  // All effects previously here (Haunted Totem, Antique Revolver, Hardtack, Wanted Poster)
+  // have been moved to processEquipmentOnRoundStart.
 }
 
 /** Called when a new die is added to the collection. Updates New Blood. */

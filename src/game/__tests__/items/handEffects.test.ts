@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
-import { processEquipmentOnHandPlayed, processEquipmentOnLegStart } from '../../EquipmentEffects';
+import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -350,13 +350,23 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     const inst = item('wanted_poster');
     const handTypes = Object.values(HandType);
     const pairIdx = handTypes.indexOf(HandType.PAIR);
-    inst.state.targetHand = pairIdx;
 
-    const { player } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
+    const { game, player } = setupGame({
       equipment: [inst],
+      dice: [...diceWithValue(5, 2), ...diceWithValue(1, 50)],
       money: 10,
     });
+
+    game.startRound();
+    // Set target AFTER startRound (which randomizes it)
+    inst.state.targetHand = pairIdx;
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceWithValue(5, 2);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    game.calculateScore();
     expect(player.economy.balance).toBe(14);
   });
 
@@ -364,20 +374,30 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     const inst = item('wanted_poster');
     const handTypes = Object.values(HandType);
     const threeIdx = handTypes.indexOf(HandType.THREE_OF_A_KIND);
-    inst.state.targetHand = threeIdx;
 
-    const { player } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
+    const { game, player } = setupGame({
       equipment: [inst],
+      dice: [...diceWithValue(5, 2), ...diceWithValue(1, 50)],
       money: 10,
     });
+
+    game.startRound();
+    // Set target AFTER startRound (which randomizes it)
+    inst.state.targetHand = threeIdx;
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceWithValue(5, 2);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    game.calculateScore();
     expect(player.economy.balance).toBe(10);
   });
 
-  test('randomizes target hand on leg start', () => {
+  test('randomizes target hand on round start', () => {
     const inst = item('wanted_poster');
     inst.state.targetHand = 0;
-    processEquipmentOnLegStart([inst]);
+    processEquipmentOnRoundStart([inst]);
     const handTypes = Object.values(HandType);
     expect(inst.state.targetHand).toBeGreaterThanOrEqual(0);
     expect(inst.state.targetHand).toBeLessThan(handTypes.length);

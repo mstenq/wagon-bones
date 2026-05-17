@@ -13,6 +13,7 @@ import {
 import { HandType } from '../types';
 import { resetPlayerState } from '../PlayerState';
 import { detectBestHand, rollDie } from '../DiceSystem';
+import { GAMEPLAY } from '../Constants';
 
 beforeEach(() => {
   resetDieIds();
@@ -469,54 +470,54 @@ describe('calculatePayout', () => {
 describe('effectiveDays / effectiveRerolls', () => {
   test('base values with no modifiers', () => {
     const player = resetPlayerState();
-    expect(player.effectiveDays).toBe(4);
-    expect(player.effectiveRerolls).toBe(6);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS);
   });
 
   test('farmer profession adds +1 reroll', () => {
     const player = resetPlayerState();
     player.applyProfession('farmer');
-    expect(player.effectiveRerolls).toBe(7);
-    expect(player.effectiveDays).toBe(4);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS + 1);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS);
   });
 
   test('surveyor profession adds +1 day', () => {
     const player = resetPlayerState();
     player.applyProfession('surveyor');
-    expect(player.effectiveDays).toBe(5);
-    expect(player.effectiveRerolls).toBe(6);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS + 1);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS);
   });
 
   test('permit day bonus increases effectiveDays', () => {
     const player = resetPlayerState();
     player.permitDayBonus = 2;
-    expect(player.effectiveDays).toBe(6);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS + 2);
   });
 
   test('permit reroll bonus increases effectiveRerolls', () => {
     const player = resetPlayerState();
     player.permitRerollBonus = 3;
-    expect(player.effectiveRerolls).toBe(9);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS + 3);
   });
 
   test('permit penalties reduce values', () => {
     const player = resetPlayerState();
     player.permitDayPenalty = 1;
     player.permitRerollPenalty = 2;
-    expect(player.effectiveDays).toBe(3);
-    expect(player.effectiveRerolls).toBe(4);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS - 1);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 2);
   });
 
   test('trail event day penalty reduces effectiveDays', () => {
     const player = resetPlayerState();
     player.trailEventModifiers.dayPenalty = 2;
-    expect(player.effectiveDays).toBe(2);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS - 2);
   });
 
   test('trail event reroll penalty reduces effectiveRerolls', () => {
     const player = resetPlayerState();
     player.trailEventModifiers.rerollPenalty = 3;
-    expect(player.effectiveRerolls).toBe(3);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 3);
   });
 
   test('trail event loseAllRerolls overrides to 0', () => {
@@ -534,9 +535,9 @@ describe('effectiveDays / effectiveRerolls', () => {
     player.permitRerollPenalty = 1;
     player.trailEventModifiers.dayPenalty = 1;
     // days: 4 + 1(prof) + 1(permit) - 1(trail) = 5
-    expect(player.effectiveDays).toBe(5);
+    expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS + 1 + 1 - 1);
     // rerolls: 6 - 1(permit penalty) = 5
-    expect(player.effectiveRerolls).toBe(5);
+    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
   });
 });
 

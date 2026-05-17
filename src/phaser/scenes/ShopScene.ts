@@ -33,6 +33,7 @@ import { createDie } from '../../game/DiceSystem';
 import { Die } from '../../game/types';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
 import stickerData from '../../data/pip_enhancements.json';
+import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
 
 const CARD_SPACING = 185;
 
@@ -275,6 +276,15 @@ export class ShopScene extends Scene {
       this.cards.push(card);
     }
 
+    // Dev icons on shop stock cards
+    if (isDevMode()) {
+      for (let i = 0; i < this.cards.length; i++) {
+        const card = this.cards[i];
+        if (card.sold) continue;
+        this.addDevIcon(cardStartX + i * CARD_SPACING + 60, cardCY1 - 125, () => this.devSwapShopItem(i));
+      }
+    }
+
     // ─── Box 2: Voucher + Booster packs ───
     const packBox = this.add.graphics();
     packBox.fillStyle(0x0d0d1a, 0.75);
@@ -314,6 +324,11 @@ export class ShopScene extends Scene {
       permitItemCard.setAffordable(player.economy.balance >= permitDisplayDef.cost);
       this.setupPermitCardClick(permitItemCard, permit);
       this.permitCard = permitItemCard;
+
+      // Dev icon on permit
+      if (isDevMode()) {
+        this.addDevIcon(voucherX + 50, voucherY - 125, () => this.devSwapPermit());
+      }
 
       // Stationary "FRONTIER PERMIT" label anchored to scene (not card)
       const labelX = voucherX - voucherW / 2 - 20;
@@ -380,6 +395,15 @@ export class ShopScene extends Scene {
       }
 
       this.packCards.push(packCard);
+    }
+
+    // Dev icons on booster packs
+    if (isDevMode()) {
+      for (let i = 0; i < this.packCards.length; i++) {
+        const packCard = this.packCards[i];
+        if (packCard.sold) continue;
+        this.addDevIcon(packX0 + i * CARD_SPACING + 60, cardCY2 - 125, () => this.devSwapPack(i));
+      }
     }
   }
 
@@ -1074,6 +1098,101 @@ export class ShopScene extends Scene {
         this.permitCard = null;
         this.buildLayout();
       },
+    });
+  }
+
+  // ─── Dev Mode Helpers ───
+
+  /** Add a small dev wrench icon at (x, y) that calls `onClick` when clicked */
+  private addDevIcon(x: number, y: number, onClick: () => void): void {
+    const icon = this.add.text(x, y, '🔧', {
+      fontSize: '18px',
+    }).setOrigin(0.5).setDepth(300).setInteractive({ useHandCursor: true });
+    icon.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pointer.event.stopPropagation();
+      onClick();
+    });
+    icon.on('pointerover', () => icon.setScale(1.3));
+    icon.on('pointerout', () => icon.setScale(1));
+  }
+
+  /** Dev: swap a shop stock item by prompting for an ID */
+  private devSwapShopItem(index: number): void {
+    const id = window.prompt('Enter item ID (equipment, supply, trail guide, or frontier):');
+    if (!id) return;
+    const result = devLookupShopItem(id.trim());
+    if (!result) {
+      this.showDevMessage('ID not found');
+      return;
+    }
+    if (result.type === 'equipment') {
+      this.stockItems[index] = { type: 'equipment', def: result.def };
+    } else {
+      this.stockItems[index] = { type: 'consumable', def: result.def };
+    }
+    // Rebuild
+    this.children.removeAll(true);
+    this.cards = [];
+    this.packCards = [];
+    this.permitCard = null;
+    this.buildLayout();
+  }
+
+  /** Dev: swap a booster pack by prompting for a pack ID */
+  private devSwapPack(index: number): void {
+    const id = window.prompt('Enter pack ID:');
+    if (!id) return;
+    const packDef = devLookupPack(id.trim());
+    if (!packDef) {
+      this.showDevMessage('ID not found');
+      return;
+    }
+    this.packs[index] = { def: packDef as any, id: `pack_dev_${Date.now()}` };
+    // Rebuild
+    this.children.removeAll(true);
+    this.cards = [];
+    this.packCards = [];
+    this.permitCard = null;
+    this.buildLayout();
+  }
+
+  /** Dev: swap the permit by prompting for a permit ID */
+  private devSwapPermit(): void {
+    const id = window.prompt('Enter permit ID:');
+    if (!id) return;
+    const permit = devLookupPermit(id.trim());
+    if (!permit) {
+      this.showDevMessage('ID not found');
+      return;
+    }
+    const player = getPlayerState();
+    player.currentLegPermit = permit;
+    player.permitPurchasedThisLeg = false;
+    // Rebuild
+    this.children.removeAll(true);
+    this.cards = [];
+    this.packCards = [];
+    this.permitCard = null;
+    this.buildLayout();
+  }
+
+  /** Show a brief dev-mode message at the center of the screen */
+  private showDevMessage(msg: string): void {
+    const { width, height } = this.scale;
+    const text = this.add.text(width / 2, height / 2, msg, {
+      fontFamily: 'sans-serif',
+      fontSize: '28px',
+      color: '#ff4444',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(1000);
+    this.tweens.add({
+      targets: text,
+      y: text.y - 20,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
     });
   }
 }

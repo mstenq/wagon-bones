@@ -387,7 +387,7 @@ export abstract class CardBar extends GameObjects.Container {
     this.sort('depth');
   }
 
-  private getCardSpacing(count: number): number {
+  protected getCardSpacing(count: number): number {
     if (count <= 1) return 0;
     const cardW = UI.CARD_W * this.cardScale;
     const availableW = this.barWidth - this.barPadding * 2 - cardW;

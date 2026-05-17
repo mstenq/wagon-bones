@@ -32,6 +32,7 @@ import {
 } from './EquipmentEffects';
 import { getRandomTrailGuideDef } from './ConsumablesSystem';
 import { createEmptyModifiers } from './TrailEventsSystem';
+import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
 
 export class GameState {
   config: GameConfig;
@@ -118,10 +119,51 @@ export class GameState {
       this.config.maxDays = Math.max(1, this.config.maxDays - dayMods.daysPenalty);
     }
 
-    // Process round-start equipment effects (Fading Memory decay, Lucky Number randomize)
-    const roundStartEffects = processEquipmentOnRoundStart(player.equipment);
+    // Process round-start equipment effects (Fading Memory decay, Lucky Number randomize, Funeral Pyre, etc.)
+    const roundStartEffects = processEquipmentOnRoundStart(player.equipment, player.isBossRound);
     for (const idx of roundStartEffects.destroyedIndices.sort((a, b) => b - a)) {
       player.equipment.splice(idx, 1);
+    }
+    // Defer animated destructions for GameScene (Funeral Pyre, Haunted Totem, etc.)
+    // Adjust indices to account for any non-animated destroys (destroyedIndices) that were already spliced
+    const splicedIndices = roundStartEffects.destroyedIndices.sort((a, b) => a - b);
+    player.pendingAnimatedDestructions = roundStartEffects.animatedDestructions.map(d => {
+      let { sourceIdx, victimIdx } = d;
+      for (const spliced of splicedIndices) {
+        if (spliced < sourceIdx) sourceIdx--;
+        if (spliced < victimIdx) victimIdx--;
+      }
+      return { sourceIdx, victimIdx };
+    });
+
+    // Junk Dealer: create equipment and defer for animation
+    if (roundStartEffects.equipmentToCreate > 0) {
+      let created = 0;
+      for (let i = 0; i < roundStartEffects.equipmentToCreate; i++) {
+        if (player.usedEquipmentSlots < player.maxEquipmentSlots) {
+          const def = generateRandomEquipment({ rarity: roundStartEffects.equipmentCreateRarity });
+          player.equipment.push(createEquipmentInstance(def));
+          created++;
+        }
+      }
+      player.pendingJunkDealerCount = created;
+    } else {
+      player.pendingJunkDealerCount = 0;
+    }
+
+    // Quarry Stone: add stone dice at round start
+    for (let i = 0; i < roundStartEffects.stoneDiceToAdd; i++) {
+      const stoneDie = createDie({ enhancement: 'stone' });
+      player.addDie(stoneDie);
+      player.pendingNewDiceIds.push(stoneDie.id);
+    }
+
+    // Hardtack: +days, lose all rerolls
+    if (roundStartEffects.daysBonus > 0) {
+      this.config.maxDays += roundStartEffects.daysBonus;
+    }
+    if (roundStartEffects.loseAllRerolls) {
+      this.config.maxRerolls = 0;
     }
 
     // Mystery Crate: add a die with random sticker at round start

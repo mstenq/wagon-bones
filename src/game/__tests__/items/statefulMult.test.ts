@@ -115,6 +115,26 @@ describe('STATEFUL_ADD_MULT: Tight Fist', () => {
     // PAIR: baseMult=1, +6 from tight fist = 7
     expect(result.mult).toBe(7);
   });
+
+  test('integration: gains mult when pack is skipped with equipment present', () => {
+    // This tests the same flow BoosterPackScene.onSkip() should follow:
+    // call processEquipmentOnPackSkipped(player.equipment)
+    const tightFist = item('tight_fist');
+    const { player } = setupGame({ equipment: [tightFist] });
+
+    // Simulate skipping a pack (what BoosterPackScene.onSkip does)
+    processEquipmentOnPackSkipped(player.equipment);
+
+    expect(tightFist.state.mult).toBe(3);
+
+    // Verify accumulated mult affects scoring
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: player.equipment,
+    });
+    // PAIR: baseMult=1, +3 from tight fist = 4
+    expect(result.mult).toBe(4);
+  });
 });
 
 // ─── EXACT_DICE_COUNT_MILES: Square Dance ───

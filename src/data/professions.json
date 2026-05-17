@@ -18,7 +18,7 @@
     "title": "Banker",
     "name": "Charles Whitlock",
     "description": "Starts with $20",
-    "modifiers": { "startingMoney": 2000 }
+    "modifiers": { "startingMoney": 20 }
   },
   {
     "id": "outlaw",
@@ -96,5 +96,12 @@
     "name": "Victor Hale",
     "description": "+2 re-rolls per day, -1 hand size",
     "modifiers": { "rerolls": 2, "handSize": -1 }
+  },
+  {
+    "id": "developer",
+    "title": "Developer",
+    "name": "Dev Mode",
+    "description": "Starts with $999. For testing purposes.",
+    "modifiers": { "startingMoney": 99900 }
   }
 ]

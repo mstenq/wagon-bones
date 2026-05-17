@@ -8,7 +8,6 @@ import {
   processEquipmentOnReroll,
   processEquipmentOnHandPlayed,
   processEquipmentAfterHandScored,
-  processEquipmentOnLegStart,
   processEquipmentOnRoundStart,
   processEquipmentOnDiceAdded,
 } from '../../EquipmentEffects';

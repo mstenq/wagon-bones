@@ -1,0 +1,83 @@
+// ─── Dev Mode Utilities ───
+// Helpers for the developer profession's item-swap functionality.
+
+import { getPlayerState } from './PlayerState';
+import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
+import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
+import { getPermitById, PermitDef } from './PermitsSystem';
+import packsData from '../data/packs.json';
+import itemAurasData from '../data/item_auras.json';
+
+export type PackCategory = 'dice' | 'supply' | 'trail_guide' | 'frontier' | 'equipment';
+export type PackTier = 'normal' | 'jumbo' | 'mega';
+
+export interface PackDefinition {
+  id: string;
+  category: PackCategory;
+  tier: PackTier;
+  name: string;
+  cost: number;
+  totalCards: number;
+  pickCount: number;
+  weight: number;
+  color: number;
+}
+
+/** Check if dev mode is active (developer profession selected) */
+export function isDevMode(): boolean {
+  const player = getPlayerState();
+  return player.profession?.id === 'developer';
+}
+
+/** Result of looking up a shop item by ID */
+export type DevLookupResult =
+  | { type: 'equipment'; def: EquipmentDef }
+  | { type: 'consumable'; def: ConsumableDef }
+  | null;
+
+/**
+ * Look up an item by ID for shop swap.
+ * Search order: equipment, supply cards, trail guides, frontier encounters.
+ */
+export function devLookupShopItem(id: string): DevLookupResult {
+  // 1. Equipment
+  const allEquip = getAllEquipment();
+  const equipDef = allEquip.find((e) => e.id === id);
+  if (equipDef) return { type: 'equipment', def: equipDef };
+
+  // 2. Supply cards
+  const supplyDef = getSupplyDefById(id);
+  if (supplyDef) return { type: 'consumable', def: supplyDef };
+
+  // 3. Trail guides
+  const tgDef = getTrailGuideDefById(id);
+  if (tgDef) return { type: 'consumable', def: tgDef };
+
+  // 4. Frontier encounters
+  const feDef = getFrontierDefById(id);
+  if (feDef) return { type: 'consumable', def: feDef };
+
+  return null;
+}
+
+/** Look up a pack definition by ID */
+export function devLookupPack(id: string): PackDefinition | null {
+  const pack = packsData.find((p) => p.id === id);
+  if (!pack) return null;
+  return {
+    ...pack,
+    category: pack.category as PackCategory,
+    tier: pack.tier as PackTier,
+    color: parseInt(pack.color),
+  };
+}
+
+/** Look up a permit by ID */
+export function devLookupPermit(id: string): PermitDef | null {
+  return getPermitById(id);
+}
+
+/** Get all available item auras (for the equipment aura swap dropdown) */
+export function devGetAllAuras(): ItemAura[] {
+  return itemAurasData as ItemAura[];
+}

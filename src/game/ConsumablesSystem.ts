@@ -202,6 +202,13 @@ export function getTrailGuideDefById(id: string, aura?: ItemAura | null): Consum
   return createTrailGuideConsumableDef(tg, aura);
 }
 
+/** Get a frontier encounter def by id */
+export function getFrontierDefById(id: string, aura?: ItemAura | null): ConsumableDef | null {
+  const fe = FRONTIER_ENCOUNTERS.find((f) => f.id === id);
+  if (!fe) return null;
+  return createFrontierConsumableDef(fe, aura);
+}
+
 // ─── Shop Generation ───
 
 /** Generate random consumable cards for the shop.
